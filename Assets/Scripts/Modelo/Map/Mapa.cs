@@ -47,5 +47,27 @@ namespace ImperiosEnGuerra.Modelo.Map
 
             return casillas[x, y];
         }
+
+        public bool EstaDentroDeLimites(Coordenada coordenada)
+        {
+            if (coordenada == null)
+            {
+                return false;
+            }
+
+            return coordenada.X >= 0 && coordenada.X < Ancho
+                && coordenada.Y >= 0 && coordenada.Y < Alto;
+        }
+
+        public bool PuedeColocar(Coordenada coordenada)
+        {
+            if (!EstaDentroDeLimites(coordenada))
+            {
+                return false;
+            }
+
+            Casilla casilla = ObtenerCasilla(coordenada.X, coordenada.Y);
+            return casilla != null && !casilla.EstaOcupada;
+        }
     }
 }
