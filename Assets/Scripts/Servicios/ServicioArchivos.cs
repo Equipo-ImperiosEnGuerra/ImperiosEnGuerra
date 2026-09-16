@@ -8,6 +8,9 @@ using ImperiosEnGuerra.Modelo.Recursos;
 
 namespace ImperiosEnGuerra.Servicios
 {
+    /// <summary>
+    /// Centraliza la persistencia de configuración, eventos y resultado de partida mediante System.IO.
+    /// </summary>
     public class ServicioArchivos
     {
         private const string ArchivoConfiguracion = "configuracion.txt";
@@ -16,6 +19,13 @@ namespace ImperiosEnGuerra.Servicios
 
         private readonly string directorioBase;
 
+        /// <summary>
+        /// Conserva la ruta recibida y asegura que exista el directorio, sin crear los archivos de partida.
+        /// </summary>
+        /// <param name="directorioBase">Ruta del directorio donde se guardarán los archivos.</param>
+        /// <exception cref="ArgumentException">La ruta es nula, vacía o solo contiene espacios.</exception>
+        /// <exception cref="IOException">El directorio no se puede crear por un error de entrada o salida.</exception>
+        /// <exception cref="UnauthorizedAccessException">No se dispone de acceso para crear el directorio.</exception>
         public ServicioArchivos(string directorioBase)
         {
             if (string.IsNullOrWhiteSpace(directorioBase))
@@ -28,6 +38,13 @@ namespace ImperiosEnGuerra.Servicios
             Directory.CreateDirectory(directorioBase);
         }
 
+        /// <summary>
+        /// Escribe el contenido en configuracion.txt, creando el archivo o reemplazando todo su contenido.
+        /// </summary>
+        /// <param name="contenido">Texto que se guarda; puede estar vacío.</param>
+        /// <exception cref="ArgumentNullException">El contenido es nulo.</exception>
+        /// <exception cref="IOException">La escritura falla por un error de entrada o salida.</exception>
+        /// <exception cref="UnauthorizedAccessException">No se dispone de acceso para escribir el archivo.</exception>
         public void GuardarConfiguracion(string contenido)
         {
             if (contenido == null)
@@ -38,6 +55,14 @@ namespace ImperiosEnGuerra.Servicios
             File.WriteAllText(Path.Combine(directorioBase, ArchivoConfiguracion), contenido);
         }
 
+        /// <summary>
+        /// Genera una descripción determinista del estado recibido de ambos jugadores y la guarda mediante GuardarConfiguracion.
+        /// Incluye nombres, tipos, dimensiones, saldos, edificios y recursos físicos; usa números con cultura invariable y saltos de línea LF.
+        /// </summary>
+        /// <param name="partida">Partida cuyo estado actual se registra como configuración inicial.</param>
+        /// <exception cref="ArgumentNullException">La partida es nula.</exception>
+        /// <exception cref="IOException">La escritura falla por un error de entrada o salida.</exception>
+        /// <exception cref="UnauthorizedAccessException">No se dispone de acceso para escribir el archivo.</exception>
         public void GuardarConfiguracionInicial(Partida partida)
         {
             if (partida == null)
@@ -54,6 +79,12 @@ namespace ImperiosEnGuerra.Servicios
             GuardarConfiguracion(texto.ToString());
         }
 
+        /// <summary>
+        /// Añade una sección de jugador; ordena los edificios por nombre de tipo y coordenadas, y los recursos por tipo y coordenadas.
+        /// </summary>
+        /// <param name="texto">Texto al que se agrega la sección.</param>
+        /// <param name="seccion">Identificador de la sección.</param>
+        /// <param name="jugador">Jugador cuyos datos se describen.</param>
         private void AgregarJugador(StringBuilder texto, string seccion, Jugador jugador)
         {
             texto.Append('[').Append(seccion).Append("]\n");
@@ -89,6 +120,12 @@ namespace ImperiosEnGuerra.Servicios
             }
         }
 
+        /// <summary>
+        /// Añade el saldo de un recurso con representación numérica de cultura invariable.
+        /// </summary>
+        /// <param name="texto">Texto al que se agrega el saldo.</param>
+        /// <param name="jugador">Jugador que posee los saldos.</param>
+        /// <param name="tipo">Tipo de recurso almacenado que se consulta.</param>
         private void AgregarRecursoAlmacenado(
             StringBuilder texto, Jugador jugador, TipoRecurso tipo)
         {
@@ -96,6 +133,13 @@ namespace ImperiosEnGuerra.Servicios
                 "{0}={1}\n", tipo, jugador.Recursos.ObtenerCantidad(tipo));
         }
 
+        /// <summary>
+        /// Añade el contenido al final de log_partida.txt seguido de Environment.NewLine; crea el archivo si no existe.
+        /// </summary>
+        /// <param name="contenido">Texto que se guarda; puede estar vacío.</param>
+        /// <exception cref="ArgumentNullException">El contenido es nulo.</exception>
+        /// <exception cref="IOException">La escritura falla por un error de entrada o salida.</exception>
+        /// <exception cref="UnauthorizedAccessException">No se dispone de acceso para escribir el archivo.</exception>
         public void RegistrarEvento(string contenido)
         {
             if (contenido == null)
@@ -107,6 +151,13 @@ namespace ImperiosEnGuerra.Servicios
                 Path.Combine(directorioBase, ArchivoLogPartida), contenido + Environment.NewLine);
         }
 
+        /// <summary>
+        /// Escribe el contenido en resultado_final.txt, creando el archivo o reemplazando todo su contenido.
+        /// </summary>
+        /// <param name="contenido">Texto que se guarda; puede estar vacío.</param>
+        /// <exception cref="ArgumentNullException">El contenido es nulo.</exception>
+        /// <exception cref="IOException">La escritura falla por un error de entrada o salida.</exception>
+        /// <exception cref="UnauthorizedAccessException">No se dispone de acceso para escribir el archivo.</exception>
         public void GuardarResultadoFinal(string contenido)
         {
             if (contenido == null)

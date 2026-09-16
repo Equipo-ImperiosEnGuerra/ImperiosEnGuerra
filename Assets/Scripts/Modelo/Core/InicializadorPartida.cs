@@ -6,8 +6,27 @@ using ImperiosEnGuerra.Modelo.Recursos;
 
 namespace ImperiosEnGuerra.Modelo.Core
 {
+    /// <summary>
+    /// Valida y configura los mapas y participantes que forman el estado inicial de una partida.
+    /// </summary>
     public class InicializadorPartida
     {
+        /// <summary>
+        /// Valida ambos conjuntos de posiciones antes de configurar los mapas y crea cada jugador con saldos cero y un Centro Urbano.
+        /// La validación evita solapamientos también cuando los participantes comparten un mapa.
+        /// </summary>
+        /// <param name="nombreHumano">Nombre del participante humano.</param>
+        /// <param name="mapaHumano">Mapa asociado al humano.</param>
+        /// <param name="centroHumano">Posición del Centro Urbano humano.</param>
+        /// <param name="recursosHumano">Recursos físicos del humano; deben incluir oro, madera y comida.</param>
+        /// <param name="nombreMaquina">Nombre del participante máquina.</param>
+        /// <param name="mapaMaquina">Mapa asociado a la máquina.</param>
+        /// <param name="centroMaquina">Posición del Centro Urbano de la máquina.</param>
+        /// <param name="recursosMaquina">Recursos físicos de la máquina; deben incluir oro, madera y comida.</param>
+        /// <returns>Partida con ambos participantes y los mapas recibidos configurados.</returns>
+        /// <exception cref="ArgumentNullException">Algún mapa, centro o lista de recursos es nulo.</exception>
+        /// <exception cref="ArgumentException">Algún nombre es inválido, hay recursos nulos, posiciones no disponibles o repetidas, o falta un tipo requerido.</exception>
+        /// <exception cref="InvalidOperationException">No se puede ocupar un centro o colocar un recurso al aplicar la configuración validada.</exception>
         public Partida Crear(
             string nombreHumano,
             Mapa mapaHumano,
@@ -34,6 +53,15 @@ namespace ImperiosEnGuerra.Modelo.Core
             return new Partida(jugadorHumano, jugadorMaquina);
         }
 
+        /// <summary>
+        /// Valida posiciones y tipos requeridos sin modificar el mapa; reserva las posiciones en el registro compartido.
+        /// </summary>
+        /// <param name="mapa">Mapa que se valida.</param>
+        /// <param name="centro">Posición del Centro Urbano.</param>
+        /// <param name="recursos">Recursos físicos que se validan.</param>
+        /// <param name="posicionesPorMapa">Registro de posiciones reservadas por las validaciones de ambos participantes.</param>
+        /// <exception cref="ArgumentNullException">El mapa, el centro o la lista de recursos es nulo.</exception>
+        /// <exception cref="ArgumentException">Hay recursos nulos, posiciones no disponibles o repetidas, o falta oro, madera o comida.</exception>
         private void ValidarMapa(
             Mapa mapa,
             Coordenada centro,
@@ -105,6 +133,13 @@ namespace ImperiosEnGuerra.Modelo.Core
             }
         }
 
+        /// <summary>
+        /// Ocupa la casilla del centro, añade el Centro Urbano al jugador y coloca los recursos previamente validados.
+        /// </summary>
+        /// <param name="jugador">Jugador cuyo mapa se configura.</param>
+        /// <param name="centro">Posición validada del Centro Urbano.</param>
+        /// <param name="recursos">Recursos físicos previamente validados.</param>
+        /// <exception cref="InvalidOperationException">No se logra ocupar la casilla del centro o colocar uno de los recursos.</exception>
         private void ConfigurarMapa(
             Jugador jugador,
             Coordenada centro,
