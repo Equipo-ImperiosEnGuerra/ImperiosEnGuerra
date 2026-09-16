@@ -1,3 +1,4 @@
+using ImperiosEnGuerra.Api.Servicios;
 using ImperiosEnGuerra.Api.Contratos;
 using ImperiosEnGuerra.Api.Mapeadores;
 using ImperiosEnGuerra.Modelo.Core;
@@ -6,6 +7,7 @@ using ImperiosEnGuerra.Modelo.Map;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+builder.Services.AddSingleton<EstadoPartidaService>();
 
 var app = builder.Build();
 
@@ -38,7 +40,9 @@ app.MapGet("/api/modelo/prueba", () =>
 })
 .WithName("ProbarModelo");
 
-app.MapPost("/api/partida/iniciar", (IniciarPartidaRequest request) =>
+app.MapPost(
+    "/api/partida/iniciar",
+    (IniciarPartidaRequest request, EstadoPartidaService estadoPartida) =>
 {
     try
     {
@@ -73,6 +77,8 @@ app.MapPost("/api/partida/iniciar", (IniciarPartidaRequest request) =>
             mapa,
             centroMaquina,
             recursosMaquina);
+
+        estadoPartida.EstablecerPartida(partida);
 
         return Results.Ok(new
         {
@@ -117,5 +123,40 @@ app.MapPost("/api/partida/iniciar", (IniciarPartidaRequest request) =>
     }
 })
 .WithName("IniciarPartida");
+
+app.MapGet("/api/partida", (EstadoPartidaService estadoPartida) =>
+{
+    Partida? partida = estadoPartida.ObtenerPartida();
+
+    if (partida == null)
+    {
+        return Results.NotFound(new
+        {
+            error = "No hay una partida activa."
+        });
+    }
+
+    return Results.Ok(new
+    {
+        estado = "activa",
+
+        jugadorHumano = new
+        {
+            nombre = partida.JugadorHumano.Nombre,
+            tipo = partida.JugadorHumano.Tipo.ToString(),
+            edificios = partida.JugadorHumano.Edificios.Count,
+            unidades = partida.JugadorHumano.Unidades.Count
+        },
+
+        jugadorMaquina = new
+        {
+            nombre = partida.JugadorMaquina.Nombre,
+            tipo = partida.JugadorMaquina.Tipo.ToString(),
+            edificios = partida.JugadorMaquina.Edificios.Count,
+            unidades = partida.JugadorMaquina.Unidades.Count
+        }
+    });
+})
+.WithName("ObtenerPartidaActiva");
 
 app.Run();
