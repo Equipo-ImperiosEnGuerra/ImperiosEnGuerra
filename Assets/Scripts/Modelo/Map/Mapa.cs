@@ -1,13 +1,21 @@
 using System;
+using System.Collections.Generic;
+using ImperiosEnGuerra.Modelo.Recursos;
 
 namespace ImperiosEnGuerra.Modelo.Map
 {
     public class Mapa
     {
         private readonly Casilla[,] casillas;
+        private readonly List<Recurso> recursos;
 
         public int Ancho { get; }
         public int Alto { get; }
+
+        public IReadOnlyList<Recurso> Recursos
+        {
+            get { return recursos.AsReadOnly(); }
+        }
 
         public Mapa(int ancho, int alto)
         {
@@ -25,6 +33,7 @@ namespace ImperiosEnGuerra.Modelo.Map
             Alto = alto;
 
             casillas = new Casilla[ancho, alto];
+            recursos = new List<Recurso>();
 
             for (int x = 0; x < ancho; x++)
             {
@@ -67,7 +76,43 @@ namespace ImperiosEnGuerra.Modelo.Map
             }
 
             Casilla casilla = ObtenerCasilla(coordenada.X, coordenada.Y);
-            return casilla != null && !casilla.EstaOcupada;
+            return casilla != null && !casilla.EstaOcupada
+                && ObtenerRecursoEn(coordenada) == null;
+        }
+
+        public Recurso ObtenerRecursoEn(Coordenada coordenada)
+        {
+            if (!EstaDentroDeLimites(coordenada))
+            {
+                return null;
+            }
+
+            foreach (Recurso recurso in recursos)
+            {
+                if (recurso.Coordenada.X == coordenada.X
+                    && recurso.Coordenada.Y == coordenada.Y)
+                {
+                    return recurso;
+                }
+            }
+
+            return null;
+        }
+
+        public bool ColocarRecurso(Recurso recurso)
+        {
+            if (recurso == null)
+            {
+                return false;
+            }
+
+            if (!PuedeColocar(recurso.Coordenada))
+            {
+                return false;
+            }
+
+            recursos.Add(recurso);
+            return true;
         }
     }
 }
