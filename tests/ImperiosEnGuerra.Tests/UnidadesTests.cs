@@ -1,3 +1,4 @@
+using System;
 using NUnit.Framework;
 using ImperiosEnGuerra.Modelo.Map;
 using ImperiosEnGuerra.Modelo.Unidades;
@@ -53,6 +54,42 @@ namespace ImperiosEnGuerra.Tests.Editor
             Assert.That(monje, Is.Not.InstanceOf<Soldado>());
             Assert.That(monje.Coordenada, Is.SameAs(coordenada));
             Assert.That(monje.Disponible, Is.True);
+        }
+
+        [Test]
+        public void UnidadesDistintas_TienenIdsDistintosYNoVacios()
+        {
+            var primera = new Aldeano(new Coordenada(1, 1));
+            var segunda = new Aldeano(new Coordenada(2, 2));
+
+            Assert.That(primera.Id, Is.Not.EqualTo(Guid.Empty));
+            Assert.That(segunda.Id, Is.Not.EqualTo(Guid.Empty));
+            Assert.That(primera.Id, Is.Not.EqualTo(segunda.Id));
+        }
+
+        [Test]
+        public void Id_PermaneceAlCambiarCoordenada()
+        {
+            var unidad = new UnidadPrueba(new Coordenada(1, 1));
+            Guid idOriginal = unidad.Id;
+
+            unidad.CambiarCoordenada(new Coordenada(4, 5));
+
+            Assert.That(unidad.Id, Is.EqualTo(idOriginal));
+            Assert.That(unidad.Coordenada.X, Is.EqualTo(4));
+            Assert.That(unidad.Coordenada.Y, Is.EqualTo(5));
+        }
+
+        private sealed class UnidadPrueba : Unidad
+        {
+            public UnidadPrueba(Coordenada coordenada) : base(coordenada)
+            {
+            }
+
+            public void CambiarCoordenada(Coordenada coordenada)
+            {
+                Coordenada = coordenada;
+            }
         }
     }
 }
