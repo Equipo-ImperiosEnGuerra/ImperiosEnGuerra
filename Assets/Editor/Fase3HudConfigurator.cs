@@ -148,6 +148,7 @@ public static class Fase3HudConfigurator
         var accionesSerializadas = new SerializedObject(controladorAcciones);
         accionesSerializadas.FindProperty("controladorSeleccion").objectReferenceValue = seleccion;
         accionesSerializadas.FindProperty("vistaHud").objectReferenceValue = hud;
+        accionesSerializadas.FindProperty("conexionApi").objectReferenceValue = conexion;
         accionesSerializadas.ApplyModifiedProperties();
         var conexionSerializada = new SerializedObject(conexion);
         conexionSerializada.FindProperty("vistaHud").objectReferenceValue = hud;

@@ -126,9 +126,9 @@ app.MapPost(
 
 app.MapGet("/api/partida", (EstadoPartidaService estadoPartida) =>
 {
-    Partida? partida = estadoPartida.ObtenerPartida();
+    EstadoPartidaResponse? respuesta = estadoPartida.ObtenerEstado();
 
-    if (partida == null)
+    if (respuesta == null)
     {
         return Results.NotFound(new
         {
@@ -136,9 +136,15 @@ app.MapGet("/api/partida", (EstadoPartidaService estadoPartida) =>
         });
     }
 
-    EstadoPartidaResponse respuesta = PartidaEstadoMapper.Convertir(partida);
     return Results.Ok(respuesta);
 })
 .WithName("ObtenerPartidaActiva");
+
+app.MapPost("/api/partida/mover", (MoverUnidadRequest? request, EstadoPartidaService estadoPartida) =>
+{
+    var resultado = estadoPartida.MoverUnidad(request);
+    return resultado.Exito ? Results.Ok(resultado) : Results.BadRequest(resultado);
+})
+.WithName("MoverUnidad");
 
 app.Run();
