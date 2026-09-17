@@ -1952,6 +1952,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ImperiosEnGuerra.Controladores.ControladorAcciones
   controladorSeleccion: {fileID: 824008030}
   vistaHud: {fileID: 1795446608}
+  conexionApi: {fileID: 171233343}
 --- !u!4 &1945101750
 Transform:
   m_ObjectHideFlags: 0

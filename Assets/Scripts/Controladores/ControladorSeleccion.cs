@@ -19,7 +19,19 @@ namespace ImperiosEnGuerra.Controladores
                 ? SeleccionActual.IdLogico
                 : string.Empty;
         public event System.Action<EntidadSeleccionableVista> SeleccionCambio;
+        public bool CapturandoDestino { get; private set; }
+        public event System.Action<int, int> DestinoSeleccionado;
+        public event System.Action CapturaCancelada;
         private VistaPartida vistaSuscrita;
+
+        public void IniciarCapturaDestino() => CapturandoDestino = true;
+        public void FinalizarCapturaDestino() => CapturandoDestino = false;
+
+        private void CancelarCapturaDestino()
+        {
+            CapturandoDestino = false;
+            CapturaCancelada?.Invoke();
+        }
 
         private void OnEnable()
         {
@@ -42,13 +54,15 @@ namespace ImperiosEnGuerra.Controladores
             }
             vistaSuscrita = null;
             LimpiarSeleccion();
+            FinalizarCapturaDestino();
         }
 
         private void Update()
         {
             if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
-                LimpiarSeleccion();
+                if (CapturandoDestino) CancelarCapturaDestino();
+                else LimpiarSeleccion();
                 return;
             }
 
@@ -76,13 +90,20 @@ namespace ImperiosEnGuerra.Controladores
             }
             if (!camara.pixelRect.Contains(pantalla))
             {
-                LimpiarSeleccion();
+                if (!CapturandoDestino) LimpiarSeleccion();
                 return;
             }
 
             // VistaPartida representa las entidades en el plano mundial z=0.
             Vector3 mundo = camara.ScreenToWorldPoint(
                 new Vector3(pantalla.x, pantalla.y, -camara.transform.position.z));
+            if (CapturandoDestino)
+            {
+                if (vistaPartida.TryObtenerCoordenadaLogica(mundo, out int x, out int y))
+                    DestinoSeleccionado?.Invoke(x, y);
+                // El clic de destino se consume incluso si queda fuera del mapa.
+                return;
+            }
             Physics2D.SyncTransforms();
             EntidadSeleccionableVista candidata = null;
             foreach (Collider2D collider in Physics2D.OverlapPointAll(mundo))
