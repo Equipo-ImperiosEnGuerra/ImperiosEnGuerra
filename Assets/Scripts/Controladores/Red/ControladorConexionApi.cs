@@ -19,14 +19,17 @@ namespace ImperiosEnGuerra.Controladores.Red
         private VistaHud vistaHud;
 
         public bool MovimientoEnCurso { get; private set; }
+        public bool RecoleccionEnCurso { get; private set; }
+        public bool AccionEnCurso => MovimientoEnCurso || RecoleccionEnCurso;
 
         public void MoverUnidad(string unidadId, int x, int y)
         {
-            if (!isActiveAndEnabled || MovimientoEnCurso)
+            if (!isActiveAndEnabled || AccionEnCurso)
             {
-                MostrarError("La conexión no está disponible o hay un movimiento en curso.");
+                MostrarError("La conexión no está disponible o hay una acción en curso.");
                 return;
             }
+
             StartCoroutine(EnviarMovimiento(new MoverUnidadDto
             {
                 unidadId = unidadId,
@@ -34,38 +37,80 @@ namespace ImperiosEnGuerra.Controladores.Red
             }));
         }
 
+        public void IniciarRecoleccion(string aldeanoId, int x, int y)
+        {
+            if (!isActiveAndEnabled || AccionEnCurso)
+            {
+                MostrarError("La conexión no está disponible o hay una acción en curso.");
+                return;
+            }
+
+            StartCoroutine(EnviarRecoleccion(new RecolectarDto
+            {
+                aldeanoId = aldeanoId,
+                objetivo = new CoordenadaDto(x, y)
+            }));
+        }
+
         private void OnDisable()
         {
             StopAllCoroutines();
             MovimientoEnCurso = false;
+            RecoleccionEnCurso = false;
         }
 
         private IEnumerator EnviarMovimiento(MoverUnidadDto movimiento)
         {
             MovimientoEnCurso = true;
+
             try
             {
-                using var request = new UnityWebRequest($"{urlBaseApi}/api/partida/mover", UnityWebRequest.kHttpVerbPOST);
-                request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(JsonUtility.ToJson(movimiento)));
-                request.downloadHandler = new DownloadHandlerBuffer();
-                request.SetRequestHeader("Content-Type", "application/json");
+                using var request = new UnityWebRequest(
+                    $"{urlBaseApi}/api/partida/mover",
+                    UnityWebRequest.kHttpVerbPOST);
+
+                request.uploadHandler = new UploadHandlerRaw(
+                    Encoding.UTF8.GetBytes(
+                        JsonUtility.ToJson(movimiento)));
+
+                request.downloadHandler =
+                    new DownloadHandlerBuffer();
+
+                request.SetRequestHeader(
+                    "Content-Type",
+                    "application/json");
+
                 request.timeout = 15;
+
                 yield return request.SendWebRequest();
 
-                ResultadoAccionDto resultado = LeerResultado(request.downloadHandler.text);
+                ResultadoAccionDto resultado =
+                    LeerResultado(request.downloadHandler.text);
+
                 if (request.result != UnityWebRequest.Result.Success)
                 {
-                    MostrarError(MensajeError(resultado, $"No se pudo confirmar el movimiento. HTTP {request.responseCode}: {request.error}"));
+                    MostrarError(
+                        MensajeError(
+                            resultado,
+                            $"No se pudo confirmar el movimiento. HTTP {request.responseCode}: {request.error}"));
+
                     yield break;
                 }
+
                 if (resultado == null || !resultado.exito)
                 {
-                    MostrarError(MensajeError(resultado, "La API no confirmó el movimiento."));
+                    MostrarError(
+                        MensajeError(
+                            resultado,
+                            "La API no confirmó el movimiento."));
+
                     yield break;
                 }
 
                 yield return ObtenerPartidaActiva(
-                    string.IsNullOrWhiteSpace(resultado.mensaje) ? "Movimiento realizado." : resultado.mensaje,
+                    string.IsNullOrWhiteSpace(resultado.mensaje)
+                        ? "Movimiento realizado."
+                        : resultado.mensaje,
                     "Movimiento aceptado, pero no se pudo actualizar la vista. ");
             }
             finally
@@ -74,31 +119,107 @@ namespace ImperiosEnGuerra.Controladores.Red
             }
         }
 
+        private IEnumerator EnviarRecoleccion(RecolectarDto recoleccion)
+        {
+            RecoleccionEnCurso = true;
+
+            try
+            {
+                using var request = new UnityWebRequest(
+                    $"{urlBaseApi}/api/partida/recolectar",
+                    UnityWebRequest.kHttpVerbPOST);
+
+                request.uploadHandler = new UploadHandlerRaw(
+                    Encoding.UTF8.GetBytes(
+                        JsonUtility.ToJson(recoleccion)));
+
+                request.downloadHandler =
+                    new DownloadHandlerBuffer();
+
+                request.SetRequestHeader(
+                    "Content-Type",
+                    "application/json");
+
+                request.timeout = 15;
+
+                yield return request.SendWebRequest();
+
+                ResultadoAccionDto resultado =
+                    LeerResultado(request.downloadHandler.text);
+
+                if (request.result != UnityWebRequest.Result.Success)
+                {
+                    MostrarError(
+                        MensajeError(
+                            resultado,
+                            $"No se pudo preparar la recolección. HTTP {request.responseCode}: {request.error}"));
+
+                    yield break;
+                }
+
+                if (resultado == null || !resultado.exito)
+                {
+                    MostrarError(
+                        MensajeError(
+                            resultado,
+                            "La API no confirmó la recolección."));
+
+                    yield break;
+                }
+
+                string mensaje =
+                    string.IsNullOrWhiteSpace(resultado.mensaje)
+                        ? "Recolección preparada."
+                        : resultado.mensaje;
+
+                if (vistaHud != null)
+                    vistaHud.MostrarMensaje(mensaje);
+
+                Debug.Log(mensaje);
+            }
+            finally
+            {
+                RecoleccionEnCurso = false;
+            }
+        }
+
         private static ResultadoAccionDto LeerResultado(string json)
         {
-            if (string.IsNullOrWhiteSpace(json)) return null;
+            if (string.IsNullOrWhiteSpace(json))
+                return null;
+
             try
             {
                 return JsonUtility.FromJson<ResultadoAccionDto>(json);
             }
             catch (System.ArgumentException ex)
             {
-                Debug.LogWarning($"La respuesta de la API no es JSON válido: {ex.Message}");
+                Debug.LogWarning(
+                    $"La respuesta de la API no es JSON válido: {ex.Message}");
+
                 return null;
             }
         }
 
-        private static string MensajeError(ResultadoAccionDto resultado, string alternativa)
+        private static string MensajeError(
+            ResultadoAccionDto resultado,
+            string alternativa)
         {
-            if (!string.IsNullOrWhiteSpace(resultado?.mensaje)) return resultado.mensaje;
-            if (!string.IsNullOrWhiteSpace(resultado?.error)) return resultado.error;
+            if (!string.IsNullOrWhiteSpace(resultado?.mensaje))
+                return resultado.mensaje;
+
+            if (!string.IsNullOrWhiteSpace(resultado?.error))
+                return resultado.error;
+
             return alternativa;
         }
 
         private void MostrarError(string mensaje)
         {
             Debug.LogError(mensaje, this);
-            if (vistaHud != null) vistaHud.MostrarMensaje(mensaje, true);
+
+            if (vistaHud != null)
+                vistaHud.MostrarMensaje(mensaje, true);
         }
 
         private void Start()
@@ -108,9 +229,11 @@ namespace ImperiosEnGuerra.Controladores.Red
 
         private IEnumerator ComprobarConexion()
         {
-            string url = $"{urlBaseApi}/api/estado";
+            string url =
+                $"{urlBaseApi}/api/estado";
 
-            using UnityWebRequest request = UnityWebRequest.Get(url);
+            using UnityWebRequest request =
+                UnityWebRequest.Get(url);
 
             yield return request.SendWebRequest();
 
@@ -133,12 +256,17 @@ namespace ImperiosEnGuerra.Controladores.Red
 
         private IEnumerator IniciarPartidaPrueba()
         {
-            IniciarPartidaDto partida = CrearPartidaPrueba();
+            IniciarPartidaDto partida =
+                CrearPartidaPrueba();
 
-            string json = JsonUtility.ToJson(partida);
-            byte[] cuerpo = Encoding.UTF8.GetBytes(json);
+            string json =
+                JsonUtility.ToJson(partida);
 
-            string url = $"{urlBaseApi}/api/partida/iniciar";
+            byte[] cuerpo =
+                Encoding.UTF8.GetBytes(json);
+
+            string url =
+                $"{urlBaseApi}/api/partida/iniciar";
 
             using UnityWebRequest request =
                 new UnityWebRequest(
@@ -173,20 +301,26 @@ namespace ImperiosEnGuerra.Controladores.Red
         }
 
         private IEnumerator ObtenerPartidaActiva(
-            string mensajeExito = "Partida recibida correctamente.", string contextoError = "")
+            string mensajeExito = "Partida recibida correctamente.",
+            string contextoError = "")
         {
-            string url = $"{urlBaseApi}/api/partida";
+            string url =
+                $"{urlBaseApi}/api/partida";
 
             using UnityWebRequest request =
                 UnityWebRequest.Get(url);
 
             request.timeout = 15;
+
             yield return request.SendWebRequest();
 
             if (request.result != UnityWebRequest.Result.Success)
             {
-                MostrarError(contextoError + MensajeError(LeerResultado(request.downloadHandler.text),
-                    $"No se pudo obtener la partida activa. HTTP {request.responseCode}: {request.error}"));
+                MostrarError(
+                    contextoError +
+                    MensajeError(
+                        LeerResultado(request.downloadHandler.text),
+                        $"No se pudo obtener la partida activa. HTTP {request.responseCode}: {request.error}"));
 
                 yield break;
             }
@@ -197,41 +331,67 @@ namespace ImperiosEnGuerra.Controladores.Red
 
             if (vistaPartida == null)
             {
-                MostrarError(contextoError + "VistaPartida no está configurada en ControladorAPI.");
+                MostrarError(
+                    contextoError +
+                    "VistaPartida no está configurada en ControladorAPI.");
+
                 yield break;
             }
 
-            string json = request.downloadHandler.text;
+            string json =
+                request.downloadHandler.text;
+
             EstadoPartidaDto estadoPartida;
+
             try
             {
-                estadoPartida = JsonUtility.FromJson<EstadoPartidaDto>(json);
+                estadoPartida =
+                    JsonUtility.FromJson<EstadoPartidaDto>(json);
             }
             catch (System.ArgumentException ex)
             {
-                MostrarError(contextoError + $"La respuesta de la partida no es JSON válido: {ex.Message}");
+                MostrarError(
+                    contextoError +
+                    $"La respuesta de la partida no es JSON válido: {ex.Message}");
+
                 yield break;
             }
 
-            if (estadoPartida?.mapa == null || estadoPartida.mapa.ancho <= 0 || estadoPartida.mapa.alto <= 0 ||
-                estadoPartida.jugadorHumano == null || estadoPartida.jugadorMaquina == null)
+            if (estadoPartida?.mapa == null ||
+                estadoPartida.mapa.ancho <= 0 ||
+                estadoPartida.mapa.alto <= 0 ||
+                estadoPartida.jugadorHumano == null ||
+                estadoPartida.jugadorMaquina == null)
             {
-                MostrarError(contextoError + "La API devolvió un estado de partida incompleto.");
+                MostrarError(
+                    contextoError +
+                    "La API devolvió un estado de partida incompleto.");
+
                 yield break;
             }
 
             vistaPartida.Renderizar(estadoPartida);
+
             if (vistaHud != null)
             {
-                var recursos = estadoPartida.jugadorHumano?.recursos;
+                var recursos =
+                    estadoPartida.jugadorHumano?.recursos;
+
                 if (recursos != null)
                 {
-                    vistaHud.MostrarRecursos(recursos.oro, recursos.madera, recursos.comida);
-                    vistaHud.MostrarMensaje(mensajeExito);
+                    vistaHud.MostrarRecursos(
+                        recursos.oro,
+                        recursos.madera,
+                        recursos.comida);
+
+                    vistaHud.MostrarMensaje(
+                        mensajeExito);
                 }
                 else
                 {
-                    vistaHud.MostrarMensaje("La respuesta no contiene los recursos del jugador humano.", true);
+                    vistaHud.MostrarMensaje(
+                        "La respuesta no contiene los recursos del jugador humano.",
+                        true);
                 }
             }
         }
