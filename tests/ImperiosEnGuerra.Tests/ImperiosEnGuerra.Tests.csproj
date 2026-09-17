@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\ImperiosEnGuerra.Api\ImperiosEnGuerra.Api.csproj" />
     <ProjectReference Include="..\..\src\ImperiosEnGuerra.Modelo\ImperiosEnGuerra.Modelo.csproj" />
     <ProjectReference Include="..\..\src\ImperiosEnGuerra.Servicios\ImperiosEnGuerra.Servicios.csproj" />
   </ItemGroup>
