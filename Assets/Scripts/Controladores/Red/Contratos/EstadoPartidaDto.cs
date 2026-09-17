@@ -54,6 +54,7 @@ namespace ImperiosEnGuerra.Controladores.Red.Contratos
     [Serializable]
     public class UnidadEstadoDto
     {
+        public string id;
         public string tipo;
         public CoordenadaEstadoDto coordenada;
         public bool disponible;
