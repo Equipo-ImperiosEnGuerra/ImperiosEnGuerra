@@ -137,9 +137,7 @@ foreach ($carpeta in $carpetas) {
         }
 
     foreach ($archivoGrafico in $archivosGraficos) {
-        $rutaRelativa = $archivoGrafico.FullName
-            .Substring($rutaOrigen.Length)
-            .TrimStart([char[]]"\/")
+        $rutaRelativa = $archivoGrafico.FullName.Substring($rutaOrigen.Length).TrimStart([char[]]"\/")
 
         $destinoArchivo = Join-Path $rutaDestino $rutaRelativa
         $destinoCarpeta = Split-Path $destinoArchivo -Parent
