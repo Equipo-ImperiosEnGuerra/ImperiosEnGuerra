@@ -12,10 +12,21 @@ MemoryCaptures/
 Recordings/
 
 # =========================
+# Proyectos .NET externos
+# =========================
+[Bb]in/
+
+# =========================
 # Visual Studio
 # =========================
 .vs/
+
+# Unity genera .csproj automáticamente,
+# pero los proyectos externos de src/ y tests/ sí se versionan.
 *.csproj
+!src/**/*.csproj
+!tests/**/*.csproj
+
 *.sln
 *.slnx
 *.suo
@@ -59,6 +70,6 @@ desktop.ini
 *.unitypackage
 
 # =========================
-# Configuración local de asistentes de desarrollo
+# Configuración local de asistente
 # =========================
 AGENTS.md
