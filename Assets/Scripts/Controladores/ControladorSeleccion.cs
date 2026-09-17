@@ -14,6 +14,10 @@ namespace ImperiosEnGuerra.Controladores
         [SerializeField] private VistaPartida vistaPartida;
 
         public EntidadSeleccionableVista SeleccionActual { get; private set; }
+        public string IdUnidadSeleccionada =>
+            SeleccionActual != null && SeleccionActual.Categoria == CategoriaEntidadVisual.Unidad
+                ? SeleccionActual.IdLogico
+                : string.Empty;
         public event System.Action<EntidadSeleccionableVista> SeleccionCambio;
         private VistaPartida vistaSuscrita;
 
@@ -117,7 +121,8 @@ namespace ImperiosEnGuerra.Controladores
             if (SeleccionActual != null)
             {
                 SeleccionActual.MostrarSeleccion();
-                Debug.Log($"Seleccionado: {entidad.Categoria} {entidad.TipoLogico} {entidad.Propietario} ({entidad.X},{entidad.Y})", entidad);
+                string id = string.IsNullOrEmpty(entidad.IdLogico) ? string.Empty : $" id={entidad.IdLogico}";
+                Debug.Log($"Seleccionado: {entidad.Categoria} {entidad.TipoLogico} {entidad.Propietario}{id} ({entidad.X},{entidad.Y})", entidad);
             }
             SeleccionCambio?.Invoke(SeleccionActual);
         }

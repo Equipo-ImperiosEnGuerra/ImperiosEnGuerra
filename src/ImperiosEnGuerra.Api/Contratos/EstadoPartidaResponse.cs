@@ -45,6 +45,7 @@ public sealed class EdificioEstadoResponse
 
 public sealed class UnidadEstadoResponse
 {
+    public required string Id { get; init; }
     public required string Tipo { get; init; }
     public CoordenadaEstadoResponse? Coordenada { get; init; }
     public bool Disponible { get; init; }
