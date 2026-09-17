@@ -49,5 +49,11 @@ namespace ImperiosEnGuerra.Modelo.Unidades
         {
             Disponible = false;
         }
+
+        /// <summary>Actualiza la posición desde la operación de movimiento del Modelo, después de validarla.</summary>
+        internal void EstablecerDestino(Coordenada destino)
+        {
+            Coordenada = destino;
+        }
     }
 }
