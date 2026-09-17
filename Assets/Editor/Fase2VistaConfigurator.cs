@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using ImperiosEnGuerra.Controladores.Red;
+using ImperiosEnGuerra.Controladores;
 using ImperiosEnGuerra.Controladores.Red.Contratos;
 using ImperiosEnGuerra.Vistas;
 using UnityEditor;
@@ -182,6 +183,23 @@ public static class Fase2VistaConfigurator
         controladorSerializado.FindProperty("vistaPartida").objectReferenceValue = vista;
         controladorSerializado.FindProperty("urlBaseApi").stringValue = "http://localhost:5086";
         controladorSerializado.ApplyModifiedProperties();
+
+        GameObject seleccionObjeto = BuscarObjeto(escena, "ControladorSeleccion");
+        if (seleccionObjeto == null)
+        {
+            seleccionObjeto = new GameObject("ControladorSeleccion");
+            SceneManager.MoveGameObjectToScene(seleccionObjeto, escena);
+            Undo.RegisterCreatedObjectUndo(seleccionObjeto, "Crear ControladorSeleccion");
+        }
+        ControladorSeleccion seleccion = seleccionObjeto.GetComponent<ControladorSeleccion>();
+        if (seleccion == null)
+        {
+            seleccion = Undo.AddComponent<ControladorSeleccion>(seleccionObjeto);
+        }
+        var seleccionSerializada = new SerializedObject(seleccion);
+        seleccionSerializada.FindProperty("camara").objectReferenceValue = camara;
+        seleccionSerializada.FindProperty("vistaPartida").objectReferenceValue = vista;
+        seleccionSerializada.ApplyModifiedProperties();
 
         EditorSceneManager.MarkSceneDirty(escena);
         if (!EditorSceneManager.SaveScene(escena))

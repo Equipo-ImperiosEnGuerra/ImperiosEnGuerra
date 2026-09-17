@@ -29,6 +29,10 @@ namespace ImperiosEnGuerra.Vistas
         [SerializeField] private Sprite monjeMaquina;
 
         private GameObject contenidoGenerado;
+        private int anchoVisual;
+        private int altoVisual;
+
+        public event System.Action AntesDeLimpiarContenido;
 
         public void Renderizar(EstadoPartidaDto estado)
         {
@@ -45,6 +49,8 @@ namespace ImperiosEnGuerra.Vistas
                 return;
             }
 
+            anchoVisual = estado.mapa.ancho;
+            altoVisual = estado.mapa.alto;
             contenidoGenerado = new GameObject("ContenidoGenerado");
             contenidoGenerado.transform.SetParent(transform, false);
             Transform mapa = CrearContenedor("Mapa");
@@ -61,6 +67,9 @@ namespace ImperiosEnGuerra.Vistas
 
         private void Limpiar()
         {
+            AntesDeLimpiarContenido?.Invoke();
+            anchoVisual = 0;
+            altoVisual = 0;
             if (contenidoGenerado == null)
             {
                 return;
@@ -133,9 +142,11 @@ namespace ImperiosEnGuerra.Vistas
                         continue;
                 }
 
-                CrearSprite($"Recurso_{recurso.tipo}_{recurso.coordenada.x}_{recurso.coordenada.y}",
+                GameObject objeto = CrearSprite($"Recurso_{recurso.tipo}_{recurso.coordenada.x}_{recurso.coordenada.y}",
                     sprite, recurso.coordenada.x, recurso.coordenada.y, 10, contenedor,
                     Vector3.one * escalaRecursos);
+                ConfigurarSeleccionable(objeto, CategoriaEntidadVisual.Recurso,
+                    recurso.tipo, string.Empty, recurso.coordenada);
             }
         }
 
@@ -164,10 +175,12 @@ namespace ImperiosEnGuerra.Vistas
                         continue;
                     }
 
-                    CrearSprite($"Edificio_{propietario}_{edificio.tipo}_{edificio.coordenada.x}_{edificio.coordenada.y}",
+                    GameObject objeto = CrearSprite($"Edificio_{propietario}_{edificio.tipo}_{edificio.coordenada.x}_{edificio.coordenada.y}",
                         humano ? centroHumano : centroMaquina,
                         edificio.coordenada.x, edificio.coordenada.y, 20, edificios,
                         Vector3.one * escalaEdificios);
+                    ConfigurarSeleccionable(objeto, CategoriaEntidadVisual.Edificio,
+                        edificio.tipo, propietario, edificio.coordenada);
                 }
             }
 
@@ -197,9 +210,11 @@ namespace ImperiosEnGuerra.Vistas
                         continue;
                 }
 
-                CrearSprite($"Unidad_{propietario}_{unidad.tipo}_{unidad.coordenada.x}_{unidad.coordenada.y}",
+                GameObject objeto = CrearSprite($"Unidad_{propietario}_{unidad.tipo}_{unidad.coordenada.x}_{unidad.coordenada.y}",
                     sprite, unidad.coordenada.x, unidad.coordenada.y, 30, unidades,
                     Vector3.one * escalaUnidades);
+                ConfigurarSeleccionable(objeto, CategoriaEntidadVisual.Unidad,
+                    unidad.tipo, propietario, unidad.coordenada);
             }
         }
 
@@ -208,13 +223,53 @@ namespace ImperiosEnGuerra.Vistas
             return new Vector3(x * espacioCasilla, y * espacioCasilla, 0f);
         }
 
-        private void CrearSprite(
+        public bool TryObtenerCoordenadaLogica(Vector3 posicionMundo, out int x, out int y)
+        {
+            x = 0;
+            y = 0;
+            if (anchoVisual <= 0 || altoVisual <= 0 || espacioCasilla <= 0f)
+            {
+                return false;
+            }
+
+            float columna = posicionMundo.x / espacioCasilla;
+            float fila = posicionMundo.y / espacioCasilla;
+            // Casillas centradas en enteros: borde inferior incluido, superior excluido.
+            // Esta comparación también rechaza NaN e infinitos sin convertirlos a int.
+            if (!(columna >= -0.5f && columna < anchoVisual - 0.5f &&
+                  fila >= -0.5f && fila < altoVisual - 0.5f))
+            {
+                return false;
+            }
+
+            x = Mathf.FloorToInt(columna + 0.5f);
+            y = Mathf.FloorToInt(fila + 0.5f);
+            return true;
+        }
+
+        private void ConfigurarSeleccionable(GameObject objeto, CategoriaEntidadVisual categoria,
+            string tipo, string propietario, CoordenadaEstadoDto coordenada)
+        {
+            if (objeto == null)
+            {
+                return;
+            }
+
+            var entidad = objeto.AddComponent<EntidadSeleccionableVista>();
+            entidad.Configurar(categoria, tipo, propietario, coordenada.x, coordenada.y);
+            var collider = objeto.AddComponent<BoxCollider2D>();
+            // Bounds locales: el Transform aplica la escala visual existente una sola vez.
+            collider.size = entidad.Renderer.sprite.bounds.size;
+            collider.offset = entidad.Renderer.sprite.bounds.center;
+        }
+
+        private GameObject CrearSprite(
             string nombre, Sprite sprite, int x, int y, int orden, Transform contenedor, Vector3 escala)
         {
             if (sprite == null)
             {
                 Debug.LogWarning($"Sprite no configurado para {nombre}; se omite.", this);
-                return;
+                return null;
             }
 
             var objeto = new GameObject(nombre);
@@ -224,6 +279,7 @@ namespace ImperiosEnGuerra.Vistas
             var renderer = objeto.AddComponent<SpriteRenderer>();
             renderer.sprite = sprite;
             renderer.sortingOrder = orden;
+            return objeto;
         }
 
         private void AjustarCamara(MapaEstadoDto mapa)
