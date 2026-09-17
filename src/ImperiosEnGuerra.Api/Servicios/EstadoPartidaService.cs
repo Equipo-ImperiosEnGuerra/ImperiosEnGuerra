@@ -28,6 +28,34 @@ public sealed class EstadoPartidaService
             return new OperacionMovimiento().Ejecutar(partidaActiva, solicitud);
         }
     }
+    public ResultadoAccion IniciarRecoleccion(RecolectarRequest? request)
+    {
+        lock (sincronizacion)
+        {
+        if (partidaActiva == null)
+            return ResultadoAccion.Fallido(
+                "No hay una partida activa.");
+
+        if (request == null)
+            return ResultadoAccion.Fallido(
+                "La solicitud de recolección es obligatoria.");
+
+        if (!Guid.TryParse(request.AldeanoId, out Guid aldeanoId))
+            return ResultadoAccion.Fallido(
+                "El ID del Aldeano debe tener formato Guid válido.");
+
+        if (request.Objetivo == null)
+            return ResultadoAccion.Fallido(
+                "El objetivo de recolección es obligatorio.");
+
+        var solicitud = new SolicitudRecoleccion(
+            aldeanoId,
+            PartidaRequestMapper.ConvertirCoordenada(request.Objetivo));
+
+        return new OperacionRecoleccion()
+            .Ejecutar(partidaActiva, solicitud);
+        }
+    }
 
     public EstadoPartidaResponse? ObtenerEstado()
     {
