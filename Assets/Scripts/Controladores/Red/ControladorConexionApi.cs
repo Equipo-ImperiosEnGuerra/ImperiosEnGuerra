@@ -15,6 +15,9 @@ namespace ImperiosEnGuerra.Controladores.Red
         [SerializeField]
         private VistaPartida vistaPartida;
 
+        [SerializeField]
+        private VistaHud vistaHud;
+
         private void Start()
         {
             StartCoroutine(ComprobarConexion());
@@ -134,6 +137,19 @@ namespace ImperiosEnGuerra.Controladores.Red
             }
 
             vistaPartida.Renderizar(estadoPartida);
+            if (vistaHud != null)
+            {
+                var recursos = estadoPartida.jugadorHumano?.recursos;
+                if (recursos != null)
+                {
+                    vistaHud.MostrarRecursos(recursos.oro, recursos.madera, recursos.comida);
+                    vistaHud.MostrarMensaje("Partida recibida correctamente.");
+                }
+                else
+                {
+                    vistaHud.MostrarMensaje("La respuesta no contiene los recursos del jugador humano.", true);
+                }
+            }
         }
 
         private IniciarPartidaDto CrearPartidaPrueba()

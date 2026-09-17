@@ -1,6 +1,9 @@
 using ImperiosEnGuerra.Vistas;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+using System.Collections.Generic;
 
 namespace ImperiosEnGuerra.Controladores
 {
@@ -11,6 +14,7 @@ namespace ImperiosEnGuerra.Controladores
         [SerializeField] private VistaPartida vistaPartida;
 
         public EntidadSeleccionableVista SeleccionActual { get; private set; }
+        public event System.Action<EntidadSeleccionableVista> SeleccionCambio;
         private VistaPartida vistaSuscrita;
 
         private void OnEnable()
@@ -56,6 +60,16 @@ namespace ImperiosEnGuerra.Controladores
             }
 
             Vector2 pantalla = Mouse.current.position.ReadValue();
+            if (EventSystem.current != null)
+            {
+                var puntero = new PointerEventData(EventSystem.current) { position = pantalla };
+                var resultados = new List<RaycastResult>();
+                EventSystem.current.RaycastAll(puntero, resultados);
+                if (resultados.Exists(resultado => resultado.module is GraphicRaycaster))
+                {
+                    return;
+                }
+            }
             if (!camara.pixelRect.Contains(pantalla))
             {
                 LimpiarSeleccion();
@@ -105,6 +119,7 @@ namespace ImperiosEnGuerra.Controladores
                 SeleccionActual.MostrarSeleccion();
                 Debug.Log($"Seleccionado: {entidad.Categoria} {entidad.TipoLogico} {entidad.Propietario} ({entidad.X},{entidad.Y})", entidad);
             }
+            SeleccionCambio?.Invoke(SeleccionActual);
         }
 
         public void LimpiarSeleccion()
@@ -115,6 +130,7 @@ namespace ImperiosEnGuerra.Controladores
                 Debug.Log("Selección limpiada", this);
             }
             SeleccionActual = null;
+            SeleccionCambio?.Invoke(null);
         }
     }
 }

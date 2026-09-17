@@ -201,6 +201,8 @@ public static class Fase2VistaConfigurator
         seleccionSerializada.FindProperty("vistaPartida").objectReferenceValue = vista;
         seleccionSerializada.ApplyModifiedProperties();
 
+        Fase3HudConfigurator.Configurar(escena, controlador, seleccion);
+
         EditorSceneManager.MarkSceneDirty(escena);
         if (!EditorSceneManager.SaveScene(escena))
         {
