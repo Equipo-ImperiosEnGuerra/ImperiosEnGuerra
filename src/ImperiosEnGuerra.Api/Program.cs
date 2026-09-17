@@ -140,11 +140,28 @@ app.MapGet("/api/partida", (EstadoPartidaService estadoPartida) =>
 })
 .WithName("ObtenerPartidaActiva");
 
-app.MapPost("/api/partida/mover", (MoverUnidadRequest? request, EstadoPartidaService estadoPartida) =>
+app.MapPost(
+    "/api/partida/mover",
+    (MoverUnidadRequest? request, EstadoPartidaService estadoPartida) =>
 {
     var resultado = estadoPartida.MoverUnidad(request);
-    return resultado.Exito ? Results.Ok(resultado) : Results.BadRequest(resultado);
+
+    return resultado.Exito
+        ? Results.Ok(resultado)
+        : Results.BadRequest(resultado);
 })
 .WithName("MoverUnidad");
+
+app.MapPost(
+    "/api/partida/recolectar",
+    (RecolectarRequest? request, EstadoPartidaService estadoPartida) =>
+{
+    var resultado = estadoPartida.IniciarRecoleccion(request);
+
+    return resultado.Exito
+        ? Results.Ok(resultado)
+        : Results.BadRequest(resultado);
+})
+.WithName("IniciarRecoleccion");
 
 app.Run();
