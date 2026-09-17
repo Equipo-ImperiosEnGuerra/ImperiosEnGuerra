@@ -73,3 +73,10 @@ desktop.ini
 # Configuración local de asistente
 # =========================
 AGENTS.md
+# =========================
+# Tiny Swords - archivos graficos externos, no redistribuir
+# =========================
+/Assets/Art/TinySwords/**/*.png
+/Assets/Art/TinySwords/**/*.aseprite
+/Assets/Art/TinySwords/**/*.jpg
+/Assets/Art/TinySwords/**/*.jpeg
