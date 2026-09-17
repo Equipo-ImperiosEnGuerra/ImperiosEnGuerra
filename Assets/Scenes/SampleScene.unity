@@ -148,7 +148,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: de2ca32d7a123274ebd7631a7a3c5083, type: 3}
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::ImperiosEnGuerra.Controladores.Red.ControladorConexionApi
-  urlBaseApi: http://localhost:5050
+  urlBaseApi: http://localhost:5086
+  vistaPartida: {fileID: 1330193592}
 --- !u!4 &171233344
 Transform:
   m_ObjectHideFlags: 0
@@ -270,7 +271,7 @@ Camera:
   far clip plane: 1000
   field of view: 34
   orthographic: 1
-  orthographic size: 5
+  orthographic size: 12
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -295,7 +296,7 @@ Transform:
   m_GameObject: {fileID: 519420028}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -10}
+  m_LocalPosition: {x: 9, y: 9, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -409,6 +410,71 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1330193591
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1330193593}
+  - component: {fileID: 1330193592}
+  m_Layer: 0
+  m_Name: VistaPartida
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1330193592
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1330193591}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 72be162010e924541892fd5b9012405e, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::ImperiosEnGuerra.Vistas.VistaPartida
+  camara: {fileID: 519420031}
+  espacioCasilla: 2
+  escalaRecursos: 0.75
+  escalaEdificios: 0.58
+  escalaUnidades: 0.65
+  suelo: {fileID: 873735274, guid: 0c69b498ba6f7624e81c9d8d701dc265, type: 3}
+  oro: {fileID: 21300000, guid: 8f173b2662bb70e4586439951d9eb0eb, type: 3}
+  madera: {fileID: 6215267202064938543, guid: 9f32a191d39ed4c43bf6746af6dfe202, type: 3}
+  comida: {fileID: -6879290243380990860, guid: 819ba0a34662da140a2170b91b7bad97, type: 3}
+  centroHumano: {fileID: 21300000, guid: fab36cafddc278f4dba30f8ecbd5a27a, type: 3}
+  centroMaquina: {fileID: 21300000, guid: 534ebd0e6aeb4b84fbd7eed77201d54e, type: 3}
+  aldeanoHumano: {fileID: -5948806968594788206, guid: 3dbcc06a4c3a3154b89787c9aff4f24d, type: 3}
+  guerreroHumano: {fileID: 7384290322352760091, guid: 80b71cd25219e774183f42c59cb83f16, type: 3}
+  lanceroHumano: {fileID: -594197781322936934, guid: 91dcad21e647cf54aa05c9970da717e9, type: 3}
+  arqueroHumano: {fileID: 7257567913506708742, guid: 24fe71d5c436a9e4faa14ef884be302e, type: 3}
+  monjeHumano: {fileID: 4723107735738678597, guid: 867c5b32a86a6c34babbce3bfb86e76e, type: 3}
+  aldeanoMaquina: {fileID: -5948806968594788206, guid: 6848afca674496c4c8a4d7b56801c610, type: 3}
+  guerreroMaquina: {fileID: 7384290322352760091, guid: 11c7ee9b590190145abc10ec4bb2de6e, type: 3}
+  lanceroMaquina: {fileID: -594197781322936934, guid: c3cf3d7c53774a446bdb937ad270a318, type: 3}
+  arqueroMaquina: {fileID: 7257567913506708742, guid: 9d2645fa25c1520438959be423224197, type: 3}
+  monjeMaquina: {fileID: 4723107735738678597, guid: 633f9fe98640d4549a64c79d0d5e4406, type: 3}
+--- !u!4 &1330193593
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1330193591}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -416,3 +482,4 @@ SceneRoots:
   - {fileID: 519420032}
   - {fileID: 619394802}
   - {fileID: 171233344}
+  - {fileID: 1330193593}
