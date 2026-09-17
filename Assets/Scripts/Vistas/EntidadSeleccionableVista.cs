@@ -14,6 +14,7 @@ namespace ImperiosEnGuerra.Vistas
     public class EntidadSeleccionableVista : MonoBehaviour
     {
         public CategoriaEntidadVisual Categoria { get; private set; }
+        public string IdLogico { get; private set; }
         public string TipoLogico { get; private set; }
         public string Propietario { get; private set; }
         public int X { get; private set; }
@@ -25,8 +26,15 @@ namespace ImperiosEnGuerra.Vistas
 
         public void Configurar(CategoriaEntidadVisual categoria, string tipo, string propietario, int x, int y)
         {
+            Configurar(categoria, string.Empty, tipo, propietario, x, y);
+        }
+
+        public void Configurar(CategoriaEntidadVisual categoria, string idLogico, string tipo,
+            string propietario, int x, int y)
+        {
             OcultarSeleccion();
             Categoria = categoria;
+            IdLogico = idLogico ?? string.Empty;
             TipoLogico = tipo;
             Propietario = propietario;
             X = x;
