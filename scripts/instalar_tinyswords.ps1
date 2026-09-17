@@ -128,11 +128,33 @@ foreach ($carpeta in $carpetas) {
         -Path $rutaDestino |
         Out-Null
 
-    Copy-Item `
-        -Path (Join-Path $rutaOrigen "*") `
-        -Destination $rutaDestino `
+    $archivosGraficos = Get-ChildItem `
+        -Path $rutaOrigen `
         -Recurse `
-        -Force
+        -File |
+        Where-Object {
+            $_.Extension.ToLowerInvariant() -in @(".png", ".jpg", ".jpeg")
+        }
+
+    foreach ($archivoGrafico in $archivosGraficos) {
+        $rutaRelativa = $archivoGrafico.FullName
+            .Substring($rutaOrigen.Length)
+            .TrimStart([char[]]"\/")
+
+        $destinoArchivo = Join-Path $rutaDestino $rutaRelativa
+        $destinoCarpeta = Split-Path $destinoArchivo -Parent
+
+        New-Item `
+            -ItemType Directory `
+            -Force `
+            -Path $destinoCarpeta |
+            Out-Null
+
+        Copy-Item `
+            -LiteralPath $archivoGrafico.FullName `
+            -Destination $destinoArchivo `
+            -Force
+    }
 }
 
 # ---------------------------------------------------------
