@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Text;
 using ImperiosEnGuerra.Controladores.Red.Contratos;
+using ImperiosEnGuerra.Vistas;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -9,7 +10,10 @@ namespace ImperiosEnGuerra.Controladores.Red
     public class ControladorConexionApi : MonoBehaviour
     {
         [SerializeField]
-        private string urlBaseApi = "http://localhost:5050";
+        private string urlBaseApi = "http://localhost:5086";
+
+        [SerializeField]
+        private VistaPartida vistaPartida;
 
         private void Start()
         {
@@ -104,6 +108,32 @@ namespace ImperiosEnGuerra.Controladores.Red
             Debug.Log(
                 $"Partida activa obtenida correctamente: " +
                 $"{request.downloadHandler.text}");
+
+            if (vistaPartida == null)
+            {
+                Debug.LogError("VistaPartida no está configurada en ControladorAPI.");
+                yield break;
+            }
+
+            string json = request.downloadHandler.text;
+            EstadoPartidaDto estadoPartida;
+            try
+            {
+                estadoPartida = JsonUtility.FromJson<EstadoPartidaDto>(json);
+            }
+            catch (System.ArgumentException ex)
+            {
+                Debug.LogError($"La respuesta de la partida no es JSON válido: {ex.Message}");
+                yield break;
+            }
+
+            if (estadoPartida == null)
+            {
+                Debug.LogError("La API devolvió un estado de partida nulo.");
+                yield break;
+            }
+
+            vistaPartida.Renderizar(estadoPartida);
         }
 
         private IniciarPartidaDto CrearPartidaPrueba()
