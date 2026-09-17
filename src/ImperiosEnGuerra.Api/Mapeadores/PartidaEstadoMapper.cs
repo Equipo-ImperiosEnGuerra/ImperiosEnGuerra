@@ -50,6 +50,7 @@ public static class PartidaEstadoMapper
             }).ToList(),
             Unidades = jugador.Unidades.Select(unidad => new UnidadEstadoResponse
             {
+                Id = unidad.Id.ToString("D"),
                 Tipo = unidad.GetType().Name,
                 Coordenada = unidad.Coordenada == null
                     ? null
