@@ -136,26 +136,8 @@ app.MapGet("/api/partida", (EstadoPartidaService estadoPartida) =>
         });
     }
 
-    return Results.Ok(new
-    {
-        estado = "activa",
-
-        jugadorHumano = new
-        {
-            nombre = partida.JugadorHumano.Nombre,
-            tipo = partida.JugadorHumano.Tipo.ToString(),
-            edificios = partida.JugadorHumano.Edificios.Count,
-            unidades = partida.JugadorHumano.Unidades.Count
-        },
-
-        jugadorMaquina = new
-        {
-            nombre = partida.JugadorMaquina.Nombre,
-            tipo = partida.JugadorMaquina.Tipo.ToString(),
-            edificios = partida.JugadorMaquina.Edificios.Count,
-            unidades = partida.JugadorMaquina.Unidades.Count
-        }
-    });
+    EstadoPartidaResponse respuesta = PartidaEstadoMapper.Convertir(partida);
+    return Results.Ok(respuesta);
 })
 .WithName("ObtenerPartidaActiva");
 
