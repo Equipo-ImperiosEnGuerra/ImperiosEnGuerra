@@ -214,7 +214,7 @@ namespace ImperiosEnGuerra.Vistas
                     sprite, unidad.coordenada.x, unidad.coordenada.y, 30, unidades,
                     Vector3.one * escalaUnidades);
                 ConfigurarSeleccionable(objeto, CategoriaEntidadVisual.Unidad,
-                    unidad.tipo, propietario, unidad.coordenada);
+                    unidad.tipo, propietario, unidad.coordenada, unidad.id);
             }
         }
 
@@ -248,7 +248,7 @@ namespace ImperiosEnGuerra.Vistas
         }
 
         private void ConfigurarSeleccionable(GameObject objeto, CategoriaEntidadVisual categoria,
-            string tipo, string propietario, CoordenadaEstadoDto coordenada)
+            string tipo, string propietario, CoordenadaEstadoDto coordenada, string idLogico = "")
         {
             if (objeto == null)
             {
@@ -256,7 +256,7 @@ namespace ImperiosEnGuerra.Vistas
             }
 
             var entidad = objeto.AddComponent<EntidadSeleccionableVista>();
-            entidad.Configurar(categoria, tipo, propietario, coordenada.x, coordenada.y);
+            entidad.Configurar(categoria, idLogico, tipo, propietario, coordenada.x, coordenada.y);
             var collider = objeto.AddComponent<BoxCollider2D>();
             // Bounds locales: el Transform aplica la escala visual existente una sola vez.
             collider.size = entidad.Renderer.sprite.bounds.size;
