@@ -289,6 +289,32 @@ namespace ImperiosEnGuerra.Controladores
                 !string.IsNullOrWhiteSpace(objetivo.IdLogico);
         }
 
+        private bool PuedeIniciarAccion(string accion)
+        {
+            if (conexionApi == null ||
+                !conexionApi.isActiveAndEnabled)
+            {
+                return false;
+            }
+
+            if (accion == "Mover")
+                return conexionApi.PuedeIniciarMovimiento;
+
+            if (accion == "Recolectar")
+                return conexionApi.PuedeIniciarRecoleccion;
+
+            if (accion == "Construir")
+                return conexionApi.PuedeIniciarConstruccion;
+
+            if (accion == "Entrenar")
+                return conexionApi.PuedeIniciarEntrenamiento;
+
+            if (accion == "Atacar")
+                return conexionApi.PuedeIniciarAtaque;
+
+            return false;
+        }
+
         private static bool PermiteOpcion(
             EntidadSeleccionableVista entidad,
             string accion)
@@ -348,12 +374,10 @@ namespace ImperiosEnGuerra.Controladores
 
             if (accion == "Entrenar")
             {
-                if (conexionApi == null ||
-                    !conexionApi.isActiveAndEnabled ||
-                    conexionApi.AccionEnCurso)
+                if (!PuedeIniciarAccion(accion))
                 {
                     vistaHud.MostrarMensaje(
-                        "La conexión no está disponible o hay una acción en curso.",
+                        "La conexión no está disponible o esa acción ya está en curso.",
                         true);
 
                     return;
@@ -381,12 +405,10 @@ namespace ImperiosEnGuerra.Controladores
                     return;
                 }
 
-                if (conexionApi == null ||
-                    !conexionApi.isActiveAndEnabled ||
-                    conexionApi.AccionEnCurso)
+                if (!PuedeIniciarAccion(accion))
                 {
                     vistaHud.MostrarMensaje(
-                        "La conexión no está disponible o hay una acción en curso.",
+                        "La conexión no está disponible o esa acción ya está en curso.",
                         true);
 
                     return;
@@ -417,12 +439,10 @@ namespace ImperiosEnGuerra.Controladores
                     return;
                 }
 
-                if (conexionApi == null ||
-                    !conexionApi.isActiveAndEnabled ||
-                    conexionApi.AccionEnCurso)
+                if (!PuedeIniciarAccion(accion))
                 {
                     vistaHud.MostrarMensaje(
-                        "La conexión no está disponible o hay una acción en curso.",
+                        "La conexión no está disponible o esa acción ya está en curso.",
                         true);
 
                     return;
