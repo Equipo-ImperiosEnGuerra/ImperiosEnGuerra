@@ -255,6 +255,69 @@ public class RecoleccionUnityTests
     }
 
     [Test]
+    public void DtoConcurrente_RecoleccionConservaContrato()
+    {
+        var inicio = new ProcesoIniciadoDto
+        {
+            procesoId =
+                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+            nombre = "RECOLECTAR",
+            estado = "iniciado"
+        };
+
+        string json = JsonUtility.ToJson(inicio);
+
+        Assert.That(
+            json,
+            Does.Contain("\"nombre\":\"RECOLECTAR\""));
+
+        var resultado = new ResultadoProcesoDto
+        {
+            procesoId = inicio.procesoId,
+            nombre = "RECOLECTAR",
+            estado = "Completado",
+            hiloTrabajoId = 9,
+            exito = true,
+            mensaje = "Recolección de Oro preparada."
+        };
+
+        string resultadoJson =
+            JsonUtility.ToJson(resultado);
+
+        Assert.That(
+            resultadoJson,
+            Does.Contain("\"estado\":\"Completado\""));
+
+        Assert.That(
+            resultadoJson,
+            Does.Contain("\"hiloTrabajoId\":9"));
+    }
+
+    [Test]
+    public void MovimientoEnCurso_NoBloqueaPrepararRecoleccion()
+    {
+        CampoAutomatico(
+            conexion,
+            "MovimientoEnCurso",
+            true);
+
+        Invocar(
+            acciones,
+            "PrepararAccion",
+            "Recolectar");
+
+        Assert.That(
+            seleccion.CapturandoDestino,
+            Is.True);
+
+        Assert.That(
+            LeerCampo(
+                acciones,
+                "accionPendiente"),
+            Is.EqualTo("Recolectar"));
+    }
+
+    [Test]
     public void CambioSeleccion_CancelaRecoleccion()
     {
         Invocar(
@@ -299,6 +362,19 @@ public class RecoleccionUnityTests
         objeto.GetType()
             .GetField(
                 nombre,
+                BindingFlags.Instance |
+                BindingFlags.NonPublic)
+            .SetValue(objeto, valor);
+    }
+
+    private static void CampoAutomatico(
+        object objeto,
+        string nombre,
+        object valor)
+    {
+        objeto.GetType()
+            .GetField(
+                $"<{nombre}>k__BackingField",
                 BindingFlags.Instance |
                 BindingFlags.NonPublic)
             .SetValue(objeto, valor);

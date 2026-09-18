@@ -4,6 +4,7 @@ using ImperiosEnGuerra.Api.Mapeadores;
 using ImperiosEnGuerra.Modelo.Core;
 using ImperiosEnGuerra.Modelo.Map;
 using ImperiosEnGuerra.Servicios;
+using ImperiosEnGuerra.Servicios.Concurrencia;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +15,33 @@ builder.Services.AddSingleton(
             Directory.GetCurrentDirectory(),
             "DatosPartida")));
 builder.Services.AddSingleton<EstadoPartidaService>();
+builder.Services.AddSingleton<GestorProcesosConcurrentes>();
+builder.Services.AddSingleton(sp =>
+{
+    int movimientoSegundos =
+        builder.Configuration.GetValue<int>(
+            "Concurrencia:MovimientoSegundos");
+
+    int recoleccionSegundos =
+        builder.Configuration.GetValue<int>(
+            "Concurrencia:RecoleccionSegundos");
+
+    int construccionSegundos =
+        builder.Configuration.GetValue<int>(
+            "Concurrencia:ConstruccionSegundos");
+
+    int entrenamientoSegundos =
+        builder.Configuration.GetValue<int>(
+            "Concurrencia:EntrenamientoSegundos");
+
+    return new ServicioAccionesConcurrentes(
+        sp.GetRequiredService<EstadoPartidaService>(),
+        sp.GetRequiredService<GestorProcesosConcurrentes>(),
+        TimeSpan.FromSeconds(movimientoSegundos),
+        TimeSpan.FromSeconds(recoleccionSegundos),
+        TimeSpan.FromSeconds(construccionSegundos),
+        TimeSpan.FromSeconds(entrenamientoSegundos));
+});
 
 var app = builder.Build();
 
@@ -48,10 +76,15 @@ app.MapGet("/api/modelo/prueba", () =>
 
 app.MapPost(
     "/api/partida/iniciar",
-    (IniciarPartidaRequest request, EstadoPartidaService estadoPartida) =>
+    (
+        IniciarPartidaRequest request,
+        EstadoPartidaService estadoPartida,
+        ServicioAccionesConcurrentes accionesConcurrentes) =>
 {
     try
     {
+        accionesConcurrentes.CancelarTodos();
+
         Mapa mapa = new Mapa(
             request.AnchoMapa,
             request.AltoMapa);
@@ -159,6 +192,114 @@ app.MapPost(
 .WithName("MoverUnidad");
 
 app.MapPost(
+    "/api/partida/mover-concurrente",
+    (
+        MoverUnidadRequest? request,
+        ServicioAccionesConcurrentes accionesConcurrentes) =>
+{
+    var proceso =
+        accionesConcurrentes.IniciarMovimiento(request);
+
+    return Results.Accepted(
+        $"/api/procesos/{proceso.Id}",
+        new
+        {
+            procesoId = proceso.Id,
+            nombre = proceso.Nombre,
+            estado = "iniciado"
+        });
+})
+.WithName("IniciarMovimientoConcurrente");
+
+app.MapGet(
+    "/api/procesos/{procesoId:guid}/resultado",
+    (
+        Guid procesoId,
+        ServicioAccionesConcurrentes accionesConcurrentes) =>
+{
+    if (!accionesConcurrentes.IntentarObtenerResultado(
+        procesoId,
+        out ResultadoProcesoConcurrente resultado))
+    {
+        return Results.NoContent();
+    }
+
+    return Results.Ok(new
+    {
+        procesoId = resultado.ProcesoId,
+        nombre = resultado.Nombre,
+        estado = resultado.Estado.ToString(),
+        hiloTrabajoId = resultado.HiloTrabajoId,
+        exito = resultado.Resultado?.Exito ?? false,
+        mensaje = resultado.Resultado?.Mensaje,
+        errorTecnico = resultado.ErrorTecnico
+    });
+})
+.WithName("ObtenerResultadoProcesoPorId");
+
+app.MapGet(
+    "/api/procesos/resultado",
+    (ServicioAccionesConcurrentes accionesConcurrentes) =>
+{
+    if (!accionesConcurrentes.IntentarObtenerResultado(
+        out ResultadoProcesoConcurrente resultado))
+    {
+        return Results.NoContent();
+    }
+
+    return Results.Ok(new
+    {
+        procesoId = resultado.ProcesoId,
+        nombre = resultado.Nombre,
+        estado = resultado.Estado.ToString(),
+        hiloTrabajoId = resultado.HiloTrabajoId,
+        exito = resultado.Resultado?.Exito ?? false,
+        mensaje = resultado.Resultado?.Mensaje,
+        errorTecnico = resultado.ErrorTecnico
+    });
+})
+.WithName("ObtenerResultadoProceso");
+
+app.MapPost(
+    "/api/procesos/{procesoId:guid}/cancelar",
+    (
+        Guid procesoId,
+        ServicioAccionesConcurrentes accionesConcurrentes) =>
+{
+    return accionesConcurrentes.Cancelar(procesoId)
+        ? Results.Ok(new
+        {
+            procesoId,
+            estado = "cancelacion_solicitada"
+        })
+        : Results.NotFound(new
+        {
+            error = "No existe un proceso activo con ese ID."
+        });
+})
+.WithName("CancelarProceso");
+
+app.MapPost(
+    "/api/partida/recolectar-concurrente",
+    (
+        RecolectarRequest? request,
+        ServicioAccionesConcurrentes accionesConcurrentes) =>
+{
+    var proceso =
+        accionesConcurrentes.IniciarRecoleccion(request);
+
+    return Results.Accepted(
+        $"/api/procesos/{proceso.Id}",
+        new
+        {
+            procesoId = proceso.Id,
+            nombre = proceso.Nombre,
+            estado = "iniciado"
+        });
+})
+.WithName("IniciarRecoleccionConcurrente");
+
+app.MapPost(
     "/api/partida/recolectar",
     (RecolectarRequest? request, EstadoPartidaService estadoPartida) =>
 {
@@ -169,6 +310,26 @@ app.MapPost(
         : Results.BadRequest(resultado);
 })
 .WithName("IniciarRecoleccion");
+
+app.MapPost(
+    "/api/partida/construir-concurrente",
+    (
+        ConstruirRequest? request,
+        ServicioAccionesConcurrentes accionesConcurrentes) =>
+{
+    var proceso =
+        accionesConcurrentes.IniciarConstruccion(request);
+
+    return Results.Accepted(
+        $"/api/procesos/{proceso.Id}",
+        new
+        {
+            procesoId = proceso.Id,
+            nombre = proceso.Nombre,
+            estado = "iniciado"
+        });
+})
+.WithName("IniciarConstruccionConcurrente");
 
 app.MapPost(
     "/api/partida/construir",
@@ -182,6 +343,26 @@ app.MapPost(
 })
 .WithName("Construir");
 
+
+app.MapPost(
+    "/api/partida/entrenar-concurrente",
+    (
+        EntrenarRequest? request,
+        ServicioAccionesConcurrentes accionesConcurrentes) =>
+{
+    var proceso =
+        accionesConcurrentes.IniciarEntrenamiento(request);
+
+    return Results.Accepted(
+        $"/api/procesos/{proceso.Id}",
+        new
+        {
+            procesoId = proceso.Id,
+            nombre = proceso.Nombre,
+            estado = "iniciado"
+        });
+})
+.WithName("IniciarEntrenamientoConcurrente");
 
 app.MapPost(
     "/api/partida/entrenar",

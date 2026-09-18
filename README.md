@@ -35,13 +35,17 @@ El proyecto será desarrollado utilizando el patrón:
 
 ## Concurrencia
 
-El proyecto implementará concurrencia real mediante herramientas de C# como:
+La Fase 4 implementa concurrencia real mediante C#:
 
-- Thread
-- Task
-- mecanismos de sincronización
+- `Task.Run` y ThreadPool;
+- `CancellationToken`;
+- `lock`;
+- `ConcurrentDictionary`;
+- `ConcurrentQueue`.
 
-La concurrencia se aplicará progresivamente en procesos como recolección, construcción, entrenamiento, movimiento y comunicación de red.
+Movimiento, recolección, construcción y entrenamiento se ejecutan mediante workers fuera del Main Thread de Unity. Los resultados regresan de forma thread-safe y Unity actualiza Vista/HUD únicamente desde su Main Thread.
+
+Los tiempos actuales del prototipo son configurables: movimiento 1 s, recolección 2 s, entrenamiento 5 s y construcción 7 s. Estos valores son de jugabilidad del prototipo y no sustituyen requisitos del profesor.
 
 ## Networking
 
@@ -64,7 +68,7 @@ Issue → Branch → Desarrollo → Pruebas → Commit → Pull Request → Deve
 
 ## Estado
 
-El proyecto se encuentra cerrando la **Fase 3 de gameplay base**.
+El proyecto se encuentra cerrando la **Fase 4 de concurrencia, sincronización y cancelación**.
 
 Actualmente están integrados:
 
@@ -78,4 +82,4 @@ Actualmente están integrados:
 - `log_partida.txt` centralizado mediante `ServicioArchivos`;
 - pruebas automáticas .NET y EditMode de Unity.
 
-Los costos de construcción/entrenamiento y las estadísticas de combate no se inventan mientras no estén definidos en los requisitos. La concurrencia real con `Task`/`Thread`, sincronización y cancelación corresponde a la Fase 4.
+Los costos de construcción/entrenamiento, cantidades/ritmos de recolección y estadísticas de combate no se inventan mientras no estén definidos en los requisitos. La Fase 4 incorpora concurrencia real para movimiento, recolección, construcción y entrenamiento, con sincronización, cancelación y comunicación segura hacia Unity.

@@ -365,6 +365,45 @@ public class ConstruccionEntrenamientoUnityTests
     }
 
     [Test]
+    public void DtoConcurrente_ConstruccionConservaContrato()
+    {
+        var inicio = new ProcesoIniciadoDto
+        {
+            procesoId =
+                "cccccccc-cccc-cccc-cccc-cccccccccccc",
+            nombre = "CONSTRUIR",
+            estado = "iniciado"
+        };
+
+        string json = JsonUtility.ToJson(inicio);
+
+        Assert.That(
+            json,
+            Does.Contain("\"nombre\":\"CONSTRUIR\""));
+
+        var resultado = new ResultadoProcesoDto
+        {
+            procesoId = inicio.procesoId,
+            nombre = "CONSTRUIR",
+            estado = "Completado",
+            hiloTrabajoId = 11,
+            exito = true,
+            mensaje = "Construcción realizada correctamente."
+        };
+
+        string resultadoJson =
+            JsonUtility.ToJson(resultado);
+
+        Assert.That(
+            resultadoJson,
+            Does.Contain("\"estado\":\"Completado\""));
+
+        Assert.That(
+            resultadoJson,
+            Does.Contain("\"hiloTrabajoId\":11"));
+    }
+
+    [Test]
     public void DtoEntrenamiento_UsaContratoEsperado()
     {
         var dto = new EntrenarDto
@@ -382,6 +421,45 @@ public class ConstruccionEntrenamientoUnityTests
                 "{\"edificioOrigen\":{\"x\":2,\"y\":2}," +
                 "\"tipoUnidad\":\"Guerrero\"," +
                 "\"destino\":{\"x\":3,\"y\":2}}"));
+    }
+
+    [Test]
+    public void DtoConcurrente_EntrenamientoConservaContrato()
+    {
+        var inicio = new ProcesoIniciadoDto
+        {
+            procesoId =
+                "dddddddd-dddd-dddd-dddd-dddddddddddd",
+            nombre = "ENTRENAR",
+            estado = "iniciado"
+        };
+
+        string json = JsonUtility.ToJson(inicio);
+
+        Assert.That(
+            json,
+            Does.Contain("\"nombre\":\"ENTRENAR\""));
+
+        var resultado = new ResultadoProcesoDto
+        {
+            procesoId = inicio.procesoId,
+            nombre = "ENTRENAR",
+            estado = "Completado",
+            hiloTrabajoId = 13,
+            exito = true,
+            mensaje = "Unidad Guerrero entrenada correctamente."
+        };
+
+        string resultadoJson =
+            JsonUtility.ToJson(resultado);
+
+        Assert.That(
+            resultadoJson,
+            Does.Contain("\"estado\":\"Completado\""));
+
+        Assert.That(
+            resultadoJson,
+            Does.Contain("\"hiloTrabajoId\":13"));
     }
 
     private static object LeerCampo(

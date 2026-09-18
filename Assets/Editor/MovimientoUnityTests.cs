@@ -108,6 +108,28 @@ public class MovimientoUnityTests
     }
 
     [Test]
+    public void MovimientoEnCurso_BloqueaSegundoMovimiento()
+    {
+        CampoAutomatico(
+            conexion,
+            "MovimientoEnCurso",
+            true);
+
+        Invocar(
+            acciones,
+            "PrepararAccion",
+            "Mover");
+
+        Assert.That(
+            seleccion.CapturandoDestino,
+            Is.False);
+
+        Assert.That(
+            mensaje.text,
+            Does.Contain("esa acción ya está en curso"));
+    }
+
+    [Test]
     public void Dto_UsaIdSeleccionadoYNombresDelContrato()
     {
         Invocar(acciones, "PrepararAccion", "Mover");
@@ -118,6 +140,36 @@ public class MovimientoUnityTests
         };
         Assert.That(JsonUtility.ToJson(dto),
             Is.EqualTo("{\"unidadId\":\"" + IdModelo + "\",\"destino\":{\"x\":4,\"y\":5}}"));
+    }
+
+    [Test]
+    public void DtoConcurrente_LeeInicioYResultadoDelWorker()
+    {
+        string inicioJson =
+            "{\"procesoId\":\"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa\",\"nombre\":\"MOVER\",\"estado\":\"iniciado\"}";
+
+        ProcesoIniciadoDto inicio =
+            JsonUtility.FromJson<ProcesoIniciadoDto>(inicioJson);
+
+        Assert.That(
+            inicio.procesoId,
+            Is.EqualTo("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));
+        Assert.That(inicio.nombre, Is.EqualTo("MOVER"));
+        Assert.That(inicio.estado, Is.EqualTo("iniciado"));
+
+        string resultadoJson =
+            "{\"procesoId\":\"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa\",\"nombre\":\"MOVER\",\"estado\":\"Completado\",\"hiloTrabajoId\":7,\"exito\":true,\"mensaje\":\"Movimiento realizado.\",\"errorTecnico\":null}";
+
+        ResultadoProcesoDto resultado =
+            JsonUtility.FromJson<ResultadoProcesoDto>(
+                resultadoJson);
+
+        Assert.That(resultado.estado, Is.EqualTo("Completado"));
+        Assert.That(resultado.hiloTrabajoId, Is.EqualTo(7));
+        Assert.That(resultado.exito, Is.True);
+        Assert.That(
+            resultado.mensaje,
+            Is.EqualTo("Movimiento realizado."));
     }
 
     [TestCase(8f, 10f, 4, 5)]
@@ -144,6 +196,19 @@ public class MovimientoUnityTests
 
     private static void Campo(object objeto, string nombre, object valor) => objeto.GetType()
         .GetField(nombre, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(objeto, valor);
+
+    private static void CampoAutomatico(
+        object objeto,
+        string nombre,
+        object valor)
+    {
+        objeto.GetType()
+            .GetField(
+                $"<{nombre}>k__BackingField",
+                BindingFlags.Instance |
+                BindingFlags.NonPublic)
+            .SetValue(objeto, valor);
+    }
 
     private static void Invocar(object objeto, string nombre, params object[] argumentos) => objeto.GetType()
         .GetMethod(nombre, BindingFlags.Instance | BindingFlags.NonPublic).Invoke(objeto, argumentos);
