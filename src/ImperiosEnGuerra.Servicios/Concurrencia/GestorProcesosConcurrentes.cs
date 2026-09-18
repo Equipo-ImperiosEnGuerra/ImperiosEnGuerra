@@ -142,7 +142,7 @@ namespace ImperiosEnGuerra.Servicios.Concurrencia
                 }
             }
 
-            resultado = null;
+            resultado = null!;
             return false;
         }
 
