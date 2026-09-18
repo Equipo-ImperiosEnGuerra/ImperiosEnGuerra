@@ -87,6 +87,11 @@ public sealed class ServicioAccionesConcurrentes
         return gestorProcesos.Cancelar(procesoId);
     }
 
+    public void CancelarTodos()
+    {
+        gestorProcesos.CancelarTodos();
+    }
+
     public bool IntentarObtenerResultado(
         Guid procesoId,
         out ResultadoProcesoConcurrente resultado)
