@@ -1,150 +1,197 @@
-using ImperiosEnGuerra.Modelo.Core;
-using ImperiosEnGuerra.Modelo.Acciones;
+using System.IO;
 using ImperiosEnGuerra.Api.Contratos;
 using ImperiosEnGuerra.Api.Mapeadores;
+using ImperiosEnGuerra.Modelo.Acciones;
+using ImperiosEnGuerra.Modelo.Core;
+using ImperiosEnGuerra.Servicios;
 
 namespace ImperiosEnGuerra.Api.Servicios;
 
 public sealed class EstadoPartidaService
 {
     private readonly object sincronizacion = new();
+    private readonly ServicioArchivos? servicioArchivos;
     private Partida? partidaActiva;
+
+    public EstadoPartidaService()
+    {
+    }
+
+    public EstadoPartidaService(ServicioArchivos servicioArchivos)
+    {
+        this.servicioArchivos =
+            servicioArchivos ?? throw new ArgumentNullException(nameof(servicioArchivos));
+    }
 
     public ResultadoAccion MoverUnidad(MoverUnidadRequest? request)
     {
         lock (sincronizacion)
         {
             if (partidaActiva == null)
-                return ResultadoAccion.Fallido("No hay una partida activa.");
-            if (request == null)
-                return ResultadoAccion.Fallido("La solicitud de movimiento es obligatoria.");
-            if (!Guid.TryParse(request.UnidadId, out Guid unidadId))
-                return ResultadoAccion.Fallido("El ID de la unidad debe tener formato Guid válido.");
-            if (request.Destino == null)
-                return ResultadoAccion.Fallido("El destino es obligatorio.");
+                return RegistrarResultado(
+                    "MOVER",
+                    ResultadoAccion.Fallido("No hay una partida activa."));
 
-            var solicitud = new SolicitudMovimiento(unidadId,
+            if (request == null)
+                return RegistrarResultado(
+                    "MOVER",
+                    ResultadoAccion.Fallido("La solicitud de movimiento es obligatoria."));
+
+            if (!Guid.TryParse(request.UnidadId, out Guid unidadId))
+                return RegistrarResultado(
+                    "MOVER",
+                    ResultadoAccion.Fallido("El ID de la unidad debe tener formato Guid válido."));
+
+            if (request.Destino == null)
+                return RegistrarResultado(
+                    "MOVER",
+                    ResultadoAccion.Fallido("El destino es obligatorio."));
+
+            var solicitud = new SolicitudMovimiento(
+                unidadId,
                 PartidaRequestMapper.ConvertirCoordenada(request.Destino));
-            return new OperacionMovimiento().Ejecutar(partidaActiva, solicitud);
+
+            return RegistrarResultado(
+                "MOVER",
+                new OperacionMovimiento().Ejecutar(partidaActiva, solicitud));
         }
     }
+
     public ResultadoAccion IniciarRecoleccion(RecolectarRequest? request)
     {
         lock (sincronizacion)
         {
-        if (partidaActiva == null)
-            return ResultadoAccion.Fallido(
-                "No hay una partida activa.");
+            if (partidaActiva == null)
+                return RegistrarResultado(
+                    "RECOLECTAR",
+                    ResultadoAccion.Fallido("No hay una partida activa."));
 
-        if (request == null)
-            return ResultadoAccion.Fallido(
-                "La solicitud de recolección es obligatoria.");
+            if (request == null)
+                return RegistrarResultado(
+                    "RECOLECTAR",
+                    ResultadoAccion.Fallido("La solicitud de recolección es obligatoria."));
 
-        if (!Guid.TryParse(request.AldeanoId, out Guid aldeanoId))
-            return ResultadoAccion.Fallido(
-                "El ID del Aldeano debe tener formato Guid válido.");
+            if (!Guid.TryParse(request.AldeanoId, out Guid aldeanoId))
+                return RegistrarResultado(
+                    "RECOLECTAR",
+                    ResultadoAccion.Fallido("El ID del Aldeano debe tener formato Guid válido."));
 
-        if (request.Objetivo == null)
-            return ResultadoAccion.Fallido(
-                "El objetivo de recolección es obligatorio.");
+            if (request.Objetivo == null)
+                return RegistrarResultado(
+                    "RECOLECTAR",
+                    ResultadoAccion.Fallido("El objetivo de recolección es obligatorio."));
 
-        var solicitud = new SolicitudRecoleccion(
-            aldeanoId,
-            PartidaRequestMapper.ConvertirCoordenada(request.Objetivo));
+            var solicitud = new SolicitudRecoleccion(
+                aldeanoId,
+                PartidaRequestMapper.ConvertirCoordenada(request.Objetivo));
 
-        return new OperacionRecoleccion()
-            .Ejecutar(partidaActiva, solicitud);
+            return RegistrarResultado(
+                "RECOLECTAR",
+                new OperacionRecoleccion().Ejecutar(partidaActiva, solicitud));
         }
     }
 
     public ResultadoAccion Construir(ConstruirRequest? request)
-{
-    lock (sincronizacion)
     {
-        if (partidaActiva == null)
-            return ResultadoAccion.Fallido(
-                "No hay una partida activa.");
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+                return RegistrarResultado(
+                    "CONSTRUIR",
+                    ResultadoAccion.Fallido("No hay una partida activa."));
 
-        if (request == null)
-            return ResultadoAccion.Fallido(
-                "La solicitud de construcción es obligatoria.");
+            if (request == null)
+                return RegistrarResultado(
+                    "CONSTRUIR",
+                    ResultadoAccion.Fallido("La solicitud de construcción es obligatoria."));
 
-        if (!Guid.TryParse(request.AldeanoId, out Guid aldeanoId))
-            return ResultadoAccion.Fallido(
-                "El ID del Aldeano debe tener formato Guid válido.");
+            if (!Guid.TryParse(request.AldeanoId, out Guid aldeanoId))
+                return RegistrarResultado(
+                    "CONSTRUIR",
+                    ResultadoAccion.Fallido("El ID del Aldeano debe tener formato Guid válido."));
 
-        if (request.Destino == null)
-            return ResultadoAccion.Fallido(
-                "La posición de construcción es obligatoria.");
+            if (request.Destino == null)
+                return RegistrarResultado(
+                    "CONSTRUIR",
+                    ResultadoAccion.Fallido("La posición de construcción es obligatoria."));
 
-        var solicitud = new SolicitudConstruccion(
-            aldeanoId,
-            request.TipoEdificio ?? string.Empty,
-            PartidaRequestMapper.ConvertirCoordenada(request.Destino));
+            var solicitud = new SolicitudConstruccion(
+                aldeanoId,
+                request.TipoEdificio ?? string.Empty,
+                PartidaRequestMapper.ConvertirCoordenada(request.Destino));
 
-        return new OperacionConstruccion()
-            .Ejecutar(partidaActiva, solicitud);
+            return RegistrarResultado(
+                "CONSTRUIR",
+                new OperacionConstruccion().Ejecutar(partidaActiva, solicitud));
+        }
     }
-}
 
     public ResultadoAccion Entrenar(EntrenarRequest? request)
-{
-    lock (sincronizacion)
     {
-        if (partidaActiva == null)
-            return ResultadoAccion.Fallido(
-                "No hay una partida activa.");
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+                return RegistrarResultado(
+                    "ENTRENAR",
+                    ResultadoAccion.Fallido("No hay una partida activa."));
 
-        if (request == null)
-            return ResultadoAccion.Fallido(
-                "La solicitud de entrenamiento es obligatoria.");
+            if (request == null)
+                return RegistrarResultado(
+                    "ENTRENAR",
+                    ResultadoAccion.Fallido("La solicitud de entrenamiento es obligatoria."));
 
-        if (request.EdificioOrigen == null)
-            return ResultadoAccion.Fallido(
-                "El edificio de origen es obligatorio.");
+            if (request.EdificioOrigen == null)
+                return RegistrarResultado(
+                    "ENTRENAR",
+                    ResultadoAccion.Fallido("El edificio de origen es obligatorio."));
 
-        if (request.Destino == null)
-            return ResultadoAccion.Fallido(
-                "La posición de aparición es obligatoria.");
+            if (request.Destino == null)
+                return RegistrarResultado(
+                    "ENTRENAR",
+                    ResultadoAccion.Fallido("La posición de aparición es obligatoria."));
 
-        var solicitud = new SolicitudEntrenamiento(
-            PartidaRequestMapper.ConvertirCoordenada(
-                request.EdificioOrigen),
-            request.TipoUnidad ?? string.Empty,
-            PartidaRequestMapper.ConvertirCoordenada(
-                request.Destino));
+            var solicitud = new SolicitudEntrenamiento(
+                PartidaRequestMapper.ConvertirCoordenada(request.EdificioOrigen),
+                request.TipoUnidad ?? string.Empty,
+                PartidaRequestMapper.ConvertirCoordenada(request.Destino));
 
-        return new OperacionEntrenamiento()
-            .Ejecutar(partidaActiva, solicitud);
+            return RegistrarResultado(
+                "ENTRENAR",
+                new OperacionEntrenamiento().Ejecutar(partidaActiva, solicitud));
+        }
     }
-}
 
     public ResultadoAccion Atacar(AtacarRequest? request)
     {
         lock (sincronizacion)
         {
             if (partidaActiva == null)
-                return ResultadoAccion.Fallido(
-                    "No hay una partida activa.");
+                return RegistrarResultado(
+                    "ATACAR",
+                    ResultadoAccion.Fallido("No hay una partida activa."));
 
             if (request == null)
-                return ResultadoAccion.Fallido(
-                    "La solicitud de ataque es obligatoria.");
+                return RegistrarResultado(
+                    "ATACAR",
+                    ResultadoAccion.Fallido("La solicitud de ataque es obligatoria."));
 
             if (!Guid.TryParse(request.AtacanteId, out Guid atacanteId))
-                return ResultadoAccion.Fallido(
-                    "El ID del atacante debe tener formato Guid válido.");
+                return RegistrarResultado(
+                    "ATACAR",
+                    ResultadoAccion.Fallido("El ID del atacante debe tener formato Guid válido."));
 
             if (!Guid.TryParse(request.ObjetivoId, out Guid objetivoId))
-                return ResultadoAccion.Fallido(
-                    "El ID del objetivo debe tener formato Guid válido.");
+                return RegistrarResultado(
+                    "ATACAR",
+                    ResultadoAccion.Fallido("El ID del objetivo debe tener formato Guid válido."));
 
             var solicitud = new SolicitudAtaque(
                 atacanteId,
                 objetivoId);
 
-            return new OperacionAtaque()
-                .Ejecutar(partidaActiva, solicitud);
+            return RegistrarResultado(
+                "ATACAR",
+                new OperacionAtaque().Ejecutar(partidaActiva, solicitud));
         }
     }
 
@@ -152,7 +199,9 @@ public sealed class EstadoPartidaService
     {
         lock (sincronizacion)
         {
-            return partidaActiva == null ? null : PartidaEstadoMapper.Convertir(partidaActiva);
+            return partidaActiva == null
+                ? null
+                : PartidaEstadoMapper.Convertir(partidaActiva);
         }
     }
 
@@ -163,6 +212,7 @@ public sealed class EstadoPartidaService
         lock (sincronizacion)
         {
             partidaActiva = partida;
+            RegistrarEventoSeguro("PARTIDA|EXITO|Partida establecida.");
         }
     }
 
@@ -179,6 +229,36 @@ public sealed class EstadoPartidaService
         lock (sincronizacion)
         {
             return partidaActiva != null;
+        }
+    }
+
+    private ResultadoAccion RegistrarResultado(
+        string accion,
+        ResultadoAccion resultado)
+    {
+        string estado = resultado.Exito ? "EXITO" : "RECHAZADO";
+        RegistrarEventoSeguro($"{accion}|{estado}|{resultado.Mensaje}");
+        return resultado;
+    }
+
+    private void RegistrarEventoSeguro(string contenido)
+    {
+        if (servicioArchivos == null)
+            return;
+
+        try
+        {
+            servicioArchivos.RegistrarEvento(contenido);
+        }
+        catch (IOException ex)
+        {
+            Console.Error.WriteLine(
+                $"No se pudo escribir log_partida.txt: {ex.Message}");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Console.Error.WriteLine(
+                $"No se pudo escribir log_partida.txt: {ex.Message}");
         }
     }
 }
