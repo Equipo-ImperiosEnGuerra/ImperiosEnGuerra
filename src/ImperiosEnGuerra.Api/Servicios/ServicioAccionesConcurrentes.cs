@@ -88,6 +88,15 @@ public sealed class ServicioAccionesConcurrentes
     }
 
     public bool IntentarObtenerResultado(
+        Guid procesoId,
+        out ResultadoProcesoConcurrente resultado)
+    {
+        return gestorProcesos.IntentarObtenerResultado(
+            procesoId,
+            out resultado);
+    }
+
+    public bool IntentarObtenerResultado(
         out ResultadoProcesoConcurrente resultado)
     {
         return gestorProcesos.IntentarObtenerResultado(out resultado);
