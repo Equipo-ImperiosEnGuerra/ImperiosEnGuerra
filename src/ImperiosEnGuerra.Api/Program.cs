@@ -299,6 +299,26 @@ app.MapPost(
 
 
 app.MapPost(
+    "/api/partida/entrenar-concurrente",
+    (
+        EntrenarRequest? request,
+        ServicioAccionesConcurrentes accionesConcurrentes) =>
+{
+    var proceso =
+        accionesConcurrentes.IniciarEntrenamiento(request);
+
+    return Results.Accepted(
+        $"/api/procesos/{proceso.Id}",
+        new
+        {
+            procesoId = proceso.Id,
+            nombre = proceso.Nombre,
+            estado = "iniciado"
+        });
+})
+.WithName("IniciarEntrenamientoConcurrente");
+
+app.MapPost(
     "/api/partida/entrenar",
     (EntrenarRequest? request, EstadoPartidaService estadoPartida) =>
 {
