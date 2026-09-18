@@ -19,6 +19,9 @@ namespace ImperiosEnGuerra.Servicios.Concurrencia
         private readonly ConcurrentQueue<ResultadoProcesoConcurrente> resultados =
             new ConcurrentQueue<ResultadoProcesoConcurrente>();
 
+        private readonly ConcurrentDictionary<Guid, ResultadoProcesoConcurrente> resultadosPorId =
+            new ConcurrentDictionary<Guid, ResultadoProcesoConcurrente>();
+
         private int cerrado;
 
         public ProcesoConcurrente Iniciar(
@@ -54,7 +57,7 @@ namespace ImperiosEnGuerra.Servicios.Concurrencia
                     ResultadoAccion resultado =
                         trabajo(cancelacion.Token);
 
-                    resultados.Enqueue(
+                    PublicarResultado(
                         ResultadoProcesoConcurrente.Completado(
                             procesoId,
                             nombre,
@@ -63,7 +66,7 @@ namespace ImperiosEnGuerra.Servicios.Concurrencia
                 }
                 catch (OperationCanceledException)
                 {
-                    resultados.Enqueue(
+                    PublicarResultado(
                         ResultadoProcesoConcurrente.Cancelado(
                             procesoId,
                             nombre,
@@ -71,7 +74,7 @@ namespace ImperiosEnGuerra.Servicios.Concurrencia
                 }
                 catch (Exception ex)
                 {
-                    resultados.Enqueue(
+                    PublicarResultado(
                         ResultadoProcesoConcurrente.Fallido(
                             procesoId,
                             nombre,
@@ -117,9 +120,37 @@ namespace ImperiosEnGuerra.Servicios.Concurrencia
         }
 
         public bool IntentarObtenerResultado(
+            Guid procesoId,
             out ResultadoProcesoConcurrente resultado)
         {
-            return resultados.TryDequeue(out resultado);
+            return resultadosPorId.TryRemove(
+                procesoId,
+                out resultado);
+        }
+
+        public bool IntentarObtenerResultado(
+            out ResultadoProcesoConcurrente resultado)
+        {
+            while (resultados.TryDequeue(
+                out ResultadoProcesoConcurrente candidato))
+            {
+                if (resultadosPorId.TryRemove(
+                    candidato.ProcesoId,
+                    out resultado))
+                {
+                    return true;
+                }
+            }
+
+            resultado = null;
+            return false;
+        }
+
+        private void PublicarResultado(
+            ResultadoProcesoConcurrente resultado)
+        {
+            resultadosPorId[resultado.ProcesoId] = resultado;
+            resultados.Enqueue(resultado);
         }
 
         public int ProcesosActivos
@@ -129,7 +160,7 @@ namespace ImperiosEnGuerra.Servicios.Concurrencia
 
         public int ResultadosPendientes
         {
-            get { return resultados.Count; }
+            get { return resultadosPorId.Count; }
         }
 
         public void Dispose()
