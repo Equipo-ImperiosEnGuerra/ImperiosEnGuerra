@@ -234,6 +234,26 @@ app.MapPost(
 .WithName("CancelarProceso");
 
 app.MapPost(
+    "/api/partida/recolectar-concurrente",
+    (
+        RecolectarRequest? request,
+        ServicioAccionesConcurrentes accionesConcurrentes) =>
+{
+    var proceso =
+        accionesConcurrentes.IniciarRecoleccion(request);
+
+    return Results.Accepted(
+        $"/api/procesos/{proceso.Id}",
+        new
+        {
+            procesoId = proceso.Id,
+            nombre = proceso.Nombre,
+            estado = "iniciado"
+        });
+})
+.WithName("IniciarRecoleccionConcurrente");
+
+app.MapPost(
     "/api/partida/recolectar",
     (RecolectarRequest? request, EstadoPartidaService estadoPartida) =>
 {
