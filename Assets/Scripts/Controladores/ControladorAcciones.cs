@@ -14,10 +14,11 @@ namespace ImperiosEnGuerra.Controladores
         private string unidadIdPendiente;
         private EntidadSeleccionableVista unidadPendiente;
         private string accionPendiente;
+        private EntidadSeleccionableVista edificioPendiente;
 
         private bool EsperandoObjetivo =>
-            !string.IsNullOrEmpty(unidadIdPendiente) &&
-            !string.IsNullOrEmpty(accionPendiente);
+        !string.IsNullOrEmpty(accionPendiente) &&
+        (unidadPendiente != null || edificioPendiente != null);
 
         private void OnEnable()
         {
@@ -86,9 +87,21 @@ namespace ImperiosEnGuerra.Controladores
 
         private bool ConservaSeleccion()
         {
-            return controladorSeleccion != null &&
-                controladorSeleccion.isActiveAndEnabled &&
-                unidadPendiente != null &&
+            if (controladorSeleccion == null ||
+                !controladorSeleccion.isActiveAndEnabled)
+            {
+                return false;
+            }
+
+            if (accionPendiente == "Entrenar")
+            {
+                return edificioPendiente != null &&
+                    edificioPendiente.isActiveAndEnabled &&
+                    controladorSeleccion.SeleccionActual == edificioPendiente &&
+                    PermiteOpcion(edificioPendiente, accionPendiente);
+            }
+
+            return unidadPendiente != null &&
                 unidadPendiente.isActiveAndEnabled &&
                 controladorSeleccion.SeleccionActual == unidadPendiente &&
                 unidadPendiente.IdLogico == unidadIdPendiente &&
@@ -100,6 +113,7 @@ namespace ImperiosEnGuerra.Controladores
             unidadIdPendiente = null;
             unidadPendiente = null;
             accionPendiente = null;
+            edificioPendiente = null;
 
             if (controladorSeleccion != null)
                 controladorSeleccion.FinalizarCapturaDestino();
@@ -130,6 +144,16 @@ namespace ImperiosEnGuerra.Controladores
             string id = unidadIdPendiente;
             string accion = accionPendiente;
 
+            int edificioX =
+                edificioPendiente != null
+                    ? edificioPendiente.X
+                    : 0;
+
+            int edificioY =
+                edificioPendiente != null
+                    ? edificioPendiente.Y
+                    : 0;
+
             LimpiarCaptura();
 
             if (conexionApi == null || !conexionApi.isActiveAndEnabled)
@@ -144,15 +168,38 @@ namespace ImperiosEnGuerra.Controladores
                 return;
             }
 
+            if (accion == "Entrenar")
+            {
+                conexionApi.Entrenar(
+                    edificioX,
+                    edificioY,
+                    "Aldeano",
+                    x,
+                    y);
+
+                return;
+            }
+
             if (accion == "Mover")
             {
                 conexionApi.MoverUnidad(id, x, y);
                 return;
             }
-
+            
             if (accion == "Recolectar")
             {
                 conexionApi.IniciarRecoleccion(id, x, y);
+                return;
+            }
+            
+            if (accion == "Construir")
+            {
+                conexionApi.Construir(
+                    id,
+                    "CentroUrbano",
+                    x,
+                    y);
+
                 return;
             }
 
@@ -176,7 +223,10 @@ namespace ImperiosEnGuerra.Controladores
             }
 
             if (entidad.Categoria == CategoriaEntidadVisual.Edificio)
-                return accion == "Entrenar";
+            {
+                return accion == "Entrenar" &&
+                    entidad.TipoLogico == "CentroUrbano";
+            }
 
             if (entidad.Categoria != CategoriaEntidadVisual.Unidad)
                 return false;
@@ -215,7 +265,33 @@ namespace ImperiosEnGuerra.Controladores
                 return;
             }
 
-            if (accion == "Mover" || accion == "Recolectar")
+            if (accion == "Entrenar")
+            {
+                if (conexionApi == null ||
+                    !conexionApi.isActiveAndEnabled ||
+                    conexionApi.AccionEnCurso)
+                {
+                    vistaHud.MostrarMensaje(
+                        "La conexión no está disponible o hay una acción en curso.",
+                        true);
+
+                    return;
+                }
+
+                edificioPendiente = entidad;
+                accionPendiente = accion;
+
+                controladorSeleccion.IniciarCapturaDestino();
+
+                vistaHud.MostrarMensaje(
+                    "Selecciona una casilla para crear el Aldeano.");
+
+                return;
+            }
+
+            if (accion == "Mover" ||
+            accion == "Recolectar" ||
+            accion == "Construir")
             {
                 if (string.IsNullOrWhiteSpace(entidad.IdLogico))
                 {
@@ -243,10 +319,21 @@ namespace ImperiosEnGuerra.Controladores
 
                 controladorSeleccion.IniciarCapturaDestino();
 
+               if (accion == "Mover")
+            {
                 vistaHud.MostrarMensaje(
-                    accion == "Mover"
-                        ? "Selecciona una casilla destino."
-                        : "Selecciona un recurso.");
+                    "Selecciona una casilla destino.");
+            }
+            else if (accion == "Recolectar")
+            {
+                vistaHud.MostrarMensaje(
+                    "Selecciona un recurso.");
+            }
+            else
+            {
+                vistaHud.MostrarMensaje(
+                    "Selecciona una casilla para construir el Centro Urbano.");
+            }
 
                 return;
             }
@@ -257,9 +344,16 @@ namespace ImperiosEnGuerra.Controladores
 
         private static string ObtenerMensajeCancelacion(string accion)
         {
-            return accion == "Recolectar"
-                ? "Recolección cancelada."
-                : "Movimiento cancelado.";
+            if (accion == "Recolectar")
+                return "Recolección cancelada.";
+
+            if (accion == "Construir")
+                return "Construcción cancelada.";
+
+            if (accion == "Entrenar")
+                return "Entrenamiento cancelado.";
+
+            return "Movimiento cancelado.";
         }
     }
 }

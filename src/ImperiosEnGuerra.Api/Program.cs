@@ -164,4 +164,29 @@ app.MapPost(
 })
 .WithName("IniciarRecoleccion");
 
+app.MapPost(
+    "/api/partida/construir",
+    (ConstruirRequest? request, EstadoPartidaService estadoPartida) =>
+{
+    var resultado = estadoPartida.Construir(request);
+
+    return resultado.Exito
+        ? Results.Ok(resultado)
+        : Results.BadRequest(resultado);
+})
+.WithName("Construir");
+
+
+app.MapPost(
+    "/api/partida/entrenar",
+    (EntrenarRequest? request, EstadoPartidaService estadoPartida) =>
+{
+    var resultado = estadoPartida.Entrenar(request);
+
+    return resultado.Exito
+        ? Results.Ok(resultado)
+        : Results.BadRequest(resultado);
+})
+.WithName("Entrenar");
+
 app.Run();

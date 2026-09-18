@@ -18,9 +18,16 @@ namespace ImperiosEnGuerra.Controladores.Red
         [SerializeField]
         private VistaHud vistaHud;
 
-        public bool MovimientoEnCurso { get; private set; }
-        public bool RecoleccionEnCurso { get; private set; }
-        public bool AccionEnCurso => MovimientoEnCurso || RecoleccionEnCurso;
+    public bool MovimientoEnCurso { get; private set; }
+    public bool RecoleccionEnCurso { get; private set; }
+    public bool ConstruccionEnCurso { get; private set; }
+    public bool EntrenamientoEnCurso { get; private set; }
+
+public bool AccionEnCurso =>
+    MovimientoEnCurso ||
+    RecoleccionEnCurso ||
+    ConstruccionEnCurso ||
+    EntrenamientoEnCurso;
 
         public void MoverUnidad(string unidadId, int x, int y)
         {
@@ -52,11 +59,69 @@ namespace ImperiosEnGuerra.Controladores.Red
             }));
         }
 
+        public void Construir(
+        string aldeanoId,
+        string tipoEdificio,
+        int x,
+        int y)
+    {
+        if (!isActiveAndEnabled || AccionEnCurso)
+        {
+            MostrarError(
+                "La conexión no está disponible o hay una acción en curso.");
+            return;
+        }
+
+        StartCoroutine(
+            EnviarConstruccion(
+                new ConstruirDto
+                {
+                    aldeanoId = aldeanoId,
+                    tipoEdificio = tipoEdificio,
+                    destino = new CoordenadaDto(x, y)
+                }));
+    }
+
+        public void Entrenar(
+            int edificioX,
+            int edificioY,
+            string tipoUnidad,
+            int destinoX,
+            int destinoY)
+        {
+            if (!isActiveAndEnabled || AccionEnCurso)
+            {
+                MostrarError(
+                    "La conexión no está disponible o hay una acción en curso.");
+                return;
+            }
+
+            StartCoroutine(
+                EnviarEntrenamiento(
+                    new EntrenarDto
+                    {
+                        edificioOrigen =
+                            new CoordenadaDto(
+                                edificioX,
+                                edificioY),
+
+                        tipoUnidad = tipoUnidad,
+
+                        destino =
+                            new CoordenadaDto(
+                                destinoX,
+                                destinoY)
+                    }));
+        }
+
         private void OnDisable()
         {
             StopAllCoroutines();
+
             MovimientoEnCurso = false;
             RecoleccionEnCurso = false;
+            ConstruccionEnCurso = false;
+            EntrenamientoEnCurso = false;
         }
 
         private IEnumerator EnviarMovimiento(MoverUnidadDto movimiento)
@@ -180,6 +245,141 @@ namespace ImperiosEnGuerra.Controladores.Red
             finally
             {
                 RecoleccionEnCurso = false;
+            }
+        }
+
+        private IEnumerator EnviarConstruccion(
+            ConstruirDto construccion)
+        {
+            ConstruccionEnCurso = true;
+
+            try
+            {
+                using var request =
+                    new UnityWebRequest(
+                        $"{urlBaseApi}/api/partida/construir",
+                        UnityWebRequest.kHttpVerbPOST);
+
+                request.uploadHandler =
+                    new UploadHandlerRaw(
+                        Encoding.UTF8.GetBytes(
+                            JsonUtility.ToJson(construccion)));
+
+                request.downloadHandler =
+                    new DownloadHandlerBuffer();
+
+                request.SetRequestHeader(
+                    "Content-Type",
+                    "application/json");
+
+                request.timeout = 15;
+
+                yield return request.SendWebRequest();
+
+                ResultadoAccionDto resultado =
+                    LeerResultado(
+                        request.downloadHandler.text);
+
+                if (request.result !=
+                    UnityWebRequest.Result.Success)
+                {
+                    MostrarError(
+                        MensajeError(
+                            resultado,
+                            $"No se pudo realizar la construcción. HTTP {request.responseCode}: {request.error}"));
+
+                    yield break;
+                }
+
+                if (resultado == null ||
+                    !resultado.exito)
+                {
+                    MostrarError(
+                        MensajeError(
+                            resultado,
+                            "La API no confirmó la construcción."));
+
+                    yield break;
+                }
+
+                yield return ObtenerPartidaActiva(
+                    string.IsNullOrWhiteSpace(
+                        resultado.mensaje)
+                        ? "Construcción realizada."
+                        : resultado.mensaje,
+                    "Construcción aceptada, pero no se pudo actualizar la vista. ");
+            }
+            finally
+            {
+                ConstruccionEnCurso = false;
+            }
+        }
+        
+
+            private IEnumerator EnviarEntrenamiento(
+            EntrenarDto entrenamiento)
+        {
+            EntrenamientoEnCurso = true;
+
+            try
+            {
+                using var request =
+                    new UnityWebRequest(
+                        $"{urlBaseApi}/api/partida/entrenar",
+                        UnityWebRequest.kHttpVerbPOST);
+
+                request.uploadHandler =
+                    new UploadHandlerRaw(
+                        Encoding.UTF8.GetBytes(
+                            JsonUtility.ToJson(entrenamiento)));
+
+                request.downloadHandler =
+                    new DownloadHandlerBuffer();
+
+                request.SetRequestHeader(
+                    "Content-Type",
+                    "application/json");
+
+                request.timeout = 15;
+
+                yield return request.SendWebRequest();
+
+                ResultadoAccionDto resultado =
+                    LeerResultado(
+                        request.downloadHandler.text);
+
+                if (request.result !=
+                    UnityWebRequest.Result.Success)
+                {
+                    MostrarError(
+                        MensajeError(
+                            resultado,
+                            $"No se pudo realizar el entrenamiento. HTTP {request.responseCode}: {request.error}"));
+
+                    yield break;
+                }
+
+                if (resultado == null ||
+                    !resultado.exito)
+                {
+                    MostrarError(
+                        MensajeError(
+                            resultado,
+                            "La API no confirmó el entrenamiento."));
+
+                    yield break;
+                }
+
+                yield return ObtenerPartidaActiva(
+                    string.IsNullOrWhiteSpace(
+                        resultado.mensaje)
+                        ? "Entrenamiento realizado."
+                        : resultado.mensaje,
+                    "Entrenamiento aceptado, pero no se pudo actualizar la vista. ");
+            }
+            finally
+            {
+                EntrenamientoEnCurso = false;
             }
         }
 

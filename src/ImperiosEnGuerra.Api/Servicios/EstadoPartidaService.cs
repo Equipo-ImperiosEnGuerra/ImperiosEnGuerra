@@ -57,6 +57,68 @@ public sealed class EstadoPartidaService
         }
     }
 
+    public ResultadoAccion Construir(ConstruirRequest? request)
+{
+    lock (sincronizacion)
+    {
+        if (partidaActiva == null)
+            return ResultadoAccion.Fallido(
+                "No hay una partida activa.");
+
+        if (request == null)
+            return ResultadoAccion.Fallido(
+                "La solicitud de construcción es obligatoria.");
+
+        if (!Guid.TryParse(request.AldeanoId, out Guid aldeanoId))
+            return ResultadoAccion.Fallido(
+                "El ID del Aldeano debe tener formato Guid válido.");
+
+        if (request.Destino == null)
+            return ResultadoAccion.Fallido(
+                "La posición de construcción es obligatoria.");
+
+        var solicitud = new SolicitudConstruccion(
+            aldeanoId,
+            request.TipoEdificio ?? string.Empty,
+            PartidaRequestMapper.ConvertirCoordenada(request.Destino));
+
+        return new OperacionConstruccion()
+            .Ejecutar(partidaActiva, solicitud);
+    }
+}
+
+    public ResultadoAccion Entrenar(EntrenarRequest? request)
+{
+    lock (sincronizacion)
+    {
+        if (partidaActiva == null)
+            return ResultadoAccion.Fallido(
+                "No hay una partida activa.");
+
+        if (request == null)
+            return ResultadoAccion.Fallido(
+                "La solicitud de entrenamiento es obligatoria.");
+
+        if (request.EdificioOrigen == null)
+            return ResultadoAccion.Fallido(
+                "El edificio de origen es obligatorio.");
+
+        if (request.Destino == null)
+            return ResultadoAccion.Fallido(
+                "La posición de aparición es obligatoria.");
+
+        var solicitud = new SolicitudEntrenamiento(
+            PartidaRequestMapper.ConvertirCoordenada(
+                request.EdificioOrigen),
+            request.TipoUnidad ?? string.Empty,
+            PartidaRequestMapper.ConvertirCoordenada(
+                request.Destino));
+
+        return new OperacionEntrenamiento()
+            .Ejecutar(partidaActiva, solicitud);
+    }
+}
+
     public EstadoPartidaResponse? ObtenerEstado()
     {
         lock (sincronizacion)
