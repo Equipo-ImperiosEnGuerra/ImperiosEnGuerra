@@ -4,6 +4,7 @@ using ImperiosEnGuerra.Api.Mapeadores;
 using ImperiosEnGuerra.Modelo.Core;
 using ImperiosEnGuerra.Modelo.Map;
 using ImperiosEnGuerra.Servicios;
+using ImperiosEnGuerra.Servicios.Concurrencia;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +15,18 @@ builder.Services.AddSingleton(
             Directory.GetCurrentDirectory(),
             "DatosPartida")));
 builder.Services.AddSingleton<EstadoPartidaService>();
+builder.Services.AddSingleton<GestorProcesosConcurrentes>();
+builder.Services.AddSingleton(sp =>
+{
+    int retardoMs =
+        builder.Configuration.GetValue<int>(
+            "Concurrencia:RetardoDemostracionMs");
+
+    return new ServicioAccionesConcurrentes(
+        sp.GetRequiredService<EstadoPartidaService>(),
+        sp.GetRequiredService<GestorProcesosConcurrentes>(),
+        TimeSpan.FromMilliseconds(retardoMs));
+});
 
 var app = builder.Build();
 
@@ -157,6 +170,68 @@ app.MapPost(
         : Results.BadRequest(resultado);
 })
 .WithName("MoverUnidad");
+
+app.MapPost(
+    "/api/partida/mover-concurrente",
+    (
+        MoverUnidadRequest? request,
+        ServicioAccionesConcurrentes accionesConcurrentes) =>
+{
+    var proceso =
+        accionesConcurrentes.IniciarMovimiento(request);
+
+    return Results.Accepted(
+        $"/api/procesos/{proceso.Id}",
+        new
+        {
+            procesoId = proceso.Id,
+            nombre = proceso.Nombre,
+            estado = "iniciado"
+        });
+})
+.WithName("IniciarMovimientoConcurrente");
+
+app.MapGet(
+    "/api/procesos/resultado",
+    (ServicioAccionesConcurrentes accionesConcurrentes) =>
+{
+    if (!accionesConcurrentes.IntentarObtenerResultado(
+        out ResultadoProcesoConcurrente resultado))
+    {
+        return Results.NoContent();
+    }
+
+    return Results.Ok(new
+    {
+        procesoId = resultado.ProcesoId,
+        nombre = resultado.Nombre,
+        estado = resultado.Estado.ToString(),
+        hiloTrabajoId = resultado.HiloTrabajoId,
+        exito = resultado.Resultado?.Exito,
+        mensaje = resultado.Resultado?.Mensaje,
+        errorTecnico = resultado.ErrorTecnico
+    });
+})
+.WithName("ObtenerResultadoProceso");
+
+app.MapPost(
+    "/api/procesos/{procesoId:guid}/cancelar",
+    (
+        Guid procesoId,
+        ServicioAccionesConcurrentes accionesConcurrentes) =>
+{
+    return accionesConcurrentes.Cancelar(procesoId)
+        ? Results.Ok(new
+        {
+            procesoId,
+            estado = "cancelacion_solicitada"
+        })
+        : Results.NotFound(new
+        {
+            error = "No existe un proceso activo con ese ID."
+        });
+})
+.WithName("CancelarProceso");
 
 app.MapPost(
     "/api/partida/recolectar",
