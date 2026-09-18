@@ -61,10 +61,15 @@ app.MapGet("/api/modelo/prueba", () =>
 
 app.MapPost(
     "/api/partida/iniciar",
-    (IniciarPartidaRequest request, EstadoPartidaService estadoPartida) =>
+    (
+        IniciarPartidaRequest request,
+        EstadoPartidaService estadoPartida,
+        ServicioAccionesConcurrentes accionesConcurrentes) =>
 {
     try
     {
+        accionesConcurrentes.CancelarTodos();
+
         Mapa mapa = new Mapa(
             request.AnchoMapa,
             request.AltoMapa);
