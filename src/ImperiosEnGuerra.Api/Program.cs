@@ -207,7 +207,7 @@ app.MapGet(
         nombre = resultado.Nombre,
         estado = resultado.Estado.ToString(),
         hiloTrabajoId = resultado.HiloTrabajoId,
-        exito = resultado.Resultado?.Exito,
+        exito = resultado.Resultado?.Exito ?? false,
         mensaje = resultado.Resultado?.Mensaje,
         errorTecnico = resultado.ErrorTecnico
     });

@@ -120,6 +120,36 @@ public class MovimientoUnityTests
             Is.EqualTo("{\"unidadId\":\"" + IdModelo + "\",\"destino\":{\"x\":4,\"y\":5}}"));
     }
 
+    [Test]
+    public void DtoConcurrente_LeeInicioYResultadoDelWorker()
+    {
+        string inicioJson =
+            "{\"procesoId\":\"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa\",\"nombre\":\"MOVER\",\"estado\":\"iniciado\"}";
+
+        ProcesoIniciadoDto inicio =
+            JsonUtility.FromJson<ProcesoIniciadoDto>(inicioJson);
+
+        Assert.That(
+            inicio.procesoId,
+            Is.EqualTo("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));
+        Assert.That(inicio.nombre, Is.EqualTo("MOVER"));
+        Assert.That(inicio.estado, Is.EqualTo("iniciado"));
+
+        string resultadoJson =
+            "{\"procesoId\":\"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa\",\"nombre\":\"MOVER\",\"estado\":\"Completado\",\"hiloTrabajoId\":7,\"exito\":true,\"mensaje\":\"Movimiento realizado.\",\"errorTecnico\":null}";
+
+        ResultadoProcesoDto resultado =
+            JsonUtility.FromJson<ResultadoProcesoDto>(
+                resultadoJson);
+
+        Assert.That(resultado.estado, Is.EqualTo("Completado"));
+        Assert.That(resultado.hiloTrabajoId, Is.EqualTo(7));
+        Assert.That(resultado.exito, Is.True);
+        Assert.That(
+            resultado.mensaje,
+            Is.EqualTo("Movimiento realizado."));
+    }
+
     [TestCase(8f, 10f, 4, 5)]
     [TestCase(0f, 0f, 0, 0)]
     public void CasillaVacia_SeConvierteSinEntidad(float mundoX, float mundoY, int esperadoX, int esperadoY)

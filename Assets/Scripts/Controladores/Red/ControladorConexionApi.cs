@@ -154,7 +154,7 @@ public bool AccionEnCurso =>
             try
             {
                 using var request = new UnityWebRequest(
-                    $"{urlBaseApi}/api/partida/mover",
+                    $"{urlBaseApi}/api/partida/mover-concurrente",
                     UnityWebRequest.kHttpVerbPOST);
 
                 request.uploadHandler = new UploadHandlerRaw(
@@ -172,38 +172,189 @@ public bool AccionEnCurso =>
 
                 yield return request.SendWebRequest();
 
-                ResultadoAccionDto resultado =
-                    LeerResultado(request.downloadHandler.text);
-
                 if (request.result != UnityWebRequest.Result.Success)
                 {
                     MostrarError(
-                        MensajeError(
-                            resultado,
-                            $"No se pudo confirmar el movimiento. HTTP {request.responseCode}: {request.error}"));
+                        $"No se pudo iniciar el movimiento concurrente. HTTP {request.responseCode}: {request.error}");
 
                     yield break;
                 }
 
-                if (resultado == null || !resultado.exito)
+                ProcesoIniciadoDto proceso =
+                    LeerProcesoIniciado(request.downloadHandler.text);
+
+                if (proceso == null ||
+                    string.IsNullOrWhiteSpace(proceso.procesoId))
                 {
                     MostrarError(
-                        MensajeError(
-                            resultado,
-                            "La API no confirmó el movimiento."));
+                        "La API no devolvió un identificador válido para el movimiento concurrente.");
 
                     yield break;
                 }
 
-                yield return ObtenerPartidaActiva(
-                    string.IsNullOrWhiteSpace(resultado.mensaje)
-                        ? "Movimiento realizado."
-                        : resultado.mensaje,
-                    "Movimiento aceptado, pero no se pudo actualizar la vista. ");
+                if (vistaHud != null)
+                {
+                    vistaHud.MostrarMensaje(
+                        "Movimiento concurrente en curso...");
+                }
+
+                yield return EsperarResultadoMovimiento(proceso.procesoId);
             }
             finally
             {
                 MovimientoEnCurso = false;
+            }
+        }
+
+        private IEnumerator EsperarResultadoMovimiento(string procesoId)
+        {
+            const float intervaloConsulta = 0.1f;
+            const float tiempoMaximo = 15f;
+            float tiempoTranscurrido = 0f;
+
+            while (tiempoTranscurrido < tiempoMaximo)
+            {
+                using UnityWebRequest request =
+                    UnityWebRequest.Get(
+                        $"{urlBaseApi}/api/procesos/resultado");
+
+                request.timeout = 5;
+
+                yield return request.SendWebRequest();
+
+                if (request.result != UnityWebRequest.Result.Success)
+                {
+                    MostrarError(
+                        $"No se pudo consultar el movimiento concurrente. HTTP {request.responseCode}: {request.error}");
+
+                    yield break;
+                }
+
+                if (request.responseCode == 204 ||
+                    string.IsNullOrWhiteSpace(
+                        request.downloadHandler.text))
+                {
+                    yield return new WaitForSecondsRealtime(
+                        intervaloConsulta);
+
+                    tiempoTranscurrido += intervaloConsulta;
+                    continue;
+                }
+
+                ResultadoProcesoDto resultado =
+                    LeerResultadoProceso(
+                        request.downloadHandler.text);
+
+                if (resultado == null)
+                {
+                    MostrarError(
+                        "La API devolvió un resultado concurrente inválido.");
+
+                    yield break;
+                }
+
+                if (resultado.procesoId != procesoId)
+                {
+                    MostrarError(
+                        "Se recibió el resultado de un proceso distinto al movimiento esperado.");
+
+                    yield break;
+                }
+
+                if (resultado.estado == "Cancelado")
+                {
+                    if (vistaHud != null)
+                    {
+                        vistaHud.MostrarMensaje(
+                            "Movimiento cancelado.");
+                    }
+
+                    yield break;
+                }
+
+                if (resultado.estado == "Fallido")
+                {
+                    MostrarError(
+                        string.IsNullOrWhiteSpace(
+                            resultado.errorTecnico)
+                            ? "El worker de movimiento finalizó con error."
+                            : resultado.errorTecnico);
+
+                    yield break;
+                }
+
+                if (resultado.estado != "Completado")
+                {
+                    MostrarError(
+                        $"Estado concurrente no reconocido: {resultado.estado}");
+
+                    yield break;
+                }
+
+                if (!resultado.exito)
+                {
+                    MostrarError(
+                        string.IsNullOrWhiteSpace(
+                            resultado.mensaje)
+                            ? "El movimiento fue rechazado por el Modelo."
+                            : resultado.mensaje);
+
+                    yield break;
+                }
+
+                Debug.Log(
+                    $"Movimiento ejecutado por worker " +
+                    $"{resultado.hiloTrabajoId}.");
+
+                yield return ObtenerPartidaActiva(
+                    string.IsNullOrWhiteSpace(
+                        resultado.mensaje)
+                        ? "Movimiento realizado."
+                        : resultado.mensaje,
+                    "Movimiento completado, pero no se pudo actualizar la vista. ");
+
+                yield break;
+            }
+
+            MostrarError(
+                "El movimiento concurrente excedió el tiempo máximo de espera.");
+        }
+
+        private static ProcesoIniciadoDto LeerProcesoIniciado(
+            string json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+                return null;
+
+            try
+            {
+                return JsonUtility.FromJson<ProcesoIniciadoDto>(json);
+            }
+            catch (System.ArgumentException ex)
+            {
+                Debug.LogWarning(
+                    $"La respuesta de inicio concurrente no es JSON válido: {ex.Message}");
+
+                return null;
+            }
+        }
+
+        private static ResultadoProcesoDto LeerResultadoProceso(
+            string json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+                return null;
+
+            try
+            {
+                return JsonUtility.FromJson<ResultadoProcesoDto>(json);
+            }
+            catch (System.ArgumentException ex)
+            {
+                Debug.LogWarning(
+                    $"La respuesta concurrente no es JSON válido: {ex.Message}");
+
+                return null;
             }
         }
 
