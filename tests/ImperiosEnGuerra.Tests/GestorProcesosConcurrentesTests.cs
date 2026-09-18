@@ -101,6 +101,56 @@ namespace ImperiosEnGuerra.Tests
         }
 
         [Test]
+        public async Task CancelarTodos_CancelaProcesosActivos()
+        {
+            using var gestor = new GestorProcesosConcurrentes();
+            using var iniciados = new CountdownEvent(2);
+
+            ProcesoConcurrente primero = gestor.Iniciar(
+                "primero",
+                token =>
+                {
+                    iniciados.Signal();
+                    token.WaitHandle.WaitOne();
+                    token.ThrowIfCancellationRequested();
+                    return ResultadoAccion.Exitoso("primero");
+                });
+
+            ProcesoConcurrente segundo = gestor.Iniciar(
+                "segundo",
+                token =>
+                {
+                    iniciados.Signal();
+                    token.WaitHandle.WaitOne();
+                    token.ThrowIfCancellationRequested();
+                    return ResultadoAccion.Exitoso("segundo");
+                });
+
+            Assert.That(
+                iniciados.Wait(TimeSpan.FromSeconds(5)),
+                Is.True);
+
+            gestor.CancelarTodos();
+
+            await Task.WhenAll(
+                primero.Finalizacion,
+                segundo.Finalizacion);
+
+            List<ResultadoProcesoConcurrente> resultados =
+                ExtraerResultados(gestor);
+
+            Assert.That(resultados.Count, Is.EqualTo(2));
+
+            Assert.That(
+                resultados.All(
+                    r => r.Estado ==
+                        EstadoProcesoConcurrente.Cancelado),
+                Is.True);
+
+            Assert.That(gestor.ProcesosActivos, Is.Zero);
+        }
+
+        [Test]
         public async Task Resultado_SePublicaEnConcurrentQueueConIdDeWorker()
         {
             using var gestor = new GestorProcesosConcurrentes();
