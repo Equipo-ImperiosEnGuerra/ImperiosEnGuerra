@@ -1,3 +1,4 @@
+using System.Linq;
 using ImperiosEnGuerra.Modelo.Core;
 using ImperiosEnGuerra.Modelo.Unidades;
 
@@ -9,8 +10,8 @@ namespace ImperiosEnGuerra.Modelo.Acciones
     public sealed class OperacionAtaque
     {
         public ResultadoAccion Ejecutar(
-            Partida? partida,
-            SolicitudAtaque? solicitud)
+            Partida partida,
+            SolicitudAtaque solicitud)
         {
             if (partida == null)
                 return ResultadoAccion.Fallido("No hay una partida activa.");
