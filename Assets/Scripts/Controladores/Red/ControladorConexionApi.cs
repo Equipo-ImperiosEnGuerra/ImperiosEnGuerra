@@ -22,12 +22,14 @@ namespace ImperiosEnGuerra.Controladores.Red
     public bool RecoleccionEnCurso { get; private set; }
     public bool ConstruccionEnCurso { get; private set; }
     public bool EntrenamientoEnCurso { get; private set; }
+    public bool AtaqueEnCurso { get; private set; }
 
 public bool AccionEnCurso =>
     MovimientoEnCurso ||
     RecoleccionEnCurso ||
     ConstruccionEnCurso ||
-    EntrenamientoEnCurso;
+    EntrenamientoEnCurso ||
+    AtaqueEnCurso;
 
         public void MoverUnidad(string unidadId, int x, int y)
         {
@@ -114,6 +116,26 @@ public bool AccionEnCurso =>
                     }));
         }
 
+        public void Atacar(
+            string atacanteId,
+            string objetivoId)
+        {
+            if (!isActiveAndEnabled || AccionEnCurso)
+            {
+                MostrarError(
+                    "La conexión no está disponible o hay una acción en curso.");
+                return;
+            }
+
+            StartCoroutine(
+                EnviarAtaque(
+                    new AtaqueDto
+                    {
+                        atacanteId = atacanteId,
+                        objetivoId = objetivoId
+                    }));
+        }
+
         private void OnDisable()
         {
             StopAllCoroutines();
@@ -122,6 +144,7 @@ public bool AccionEnCurso =>
             RecoleccionEnCurso = false;
             ConstruccionEnCurso = false;
             EntrenamientoEnCurso = false;
+            AtaqueEnCurso = false;
         }
 
         private IEnumerator EnviarMovimiento(MoverUnidadDto movimiento)
@@ -232,15 +255,11 @@ public bool AccionEnCurso =>
                     yield break;
                 }
 
-                string mensaje =
+                yield return ObtenerPartidaActiva(
                     string.IsNullOrWhiteSpace(resultado.mensaje)
                         ? "Recolección preparada."
-                        : resultado.mensaje;
-
-                if (vistaHud != null)
-                    vistaHud.MostrarMensaje(mensaje);
-
-                Debug.Log(mensaje);
+                        : resultado.mensaje,
+                    "Recolección aceptada, pero no se pudo actualizar la vista. ");
             }
             finally
             {
@@ -380,6 +399,73 @@ public bool AccionEnCurso =>
             finally
             {
                 EntrenamientoEnCurso = false;
+            }
+        }
+
+        private IEnumerator EnviarAtaque(
+            AtaqueDto ataque)
+        {
+            AtaqueEnCurso = true;
+
+            try
+            {
+                using var request =
+                    new UnityWebRequest(
+                        $"{urlBaseApi}/api/partida/atacar",
+                        UnityWebRequest.kHttpVerbPOST);
+
+                request.uploadHandler =
+                    new UploadHandlerRaw(
+                        Encoding.UTF8.GetBytes(
+                            JsonUtility.ToJson(ataque)));
+
+                request.downloadHandler =
+                    new DownloadHandlerBuffer();
+
+                request.SetRequestHeader(
+                    "Content-Type",
+                    "application/json");
+
+                request.timeout = 15;
+
+                yield return request.SendWebRequest();
+
+                ResultadoAccionDto resultado =
+                    LeerResultado(
+                        request.downloadHandler.text);
+
+                if (request.result !=
+                    UnityWebRequest.Result.Success)
+                {
+                    MostrarError(
+                        MensajeError(
+                            resultado,
+                            $"No se pudo preparar el ataque. HTTP {request.responseCode}: {request.error}"));
+
+                    yield break;
+                }
+
+                if (resultado == null ||
+                    !resultado.exito)
+                {
+                    MostrarError(
+                        MensajeError(
+                            resultado,
+                            "La API no confirmó el ataque."));
+
+                    yield break;
+                }
+
+                yield return ObtenerPartidaActiva(
+                    string.IsNullOrWhiteSpace(
+                        resultado.mensaje)
+                        ? "Ataque preparado."
+                        : resultado.mensaje,
+                    "Ataque aceptado, pero no se pudo actualizar la vista. ");
+            }
+            finally
+            {
+                AtaqueEnCurso = false;
             }
         }
 

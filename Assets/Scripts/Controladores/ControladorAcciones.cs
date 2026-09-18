@@ -29,6 +29,7 @@ namespace ImperiosEnGuerra.Controladores
             {
                 controladorSeleccion.SeleccionCambio += ActualizarSeleccion;
                 controladorSeleccion.DestinoSeleccionado += EnviarObjetivo;
+                controladorSeleccion.ObjetivoEntidadSeleccionado += EnviarObjetivoAtaque;
                 controladorSeleccion.CapturaCancelada += CancelarCaptura;
             }
 
@@ -52,6 +53,7 @@ namespace ImperiosEnGuerra.Controladores
             {
                 controladorSeleccion.SeleccionCambio -= ActualizarSeleccion;
                 controladorSeleccion.DestinoSeleccionado -= EnviarObjetivo;
+                controladorSeleccion.ObjetivoEntidadSeleccionado -= EnviarObjetivoAtaque;
                 controladorSeleccion.CapturaCancelada -= CancelarCaptura;
             }
 
@@ -126,7 +128,10 @@ namespace ImperiosEnGuerra.Controladores
             tipoUnidadPendiente = null;
 
             if (controladorSeleccion != null)
+            {
                 controladorSeleccion.FinalizarCapturaDestino();
+                controladorSeleccion.FinalizarCapturaObjetivoEntidad();
+            }
 
             if (vistaHud != null)
                 vistaHud.MostrarSelectorEntrenamiento(false);
@@ -228,6 +233,62 @@ namespace ImperiosEnGuerra.Controladores
             }
         }
 
+        private void EnviarObjetivoAtaque(EntidadSeleccionableVista objetivo)
+        {
+            if (accionPendiente != "Atacar")
+                return;
+
+            if (!ConservaSeleccion())
+            {
+                CancelarCaptura();
+                return;
+            }
+
+            if (!EsObjetivoAtaqueValido(objetivo))
+            {
+                if (vistaHud != null)
+                {
+                    vistaHud.MostrarMensaje(
+                        "Selecciona una unidad enemiga válida como objetivo.",
+                        true);
+                }
+
+                return;
+            }
+
+            string atacanteId = unidadIdPendiente;
+            string objetivoId = objetivo.IdLogico;
+
+            LimpiarCaptura();
+
+            if (conexionApi == null ||
+                !conexionApi.isActiveAndEnabled)
+            {
+                if (vistaHud != null)
+                {
+                    vistaHud.MostrarMensaje(
+                        "La conexión con la API no está disponible.",
+                        true);
+                }
+
+                return;
+            }
+
+            conexionApi.Atacar(
+                atacanteId,
+                objetivoId);
+        }
+
+        private static bool EsObjetivoAtaqueValido(
+            EntidadSeleccionableVista objetivo)
+        {
+            return objetivo != null &&
+                objetivo.isActiveAndEnabled &&
+                objetivo.Categoria == CategoriaEntidadVisual.Unidad &&
+                objetivo.Propietario == "Maquina" &&
+                !string.IsNullOrWhiteSpace(objetivo.IdLogico);
+        }
+
         private static bool PermiteOpcion(
             EntidadSeleccionableVista entidad,
             string accion)
@@ -305,6 +366,40 @@ namespace ImperiosEnGuerra.Controladores
 
                 vistaHud.MostrarMensaje(
                     "Selecciona el tipo de unidad a entrenar.");
+
+                return;
+            }
+
+            if (accion == "Atacar")
+            {
+                if (string.IsNullOrWhiteSpace(entidad.IdLogico))
+                {
+                    vistaHud.MostrarMensaje(
+                        "La unidad atacante no tiene identidad disponible.",
+                        true);
+
+                    return;
+                }
+
+                if (conexionApi == null ||
+                    !conexionApi.isActiveAndEnabled ||
+                    conexionApi.AccionEnCurso)
+                {
+                    vistaHud.MostrarMensaje(
+                        "La conexión no está disponible o hay una acción en curso.",
+                        true);
+
+                    return;
+                }
+
+                unidadPendiente = entidad;
+                unidadIdPendiente = entidad.IdLogico;
+                accionPendiente = accion;
+
+                controladorSeleccion.IniciarCapturaObjetivoEntidad();
+
+                vistaHud.MostrarMensaje(
+                    "Selecciona una unidad enemiga como objetivo.");
 
                 return;
             }
@@ -393,6 +488,9 @@ namespace ImperiosEnGuerra.Controladores
 
             if (accion == "Entrenar")
                 return "Entrenamiento cancelado.";
+
+            if (accion == "Atacar")
+                return "Ataque cancelado.";
 
             return "Movimiento cancelado.";
         }

@@ -20,16 +20,33 @@ namespace ImperiosEnGuerra.Controladores
                 : string.Empty;
         public event System.Action<EntidadSeleccionableVista> SeleccionCambio;
         public bool CapturandoDestino { get; private set; }
+        public bool CapturandoObjetivoEntidad { get; private set; }
         public event System.Action<int, int> DestinoSeleccionado;
+        public event System.Action<EntidadSeleccionableVista> ObjetivoEntidadSeleccionado;
         public event System.Action CapturaCancelada;
         private VistaPartida vistaSuscrita;
 
-        public void IniciarCapturaDestino() => CapturandoDestino = true;
+        public void IniciarCapturaDestino()
+        {
+            CapturandoObjetivoEntidad = false;
+            CapturandoDestino = true;
+        }
+
         public void FinalizarCapturaDestino() => CapturandoDestino = false;
+
+        public void IniciarCapturaObjetivoEntidad()
+        {
+            CapturandoDestino = false;
+            CapturandoObjetivoEntidad = true;
+        }
+
+        public void FinalizarCapturaObjetivoEntidad() =>
+            CapturandoObjetivoEntidad = false;
 
         private void CancelarCapturaDestino()
         {
             CapturandoDestino = false;
+            CapturandoObjetivoEntidad = false;
             CapturaCancelada?.Invoke();
         }
 
@@ -55,14 +72,17 @@ namespace ImperiosEnGuerra.Controladores
             vistaSuscrita = null;
             LimpiarSeleccion();
             FinalizarCapturaDestino();
+            FinalizarCapturaObjetivoEntidad();
         }
 
         private void Update()
         {
             if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
-                if (CapturandoDestino) CancelarCapturaDestino();
-                else LimpiarSeleccion();
+                if (CapturandoDestino || CapturandoObjetivoEntidad)
+                    CancelarCapturaDestino();
+                else
+                    LimpiarSeleccion();
                 return;
             }
 
@@ -104,8 +124,23 @@ namespace ImperiosEnGuerra.Controladores
                 // El clic de destino se consume incluso si queda fuera del mapa.
                 return;
             }
+
+            EntidadSeleccionableVista candidata = ObtenerEntidadEn(mundo);
+
+            if (CapturandoObjetivoEntidad)
+            {
+                ObjetivoEntidadSeleccionado?.Invoke(candidata);
+                return;
+            }
+
+            Seleccionar(candidata);
+        }
+
+        private EntidadSeleccionableVista ObtenerEntidadEn(Vector3 mundo)
+        {
             Physics2D.SyncTransforms();
             EntidadSeleccionableVista candidata = null;
+
             foreach (Collider2D collider in Physics2D.OverlapPointAll(mundo))
             {
                 var entidad = collider.GetComponent<EntidadSeleccionableVista>();
@@ -121,13 +156,11 @@ namespace ImperiosEnGuerra.Controladores
                     (entidad.Renderer.sortingOrder == candidata.Renderer.sortingOrder &&
                      entidad.transform.GetSiblingIndex() < candidata.transform.GetSiblingIndex()))
                 {
-                    // A igual orden: primero creado en su contenedor, según el orden del DTO.
-                    // Cada categoría tiene un sortingOrder distinto y un único contenedor.
                     candidata = entidad;
                 }
             }
 
-            Seleccionar(candidata);
+            return candidata;
         }
 
         private void Seleccionar(EntidadSeleccionableVista entidad)
