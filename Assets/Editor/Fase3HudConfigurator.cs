@@ -131,6 +131,85 @@ public static class Fase3HudConfigurator
                 .objectReferenceValue = boton;
             rect.gameObject.SetActive(false);
         }
+
+        RectTransform selectorEntrenamiento = Rect(
+            panel,
+            "SelectorEntrenamiento",
+            Vector2.zero,
+            Vector2.zero,
+            Vector2.zero,
+            new Vector2(16, 64),
+            new Vector2(380, 110));
+
+        string[] tiposUnidad =
+        {
+            "Aldeano",
+            "Guerrero",
+            "Lancero",
+            "Arquero",
+            "Monje"
+        };
+
+        string[] propiedadesUnidad =
+        {
+            "entrenarAldeano",
+            "entrenarGuerrero",
+            "entrenarLancero",
+            "entrenarArquero",
+            "entrenarMonje"
+        };
+
+        for (int i = 0; i < tiposUnidad.Length; i++)
+        {
+            float x = i * 72;
+
+            RectTransform rectTipo = Rect(
+                selectorEntrenamiento,
+                tiposUnidad[i],
+                Vector2.zero,
+                Vector2.zero,
+                Vector2.zero,
+                new Vector2(x, 2),
+                new Vector2(x + 68, 44));
+
+            Image imagenTipo =
+                Componente<Image>(rectTipo.gameObject);
+
+            imagenTipo.enabled = true;
+            imagenTipo.color =
+                new Color(0.22f, 0.34f, 0.44f, 1f);
+
+            Button botonTipo =
+                Componente<Button>(rectTipo.gameObject);
+
+            botonTipo.enabled = true;
+            botonTipo.targetGraphic = imagenTipo;
+
+            Text etiquetaTipo = Texto(
+                rectTipo,
+                "Texto",
+                tiposUnidad[i],
+                new Vector2(2, -38),
+                new Vector2(-2, -4));
+
+            etiquetaTipo.fontSize = 12;
+            etiquetaTipo.resizeTextMinSize = 8;
+            etiquetaTipo.resizeTextMaxSize = 12;
+            etiquetaTipo.alignment =
+                TextAnchor.MiddleCenter;
+
+            serializado
+                .FindProperty(propiedadesUnidad[i])
+                .objectReferenceValue = botonTipo;
+        }
+
+        serializado
+            .FindProperty("selectorEntrenamiento")
+            .objectReferenceValue =
+                selectorEntrenamiento.gameObject;
+
+        selectorEntrenamiento.gameObject.SetActive(false);
+
         serializado.ApplyModifiedProperties();
 
         var controladorAcciones = BuscarComponente<ControladorAcciones>(escena);

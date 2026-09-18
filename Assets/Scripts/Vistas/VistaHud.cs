@@ -15,8 +15,15 @@ namespace ImperiosEnGuerra.Vistas
         [SerializeField] private Button construir;
         [SerializeField] private Button entrenar;
         [SerializeField] private Button atacar;
+        [SerializeField] private GameObject selectorEntrenamiento;
+        [SerializeField] private Button entrenarAldeano;
+        [SerializeField] private Button entrenarGuerrero;
+        [SerializeField] private Button entrenarLancero;
+        [SerializeField] private Button entrenarArquero;
+        [SerializeField] private Button entrenarMonje;
 
         public event Action<string> AccionSolicitada;
+        public event Action<string> TipoUnidadSolicitado;
 
         private void OnEnable()
         {
@@ -25,6 +32,20 @@ namespace ImperiosEnGuerra.Vistas
             if (construir != null) construir.onClick.AddListener(SolicitarConstruir);
             if (entrenar != null) entrenar.onClick.AddListener(SolicitarEntrenar);
             if (atacar != null) atacar.onClick.AddListener(SolicitarAtacar);
+
+            if (entrenarAldeano != null)
+                entrenarAldeano.onClick.AddListener(SolicitarEntrenarAldeano);
+            if (entrenarGuerrero != null)
+                entrenarGuerrero.onClick.AddListener(SolicitarEntrenarGuerrero);
+
+            if (entrenarLancero != null)
+                entrenarLancero.onClick.AddListener(SolicitarEntrenarLancero);
+
+            if (entrenarArquero != null)
+                entrenarArquero.onClick.AddListener(SolicitarEntrenarArquero);
+
+            if (entrenarMonje != null)
+                entrenarMonje.onClick.AddListener(SolicitarEntrenarMonje);
         }
 
         private void OnDisable()
@@ -34,6 +55,21 @@ namespace ImperiosEnGuerra.Vistas
             if (construir != null) construir.onClick.RemoveListener(SolicitarConstruir);
             if (entrenar != null) entrenar.onClick.RemoveListener(SolicitarEntrenar);
             if (atacar != null) atacar.onClick.RemoveListener(SolicitarAtacar);
+
+            if (entrenarAldeano != null)
+                entrenarAldeano.onClick.RemoveListener(SolicitarEntrenarAldeano);
+
+            if (entrenarGuerrero != null)
+                entrenarGuerrero.onClick.RemoveListener(SolicitarEntrenarGuerrero);
+
+            if (entrenarLancero != null)
+                entrenarLancero.onClick.RemoveListener(SolicitarEntrenarLancero);
+
+            if (entrenarArquero != null)
+                entrenarArquero.onClick.RemoveListener(SolicitarEntrenarArquero);
+
+            if (entrenarMonje != null)
+                entrenarMonje.onClick.RemoveListener(SolicitarEntrenarMonje);
         }
 
         private void SolicitarMover() => AccionSolicitada?.Invoke("Mover");
@@ -42,6 +78,16 @@ namespace ImperiosEnGuerra.Vistas
         private void SolicitarEntrenar() => AccionSolicitada?.Invoke("Entrenar");
         private void SolicitarAtacar() => AccionSolicitada?.Invoke("Atacar");
 
+        private void SolicitarEntrenarAldeano() =>
+            TipoUnidadSolicitado?.Invoke("Aldeano");
+        private void SolicitarEntrenarGuerrero() =>
+            TipoUnidadSolicitado?.Invoke("Guerrero");
+        private void SolicitarEntrenarLancero() =>
+            TipoUnidadSolicitado?.Invoke("Lancero");
+        private void SolicitarEntrenarArquero() =>
+            TipoUnidadSolicitado?.Invoke("Arquero");
+        private void SolicitarEntrenarMonje() =>
+            TipoUnidadSolicitado?.Invoke("Monje");
         public void MostrarRecursos(int oro, int madera, int comida)
         {
             if (recursos != null)
@@ -54,6 +100,12 @@ namespace ImperiosEnGuerra.Vistas
             seleccion.text = entidad == null ? "Sin selección" :
                 $"{entidad.TipoLogico}\nPropietario: {entidad.Propietario}\nCoordenada: ({entidad.X},{entidad.Y})" +
                 (entidad.Propietario == "Maquina" ? " — Enemigo" : "");
+        }
+
+        public void MostrarSelectorEntrenamiento(bool mostrar)
+        {
+            if (selectorEntrenamiento != null)
+                selectorEntrenamiento.SetActive(mostrar);
         }
 
         public void MostrarOpciones(bool puedeMover, bool puedeRecolectar, bool puedeConstruir,
