@@ -2,7 +2,7 @@
 
 Proyecto académico de Programación Orientada a Objetos desarrollado en C# y Unity.
 
-**Imperios en Guerra** es un videojuego de estrategia en tiempo real (RTS) para dos jugadores, inspirado en Age of Empires.
+**Imperios en Guerra** es un videojuego de estrategia en tiempo real (RTS) inspirado en Age of Empires. La modalidad actual del proyecto es **Humano vs Máquina**.
 
 ## Tecnologías
 
@@ -45,11 +45,9 @@ La concurrencia se aplicará progresivamente en procesos como recolección, cons
 
 ## Networking
 
-La comunicación entre las dos instancias del juego se realizará mediante:
+El requisito de networking permanece pendiente de revisión en una fase posterior debido al cambio de modalidad a **Humano vs Máquina**. No se eliminará ni se sustituirá sin revisar nuevamente la guía del profesor.
 
-**WebSockets**
-
-Los mensajes de red utilizarán estructuras definidas, preferiblemente mediante JSON.
+La integración actual entre Unity y la lógica de aplicación utiliza una API local con mensajes JSON estructurados.
 
 ## Flujo de Git
 
