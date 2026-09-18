@@ -40,6 +40,20 @@ public sealed class ServicioAccionesConcurrentes
             });
     }
 
+    public ProcesoConcurrente IniciarRecoleccion(
+        RecolectarRequest? request)
+    {
+        RecolectarRequest? copia = Copiar(request);
+
+        return gestorProcesos.Iniciar(
+            "RECOLECTAR",
+            token =>
+            {
+                EsperarAntesDeAplicar(token);
+                return estadoPartida.IniciarRecoleccion(copia);
+            });
+    }
+
     public bool Cancelar(Guid procesoId)
     {
         return gestorProcesos.Cancelar(procesoId);
@@ -62,6 +76,25 @@ public sealed class ServicioAccionesConcurrentes
 
         if (token.WaitHandle.WaitOne(retardoDemostracion))
             token.ThrowIfCancellationRequested();
+    }
+
+    private static RecolectarRequest? Copiar(
+        RecolectarRequest? request)
+    {
+        if (request == null)
+            return null;
+
+        return new RecolectarRequest
+        {
+            AldeanoId = request.AldeanoId,
+            Objetivo = request.Objetivo == null
+                ? null
+                : new CoordenadaRequest
+                {
+                    X = request.Objetivo.X,
+                    Y = request.Objetivo.Y
+                }
+        };
     }
 
     private static MoverUnidadRequest? Copiar(
