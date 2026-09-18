@@ -266,6 +266,26 @@ app.MapPost(
 .WithName("IniciarRecoleccion");
 
 app.MapPost(
+    "/api/partida/construir-concurrente",
+    (
+        ConstruirRequest? request,
+        ServicioAccionesConcurrentes accionesConcurrentes) =>
+{
+    var proceso =
+        accionesConcurrentes.IniciarConstruccion(request);
+
+    return Results.Accepted(
+        $"/api/procesos/{proceso.Id}",
+        new
+        {
+            procesoId = proceso.Id,
+            nombre = proceso.Nombre,
+            estado = "iniciado"
+        });
+})
+.WithName("IniciarConstruccionConcurrente");
+
+app.MapPost(
     "/api/partida/construir",
     (ConstruirRequest? request, EstadoPartidaService estadoPartida) =>
 {
