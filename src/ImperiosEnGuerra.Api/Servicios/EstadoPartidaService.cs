@@ -119,6 +119,35 @@ public sealed class EstadoPartidaService
     }
 }
 
+    public ResultadoAccion Atacar(AtacarRequest? request)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+                return ResultadoAccion.Fallido(
+                    "No hay una partida activa.");
+
+            if (request == null)
+                return ResultadoAccion.Fallido(
+                    "La solicitud de ataque es obligatoria.");
+
+            if (!Guid.TryParse(request.AtacanteId, out Guid atacanteId))
+                return ResultadoAccion.Fallido(
+                    "El ID del atacante debe tener formato Guid válido.");
+
+            if (!Guid.TryParse(request.ObjetivoId, out Guid objetivoId))
+                return ResultadoAccion.Fallido(
+                    "El ID del objetivo debe tener formato Guid válido.");
+
+            var solicitud = new SolicitudAtaque(
+                atacanteId,
+                objetivoId);
+
+            return new OperacionAtaque()
+                .Ejecutar(partidaActiva, solicitud);
+        }
+    }
+
     public EstadoPartidaResponse? ObtenerEstado()
     {
         lock (sincronizacion)

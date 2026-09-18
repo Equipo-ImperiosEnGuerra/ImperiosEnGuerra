@@ -189,4 +189,16 @@ app.MapPost(
 })
 .WithName("Entrenar");
 
+app.MapPost(
+    "/api/partida/atacar",
+    (AtacarRequest? request, EstadoPartidaService estadoPartida) =>
+{
+    var resultado = estadoPartida.Atacar(request);
+
+    return resultado.Exito
+        ? Results.Ok(resultado)
+        : Results.BadRequest(resultado);
+})
+.WithName("Atacar");
+
 app.Run();
