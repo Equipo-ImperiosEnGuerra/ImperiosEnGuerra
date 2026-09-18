@@ -365,6 +365,45 @@ public class ConstruccionEntrenamientoUnityTests
     }
 
     [Test]
+    public void DtoConcurrente_ConstruccionConservaContrato()
+    {
+        var inicio = new ProcesoIniciadoDto
+        {
+            procesoId =
+                "cccccccc-cccc-cccc-cccc-cccccccccccc",
+            nombre = "CONSTRUIR",
+            estado = "iniciado"
+        };
+
+        string json = JsonUtility.ToJson(inicio);
+
+        Assert.That(
+            json,
+            Does.Contain("\"nombre\":\"CONSTRUIR\""));
+
+        var resultado = new ResultadoProcesoDto
+        {
+            procesoId = inicio.procesoId,
+            nombre = "CONSTRUIR",
+            estado = "Completado",
+            hiloTrabajoId = 11,
+            exito = true,
+            mensaje = "Construcción realizada correctamente."
+        };
+
+        string resultadoJson =
+            JsonUtility.ToJson(resultado);
+
+        Assert.That(
+            resultadoJson,
+            Does.Contain("\"estado\":\"Completado\""));
+
+        Assert.That(
+            resultadoJson,
+            Does.Contain("\"hiloTrabajoId\":11"));
+    }
+
+    [Test]
     public void DtoEntrenamiento_UsaContratoEsperado()
     {
         var dto = new EntrenarDto
