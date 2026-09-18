@@ -108,6 +108,28 @@ public class MovimientoUnityTests
     }
 
     [Test]
+    public void MovimientoEnCurso_BloqueaSegundoMovimiento()
+    {
+        CampoAutomatico(
+            conexion,
+            "MovimientoEnCurso",
+            true);
+
+        Invocar(
+            acciones,
+            "PrepararAccion",
+            "Mover");
+
+        Assert.That(
+            seleccion.CapturandoDestino,
+            Is.False);
+
+        Assert.That(
+            mensaje.text,
+            Does.Contain("esa acción ya está en curso"));
+    }
+
+    [Test]
     public void Dto_UsaIdSeleccionadoYNombresDelContrato()
     {
         Invocar(acciones, "PrepararAccion", "Mover");
@@ -174,6 +196,19 @@ public class MovimientoUnityTests
 
     private static void Campo(object objeto, string nombre, object valor) => objeto.GetType()
         .GetField(nombre, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(objeto, valor);
+
+    private static void CampoAutomatico(
+        object objeto,
+        string nombre,
+        object valor)
+    {
+        objeto.GetType()
+            .GetField(
+                $"<{nombre}>k__BackingField",
+                BindingFlags.Instance |
+                BindingFlags.NonPublic)
+            .SetValue(objeto, valor);
+    }
 
     private static void Invocar(object objeto, string nombre, params object[] argumentos) => objeto.GetType()
         .GetMethod(nombre, BindingFlags.Instance | BindingFlags.NonPublic).Invoke(objeto, argumentos);
