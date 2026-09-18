@@ -192,6 +192,32 @@ app.MapPost(
 .WithName("IniciarMovimientoConcurrente");
 
 app.MapGet(
+    "/api/procesos/{procesoId:guid}/resultado",
+    (
+        Guid procesoId,
+        ServicioAccionesConcurrentes accionesConcurrentes) =>
+{
+    if (!accionesConcurrentes.IntentarObtenerResultado(
+        procesoId,
+        out ResultadoProcesoConcurrente resultado))
+    {
+        return Results.NoContent();
+    }
+
+    return Results.Ok(new
+    {
+        procesoId = resultado.ProcesoId,
+        nombre = resultado.Nombre,
+        estado = resultado.Estado.ToString(),
+        hiloTrabajoId = resultado.HiloTrabajoId,
+        exito = resultado.Resultado?.Exito ?? false,
+        mensaje = resultado.Resultado?.Mensaje,
+        errorTecnico = resultado.ErrorTecnico
+    });
+})
+.WithName("ObtenerResultadoProcesoPorId");
+
+app.MapGet(
     "/api/procesos/resultado",
     (ServicioAccionesConcurrentes accionesConcurrentes) =>
 {
