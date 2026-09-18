@@ -31,11 +31,35 @@ public bool AccionEnCurso =>
     EntrenamientoEnCurso ||
     AtaqueEnCurso;
 
+public bool PuedeIniciarMovimiento =>
+    isActiveAndEnabled &&
+    !MovimientoEnCurso &&
+    !AtaqueEnCurso;
+
+public bool PuedeIniciarRecoleccion =>
+    isActiveAndEnabled &&
+    !RecoleccionEnCurso &&
+    !AtaqueEnCurso;
+
+public bool PuedeIniciarConstruccion =>
+    isActiveAndEnabled &&
+    !ConstruccionEnCurso &&
+    !AtaqueEnCurso;
+
+public bool PuedeIniciarEntrenamiento =>
+    isActiveAndEnabled &&
+    !EntrenamientoEnCurso &&
+    !AtaqueEnCurso;
+
+public bool PuedeIniciarAtaque =>
+    isActiveAndEnabled &&
+    !AccionEnCurso;
+
         public void MoverUnidad(string unidadId, int x, int y)
         {
-            if (!isActiveAndEnabled || AccionEnCurso)
+            if (!PuedeIniciarMovimiento)
             {
-                MostrarError("La conexión no está disponible o hay una acción en curso.");
+                MostrarError("La conexión no está disponible o ya hay un movimiento en curso.");
                 return;
             }
 
@@ -48,9 +72,9 @@ public bool AccionEnCurso =>
 
         public void IniciarRecoleccion(string aldeanoId, int x, int y)
         {
-            if (!isActiveAndEnabled || AccionEnCurso)
+            if (!PuedeIniciarRecoleccion)
             {
-                MostrarError("La conexión no está disponible o hay una acción en curso.");
+                MostrarError("La conexión no está disponible o ya hay una recolección en curso.");
                 return;
             }
 
@@ -67,10 +91,10 @@ public bool AccionEnCurso =>
         int x,
         int y)
     {
-        if (!isActiveAndEnabled || AccionEnCurso)
+        if (!PuedeIniciarConstruccion)
         {
             MostrarError(
-                "La conexión no está disponible o hay una acción en curso.");
+                "La conexión no está disponible o ya hay una construcción en curso.");
             return;
         }
 
@@ -91,10 +115,10 @@ public bool AccionEnCurso =>
             int destinoX,
             int destinoY)
         {
-            if (!isActiveAndEnabled || AccionEnCurso)
+            if (!PuedeIniciarEntrenamiento)
             {
                 MostrarError(
-                    "La conexión no está disponible o hay una acción en curso.");
+                    "La conexión no está disponible o ya hay un entrenamiento en curso.");
                 return;
             }
 
@@ -120,10 +144,10 @@ public bool AccionEnCurso =>
             string atacanteId,
             string objetivoId)
         {
-            if (!isActiveAndEnabled || AccionEnCurso)
+            if (!PuedeIniciarAtaque)
             {
                 MostrarError(
-                    "La conexión no está disponible o hay una acción en curso.");
+                    "La conexión no está disponible o hay otra acción en curso.");
                 return;
             }
 
@@ -216,7 +240,7 @@ public bool AccionEnCurso =>
             {
                 using UnityWebRequest request =
                     UnityWebRequest.Get(
-                        $"{urlBaseApi}/api/procesos/resultado");
+                        $"{urlBaseApi}/api/procesos/{procesoId}/resultado");
 
                 request.timeout = 5;
 
@@ -425,7 +449,7 @@ public bool AccionEnCurso =>
             {
                 using UnityWebRequest request =
                     UnityWebRequest.Get(
-                        $"{urlBaseApi}/api/procesos/resultado");
+                        $"{urlBaseApi}/api/procesos/{procesoId}/resultado");
 
                 request.timeout = 5;
 
@@ -597,7 +621,7 @@ public bool AccionEnCurso =>
             {
                 using UnityWebRequest request =
                     UnityWebRequest.Get(
-                        $"{urlBaseApi}/api/procesos/resultado");
+                        $"{urlBaseApi}/api/procesos/{procesoId}/resultado");
 
                 request.timeout = 5;
 
@@ -780,7 +804,7 @@ public bool AccionEnCurso =>
             {
                 using UnityWebRequest request =
                     UnityWebRequest.Get(
-                        $"{urlBaseApi}/api/procesos/resultado");
+                        $"{urlBaseApi}/api/procesos/{procesoId}/resultado");
 
                 request.timeout = 5;
 
