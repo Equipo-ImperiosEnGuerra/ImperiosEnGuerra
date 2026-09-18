@@ -167,6 +167,66 @@ public class ConstruccionConcurrenteTests
             Is.True);
     }
 
+    [Test]
+    public async Task ConflictoConstruccion_Repetido_NoDuplicaEdificios()
+    {
+        const int repeticiones = 10;
+
+        for (int intento = 0;
+             intento < repeticiones;
+             intento++)
+        {
+            Partida partida = CrearPartida(
+                out Aldeano primero,
+                out Aldeano segundo);
+
+            var estado = new EstadoPartidaService();
+            estado.EstablecerPartida(partida);
+
+            using var gestor =
+                new GestorProcesosConcurrentes();
+
+            var servicio =
+                new ServicioAccionesConcurrentes(
+                    estado,
+                    gestor,
+                    TimeSpan.FromMilliseconds(5));
+
+            ProcesoConcurrente procesoA =
+                servicio.IniciarConstruccion(
+                    CrearRequest(primero, 4, 4));
+
+            ProcesoConcurrente procesoB =
+                servicio.IniciarConstruccion(
+                    CrearRequest(segundo, 4, 4));
+
+            await Task.WhenAll(
+                procesoA.Finalizacion,
+                procesoB.Finalizacion);
+
+            var resultados =
+                new List<ResultadoProcesoConcurrente>();
+
+            while (servicio.IntentarObtenerResultado(
+                out ResultadoProcesoConcurrente resultado))
+            {
+                resultados.Add(resultado);
+            }
+
+            Assert.That(
+                resultados.Count(
+                    r => r.Resultado != null &&
+                         r.Resultado.Exito),
+                Is.EqualTo(1),
+                $"Intento concurrente {intento + 1}");
+
+            Assert.That(
+                partida.JugadorHumano.Edificios.Count,
+                Is.EqualTo(1),
+                $"Intento concurrente {intento + 1}");
+        }
+    }
+
     private static Partida CrearPartida(
         out Aldeano primero,
         out Aldeano segundo)
