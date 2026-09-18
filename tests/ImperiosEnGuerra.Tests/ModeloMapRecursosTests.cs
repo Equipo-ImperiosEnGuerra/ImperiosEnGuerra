@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using NUnit.Framework;
 using ImperiosEnGuerra.Modelo.Map;
 using ImperiosEnGuerra.Modelo.Recursos;
@@ -231,6 +232,83 @@ namespace ImperiosEnGuerra.Tests.Editor
 
             Assert.That(recursos.IntentarGastar(TipoRecurso.Oro, cantidad), Is.EqualTo(esperado));
             Assert.That(recursos.ObtenerCantidad(TipoRecurso.Oro), Is.EqualTo(saldoEsperado));
+        }
+
+        [Test]
+        public async Task RecursosJugador_AgregarConcurrente_NoPierdeActualizaciones()
+        {
+            RecursosJugador recursos = new RecursosJugador();
+
+            const int cantidadTareas = 8;
+            const int incrementosPorTarea = 1000;
+
+            Task[] tareas = new Task[cantidadTareas];
+
+            for (int i = 0; i < cantidadTareas; i++)
+            {
+                tareas[i] = Task.Run(() =>
+                {
+                    for (int incremento = 0;
+                         incremento < incrementosPorTarea;
+                         incremento++)
+                    {
+                        recursos.Agregar(TipoRecurso.Oro, 1);
+                    }
+                });
+            }
+
+            await Task.WhenAll(tareas);
+
+            Assert.That(
+                recursos.ObtenerCantidad(TipoRecurso.Oro),
+                Is.EqualTo(cantidadTareas * incrementosPorTarea));
+        }
+
+        [Test]
+        public async Task RecursosJugador_GastoConcurrente_NoPermiteSaldoNegativo()
+        {
+            RecursosJugador recursos = new RecursosJugador();
+            recursos.Agregar(TipoRecurso.Madera, 1000);
+
+            const int cantidadTareas = 8;
+            const int intentosPorTarea = 200;
+
+            Task<int>[] tareas = new Task<int>[cantidadTareas];
+
+            for (int i = 0; i < cantidadTareas; i++)
+            {
+                tareas[i] = Task.Run(() =>
+                {
+                    int exitos = 0;
+
+                    for (int intento = 0;
+                         intento < intentosPorTarea;
+                         intento++)
+                    {
+                        if (recursos.IntentarGastar(
+                            TipoRecurso.Madera,
+                            1))
+                        {
+                            exitos++;
+                        }
+                    }
+
+                    return exitos;
+                });
+            }
+
+            int[] exitosPorTarea = await Task.WhenAll(tareas);
+            int totalExitos = 0;
+
+            foreach (int exitos in exitosPorTarea)
+            {
+                totalExitos += exitos;
+            }
+
+            Assert.That(totalExitos, Is.EqualTo(1000));
+            Assert.That(
+                recursos.ObtenerCantidad(TipoRecurso.Madera),
+                Is.Zero);
         }
 
         [TestCase(TipoRecurso.Oro)]

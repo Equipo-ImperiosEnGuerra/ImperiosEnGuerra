@@ -9,6 +9,7 @@ namespace ImperiosEnGuerra.Modelo.Recursos
     public class RecursosJugador
     {
         private readonly Dictionary<TipoRecurso, int> cantidades;
+        private readonly object sincronizacion = new object();
 
         /// <summary>
         /// Inicializa los saldos de oro, madera y comida en cero.
@@ -31,7 +32,10 @@ namespace ImperiosEnGuerra.Modelo.Recursos
         /// <exception cref="KeyNotFoundException">El tipo no corresponde a una clave registrada.</exception>
         public int ObtenerCantidad(TipoRecurso tipo)
         {
-            return cantidades[tipo];
+            lock (sincronizacion)
+            {
+                return cantidades[tipo];
+            }
         }
 
         /// <summary>
@@ -51,7 +55,10 @@ namespace ImperiosEnGuerra.Modelo.Recursos
                 );
             }
 
-            cantidades[tipo] += cantidad;
+            lock (sincronizacion)
+            {
+                cantidades[tipo] += cantidad;
+            }
         }
 
         /// <summary>
@@ -68,7 +75,10 @@ namespace ImperiosEnGuerra.Modelo.Recursos
                 return false;
             }
 
-            return cantidades[tipo] >= cantidad;
+            lock (sincronizacion)
+            {
+                return cantidades[tipo] >= cantidad;
+            }
         }
 
         /// <summary>
@@ -85,13 +95,16 @@ namespace ImperiosEnGuerra.Modelo.Recursos
                 return false;
             }
 
-            if (cantidades[tipo] < cantidad)
+            lock (sincronizacion)
             {
-                return false;
-            }
+                if (cantidades[tipo] < cantidad)
+                {
+                    return false;
+                }
 
-            cantidades[tipo] -= cantidad;
-            return true;
+                cantidades[tipo] -= cantidad;
+                return true;
+            }
         }
     }
 }
