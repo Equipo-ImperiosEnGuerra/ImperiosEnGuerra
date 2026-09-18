@@ -55,7 +55,9 @@ public static class PartidaEstadoMapper
                 Coordenada = unidad.Coordenada == null
                     ? null
                     : ConvertirCoordenada(unidad.Coordenada),
-                Disponible = unidad.Disponible
+                Disponible = unidad.Disponible,
+                Estado = unidad.Estado.ToString(),
+                OrdenActiva = unidad.OrdenActiva?.ToString()
             }).ToList()
         };
     }
