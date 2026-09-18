@@ -7,12 +7,32 @@ public sealed class ServicioAccionesConcurrentes
 {
     private readonly EstadoPartidaService estadoPartida;
     private readonly GestorProcesosConcurrentes gestorProcesos;
-    private readonly TimeSpan retardoDemostracion;
+    private readonly TimeSpan retardoMovimiento;
+    private readonly TimeSpan retardoRecoleccion;
+    private readonly TimeSpan retardoConstruccion;
+    private readonly TimeSpan retardoEntrenamiento;
 
     public ServicioAccionesConcurrentes(
         EstadoPartidaService estadoPartida,
         GestorProcesosConcurrentes gestorProcesos,
         TimeSpan retardoDemostracion)
+        : this(
+            estadoPartida,
+            gestorProcesos,
+            retardoDemostracion,
+            retardoDemostracion,
+            retardoDemostracion,
+            retardoDemostracion)
+    {
+    }
+
+    public ServicioAccionesConcurrentes(
+        EstadoPartidaService estadoPartida,
+        GestorProcesosConcurrentes gestorProcesos,
+        TimeSpan retardoMovimiento,
+        TimeSpan retardoRecoleccion,
+        TimeSpan retardoConstruccion,
+        TimeSpan retardoEntrenamiento)
     {
         this.estadoPartida =
             estadoPartida ?? throw new ArgumentNullException(nameof(estadoPartida));
@@ -20,10 +40,15 @@ public sealed class ServicioAccionesConcurrentes
         this.gestorProcesos =
             gestorProcesos ?? throw new ArgumentNullException(nameof(gestorProcesos));
 
-        if (retardoDemostracion < TimeSpan.Zero)
-            throw new ArgumentOutOfRangeException(nameof(retardoDemostracion));
+        ValidarRetardo(retardoMovimiento, nameof(retardoMovimiento));
+        ValidarRetardo(retardoRecoleccion, nameof(retardoRecoleccion));
+        ValidarRetardo(retardoConstruccion, nameof(retardoConstruccion));
+        ValidarRetardo(retardoEntrenamiento, nameof(retardoEntrenamiento));
 
-        this.retardoDemostracion = retardoDemostracion;
+        this.retardoMovimiento = retardoMovimiento;
+        this.retardoRecoleccion = retardoRecoleccion;
+        this.retardoConstruccion = retardoConstruccion;
+        this.retardoEntrenamiento = retardoEntrenamiento;
     }
 
     public ProcesoConcurrente IniciarMovimiento(
@@ -35,7 +60,7 @@ public sealed class ServicioAccionesConcurrentes
             "MOVER",
             token =>
             {
-                EsperarAntesDeAplicar(token);
+                EsperarAntesDeAplicar(token, retardoMovimiento);
                 return estadoPartida.MoverUnidad(copia);
             });
     }
@@ -49,7 +74,7 @@ public sealed class ServicioAccionesConcurrentes
             "RECOLECTAR",
             token =>
             {
-                EsperarAntesDeAplicar(token);
+                EsperarAntesDeAplicar(token, retardoRecoleccion);
                 return estadoPartida.IniciarRecoleccion(copia);
             });
     }
@@ -63,7 +88,7 @@ public sealed class ServicioAccionesConcurrentes
             "CONSTRUIR",
             token =>
             {
-                EsperarAntesDeAplicar(token);
+                EsperarAntesDeAplicar(token, retardoConstruccion);
                 return estadoPartida.Construir(copia);
             });
     }
@@ -77,7 +102,7 @@ public sealed class ServicioAccionesConcurrentes
             "ENTRENAR",
             token =>
             {
-                EsperarAntesDeAplicar(token);
+                EsperarAntesDeAplicar(token, retardoEntrenamiento);
                 return estadoPartida.Entrenar(copia);
             });
     }
@@ -109,15 +134,25 @@ public sealed class ServicioAccionesConcurrentes
 
     public int ProcesosActivos => gestorProcesos.ProcesosActivos;
 
-    private void EsperarAntesDeAplicar(CancellationToken token)
+    private static void EsperarAntesDeAplicar(
+        CancellationToken token,
+        TimeSpan retardo)
     {
         token.ThrowIfCancellationRequested();
 
-        if (retardoDemostracion <= TimeSpan.Zero)
+        if (retardo <= TimeSpan.Zero)
             return;
 
-        if (token.WaitHandle.WaitOne(retardoDemostracion))
+        if (token.WaitHandle.WaitOne(retardo))
             token.ThrowIfCancellationRequested();
+    }
+
+    private static void ValidarRetardo(
+        TimeSpan retardo,
+        string nombreParametro)
+    {
+        if (retardo < TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nombreParametro);
     }
 
     private static EntrenarRequest? Copiar(
