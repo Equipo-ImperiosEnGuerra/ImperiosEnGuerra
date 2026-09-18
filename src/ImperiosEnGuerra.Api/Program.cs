@@ -18,14 +18,29 @@ builder.Services.AddSingleton<EstadoPartidaService>();
 builder.Services.AddSingleton<GestorProcesosConcurrentes>();
 builder.Services.AddSingleton(sp =>
 {
-    int retardoMs =
+    int movimientoSegundos =
         builder.Configuration.GetValue<int>(
-            "Concurrencia:RetardoDemostracionMs");
+            "Concurrencia:MovimientoSegundos");
+
+    int recoleccionSegundos =
+        builder.Configuration.GetValue<int>(
+            "Concurrencia:RecoleccionSegundos");
+
+    int construccionSegundos =
+        builder.Configuration.GetValue<int>(
+            "Concurrencia:ConstruccionSegundos");
+
+    int entrenamientoSegundos =
+        builder.Configuration.GetValue<int>(
+            "Concurrencia:EntrenamientoSegundos");
 
     return new ServicioAccionesConcurrentes(
         sp.GetRequiredService<EstadoPartidaService>(),
         sp.GetRequiredService<GestorProcesosConcurrentes>(),
-        TimeSpan.FromMilliseconds(retardoMs));
+        TimeSpan.FromSeconds(movimientoSegundos),
+        TimeSpan.FromSeconds(recoleccionSegundos),
+        TimeSpan.FromSeconds(construccionSegundos),
+        TimeSpan.FromSeconds(entrenamientoSegundos));
 });
 
 var app = builder.Build();
