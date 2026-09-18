@@ -45,7 +45,7 @@ La Fase 4 implementa concurrencia real mediante C#:
 
 Movimiento, recolección, construcción y entrenamiento se ejecutan mediante workers fuera del Main Thread de Unity. Los resultados regresan de forma thread-safe y Unity actualiza Vista/HUD únicamente desde su Main Thread.
 
-Detalle técnico: [docs/FASE_4_CONCURRENCIA.md](docs/FASE_4_CONCURRENCIA.md).
+Los tiempos actuales del prototipo son configurables: movimiento 1 s, recolección 2 s, entrenamiento 5 s y construcción 7 s. Estos valores son de jugabilidad del prototipo y no sustituyen requisitos del profesor.
 
 ## Networking
 
