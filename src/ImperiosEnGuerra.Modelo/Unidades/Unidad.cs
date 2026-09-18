@@ -1,10 +1,11 @@
 using System;
+using ImperiosEnGuerra.Modelo.Acciones;
 using ImperiosEnGuerra.Modelo.Map;
 
 namespace ImperiosEnGuerra.Modelo.Unidades
 {
     /// <summary>
-    /// Base de las unidades del Modelo, con identidad estable, posición lógica y una marca de disponibilidad.
+    /// Base de las unidades del Modelo, con identidad estable, posición lógica y estado de gameplay.
     /// </summary>
     public abstract class Unidad
     {
@@ -19,12 +20,23 @@ namespace ImperiosEnGuerra.Modelo.Unidades
         public Coordenada Coordenada { get; protected set; }
 
         /// <summary>
-        /// Marca de disponibilidad que puede cambiarse mediante los métodos de la unidad o sus clases derivadas.
+        /// Marca de disponibilidad conservada por compatibilidad con las validaciones existentes.
+        /// Una orden activa vuelve la unidad no disponible hasta completarse o cancelarse.
         /// </summary>
         public bool Disponible { get; protected set; }
 
         /// <summary>
-        /// Inicializa una unidad con un identificador único, disponible y con la coordenada recibida, sin validarla.
+        /// Estado lógico autoritativo de la unidad.
+        /// </summary>
+        public EstadoUnidad Estado { get; private set; }
+
+        /// <summary>
+        /// Tipo de orden activa. Es null cuando la unidad está Idle.
+        /// </summary>
+        public TipoAccionJuego? OrdenActiva { get; private set; }
+
+        /// <summary>
+        /// Inicializa una unidad con un identificador único, disponible, sin orden y en estado Idle.
         /// </summary>
         /// <param name="coordenada">Posición lógica inicial.</param>
         protected Unidad(Coordenada coordenada)
@@ -32,14 +44,66 @@ namespace ImperiosEnGuerra.Modelo.Unidades
             Id = Guid.NewGuid();
             Coordenada = coordenada;
             Disponible = true;
+            Estado = EstadoUnidad.Idle;
+            OrdenActiva = null;
         }
 
         /// <summary>
-        /// Establece la marca de disponibilidad en true.
+        /// Intenta iniciar una orden de unidad. Solo puede existir una orden activa a la vez.
+        /// </summary>
+        public bool IntentarIniciarOrden(TipoAccionJuego tipo)
+        {
+            if (OrdenActiva.HasValue)
+                return false;
+
+            EstadoUnidad? nuevoEstado = EstadoPara(tipo);
+            if (!nuevoEstado.HasValue)
+                return false;
+
+            OrdenActiva = tipo;
+            Estado = nuevoEstado.Value;
+            Disponible = false;
+            return true;
+        }
+
+        /// <summary>
+        /// Reemplaza explícitamente una orden activa por otra compatible.
+        /// Si la nueva orden no corresponde a un estado de unidad, no modifica el estado actual.
+        /// </summary>
+        public bool IntentarReemplazarOrden(TipoAccionJuego tipo)
+        {
+            EstadoUnidad? nuevoEstado = EstadoPara(tipo);
+            if (!nuevoEstado.HasValue)
+                return false;
+
+            OrdenActiva = tipo;
+            Estado = nuevoEstado.Value;
+            Disponible = false;
+            return true;
+        }
+
+        /// <summary>
+        /// Cancela la orden actual y devuelve la unidad a Idle.
+        /// </summary>
+        public void CancelarOrden()
+        {
+            RestablecerOrden();
+        }
+
+        /// <summary>
+        /// Marca la orden como completada y devuelve la unidad a Idle.
+        /// </summary>
+        public void CompletarOrden()
+        {
+            RestablecerOrden();
+        }
+
+        /// <summary>
+        /// Establece la marca de disponibilidad en true y limpia cualquier orden pendiente.
         /// </summary>
         public void MarcarDisponible()
         {
-            Disponible = true;
+            RestablecerOrden();
         }
 
         /// <summary>
@@ -54,6 +118,28 @@ namespace ImperiosEnGuerra.Modelo.Unidades
         internal void EstablecerDestino(Coordenada destino)
         {
             Coordenada = destino;
+        }
+
+        private void RestablecerOrden()
+        {
+            OrdenActiva = null;
+            Estado = EstadoUnidad.Idle;
+            Disponible = true;
+        }
+
+        private static EstadoUnidad? EstadoPara(TipoAccionJuego tipo)
+        {
+            switch (tipo)
+            {
+                case TipoAccionJuego.Mover:
+                    return EstadoUnidad.Moviendo;
+                case TipoAccionJuego.Recolectar:
+                    return EstadoUnidad.Recolectando;
+                case TipoAccionJuego.Construir:
+                    return EstadoUnidad.Construyendo;
+                default:
+                    return null;
+            }
         }
     }
 }
