@@ -529,7 +529,7 @@ public bool AccionEnCurso =>
             {
                 using var request =
                     new UnityWebRequest(
-                        $"{urlBaseApi}/api/partida/construir",
+                        $"{urlBaseApi}/api/partida/construir-concurrente",
                         UnityWebRequest.kHttpVerbPOST);
 
                 request.uploadHandler =
@@ -548,43 +548,158 @@ public bool AccionEnCurso =>
 
                 yield return request.SendWebRequest();
 
-                ResultadoAccionDto resultado =
-                    LeerResultado(
+                if (request.result !=
+                    UnityWebRequest.Result.Success)
+                {
+                    MostrarError(
+                        $"No se pudo iniciar la construcción concurrente. HTTP {request.responseCode}: {request.error}");
+
+                    yield break;
+                }
+
+                ProcesoIniciadoDto proceso =
+                    LeerProcesoIniciado(
                         request.downloadHandler.text);
+
+                if (proceso == null ||
+                    string.IsNullOrWhiteSpace(
+                        proceso.procesoId))
+                {
+                    MostrarError(
+                        "La API no devolvió un identificador válido para la construcción concurrente.");
+
+                    yield break;
+                }
+
+                if (vistaHud != null)
+                {
+                    vistaHud.MostrarMensaje(
+                        "Construcción concurrente en curso...");
+                }
+
+                yield return EsperarResultadoConstruccion(
+                    proceso.procesoId);
+            }
+            finally
+            {
+                ConstruccionEnCurso = false;
+            }
+        }
+
+        private IEnumerator EsperarResultadoConstruccion(
+            string procesoId)
+        {
+            const float intervaloConsulta = 0.1f;
+            const float tiempoMaximo = 15f;
+            float tiempoTranscurrido = 0f;
+
+            while (tiempoTranscurrido < tiempoMaximo)
+            {
+                using UnityWebRequest request =
+                    UnityWebRequest.Get(
+                        $"{urlBaseApi}/api/procesos/resultado");
+
+                request.timeout = 5;
+
+                yield return request.SendWebRequest();
 
                 if (request.result !=
                     UnityWebRequest.Result.Success)
                 {
                     MostrarError(
-                        MensajeError(
-                            resultado,
-                            $"No se pudo realizar la construcción. HTTP {request.responseCode}: {request.error}"));
+                        $"No se pudo consultar la construcción concurrente. HTTP {request.responseCode}: {request.error}");
 
                     yield break;
                 }
 
-                if (resultado == null ||
-                    !resultado.exito)
+                if (request.responseCode == 204 ||
+                    string.IsNullOrWhiteSpace(
+                        request.downloadHandler.text))
+                {
+                    yield return new WaitForSecondsRealtime(
+                        intervaloConsulta);
+
+                    tiempoTranscurrido += intervaloConsulta;
+                    continue;
+                }
+
+                ResultadoProcesoDto resultado =
+                    LeerResultadoProceso(
+                        request.downloadHandler.text);
+
+                if (resultado == null)
                 {
                     MostrarError(
-                        MensajeError(
-                            resultado,
-                            "La API no confirmó la construcción."));
+                        "La API devolvió un resultado concurrente inválido.");
 
                     yield break;
                 }
+
+                if (resultado.procesoId != procesoId)
+                {
+                    MostrarError(
+                        "Se recibió el resultado de un proceso distinto a la construcción esperada.");
+
+                    yield break;
+                }
+
+                if (resultado.estado == "Cancelado")
+                {
+                    if (vistaHud != null)
+                    {
+                        vistaHud.MostrarMensaje(
+                            "Construcción cancelada.");
+                    }
+
+                    yield break;
+                }
+
+                if (resultado.estado == "Fallido")
+                {
+                    MostrarError(
+                        string.IsNullOrWhiteSpace(
+                            resultado.errorTecnico)
+                            ? "El worker de construcción finalizó con error."
+                            : resultado.errorTecnico);
+
+                    yield break;
+                }
+
+                if (resultado.estado != "Completado")
+                {
+                    MostrarError(
+                        $"Estado concurrente no reconocido: {resultado.estado}");
+
+                    yield break;
+                }
+
+                if (!resultado.exito)
+                {
+                    MostrarError(
+                        string.IsNullOrWhiteSpace(
+                            resultado.mensaje)
+                            ? "La construcción fue rechazada por el Modelo."
+                            : resultado.mensaje);
+
+                    yield break;
+                }
+
+                Debug.Log(
+                    $"Construcción ejecutada por worker " +
+                    $"{resultado.hiloTrabajoId}.");
 
                 yield return ObtenerPartidaActiva(
                     string.IsNullOrWhiteSpace(
                         resultado.mensaje)
                         ? "Construcción realizada."
                         : resultado.mensaje,
-                    "Construcción aceptada, pero no se pudo actualizar la vista. ");
+                    "Construcción completada, pero no se pudo actualizar la vista. ");
+
+                yield break;
             }
-            finally
-            {
-                ConstruccionEnCurso = false;
-            }
+
+            MostrarError(
+                "La construcción concurrente excedió el tiempo máximo de espera.");
         }
         
 
