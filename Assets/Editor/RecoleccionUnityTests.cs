@@ -255,6 +255,45 @@ public class RecoleccionUnityTests
     }
 
     [Test]
+    public void DtoConcurrente_RecoleccionConservaContrato()
+    {
+        var inicio = new ProcesoIniciadoDto
+        {
+            procesoId =
+                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+            nombre = "RECOLECTAR",
+            estado = "iniciado"
+        };
+
+        string json = JsonUtility.ToJson(inicio);
+
+        Assert.That(
+            json,
+            Does.Contain("\"nombre\":\"RECOLECTAR\""));
+
+        var resultado = new ResultadoProcesoDto
+        {
+            procesoId = inicio.procesoId,
+            nombre = "RECOLECTAR",
+            estado = "Completado",
+            hiloTrabajoId = 9,
+            exito = true,
+            mensaje = "Recolección de Oro preparada."
+        };
+
+        string resultadoJson =
+            JsonUtility.ToJson(resultado);
+
+        Assert.That(
+            resultadoJson,
+            Does.Contain("\"estado\":\"Completado\""));
+
+        Assert.That(
+            resultadoJson,
+            Does.Contain("\"hiloTrabajoId\":9"));
+    }
+
+    [Test]
     public void CambioSeleccion_CancelaRecoleccion()
     {
         Invocar(
