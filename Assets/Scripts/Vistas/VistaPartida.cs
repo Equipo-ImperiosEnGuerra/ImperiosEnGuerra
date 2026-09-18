@@ -213,8 +213,15 @@ namespace ImperiosEnGuerra.Vistas
                 GameObject objeto = CrearSprite($"Unidad_{propietario}_{unidad.tipo}_{unidad.coordenada.x}_{unidad.coordenada.y}",
                     sprite, unidad.coordenada.x, unidad.coordenada.y, 30, unidades,
                     Vector3.one * escalaUnidades);
-                ConfigurarSeleccionable(objeto, CategoriaEntidadVisual.Unidad,
-                    unidad.tipo, propietario, unidad.coordenada, unidad.id);
+                ConfigurarSeleccionable(
+                    objeto,
+                    CategoriaEntidadVisual.Unidad,
+                    unidad.tipo,
+                    propietario,
+                    unidad.coordenada,
+                    unidad.id,
+                    unidad.estado,
+                    unidad.ordenActiva);
             }
         }
 
@@ -247,8 +254,15 @@ namespace ImperiosEnGuerra.Vistas
             return true;
         }
 
-        private void ConfigurarSeleccionable(GameObject objeto, CategoriaEntidadVisual categoria,
-            string tipo, string propietario, CoordenadaEstadoDto coordenada, string idLogico = "")
+        private void ConfigurarSeleccionable(
+            GameObject objeto,
+            CategoriaEntidadVisual categoria,
+            string tipo,
+            string propietario,
+            CoordenadaEstadoDto coordenada,
+            string idLogico = "",
+            string estadoLogico = "",
+            string ordenActiva = "")
         {
             if (objeto == null)
             {
@@ -256,9 +270,19 @@ namespace ImperiosEnGuerra.Vistas
             }
 
             var entidad = objeto.AddComponent<EntidadSeleccionableVista>();
-            entidad.Configurar(categoria, idLogico, tipo, propietario, coordenada.x, coordenada.y);
+
+            entidad.Configurar(
+                categoria,
+                idLogico,
+                tipo,
+                propietario,
+                coordenada.x,
+                coordenada.y,
+                estadoLogico,
+                ordenActiva);
+
             var collider = objeto.AddComponent<BoxCollider2D>();
-            // Bounds locales: el Transform aplica la escala visual existente una sola vez.
+
             collider.size = entidad.Renderer.sprite.bounds.size;
             collider.offset = entidad.Renderer.sprite.bounds.center;
         }

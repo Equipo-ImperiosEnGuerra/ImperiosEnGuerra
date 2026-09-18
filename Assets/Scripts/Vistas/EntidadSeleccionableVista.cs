@@ -19,26 +19,52 @@ namespace ImperiosEnGuerra.Vistas
         public string Propietario { get; private set; }
         public int X { get; private set; }
         public int Y { get; private set; }
+        public string EstadoLogico { get; private set; }
+        public string OrdenActiva { get; private set; }
+
         public SpriteRenderer Renderer { get; private set; }
 
         private Color colorOriginal;
         private bool seleccionada;
 
-        public void Configurar(CategoriaEntidadVisual categoria, string tipo, string propietario, int x, int y)
+        public void Configurar(
+            CategoriaEntidadVisual categoria,
+            string tipo,
+            string propietario,
+            int x,
+            int y)
         {
-            Configurar(categoria, string.Empty, tipo, propietario, x, y);
+            Configurar(
+                categoria,
+                string.Empty,
+                tipo,
+                propietario,
+                x,
+                y);
         }
 
-        public void Configurar(CategoriaEntidadVisual categoria, string idLogico, string tipo,
-            string propietario, int x, int y)
+        public void Configurar(
+            CategoriaEntidadVisual categoria,
+            string idLogico,
+            string tipo,
+            string propietario,
+            int x,
+            int y,
+            string estadoLogico = "",
+            string ordenActiva = "")
         {
             OcultarSeleccion();
+
             Categoria = categoria;
             IdLogico = idLogico ?? string.Empty;
             TipoLogico = tipo;
             Propietario = propietario;
             X = x;
             Y = y;
+
+            EstadoLogico = estadoLogico ?? string.Empty;
+            OrdenActiva = ordenActiva ?? string.Empty;
+
             Renderer = GetComponent<SpriteRenderer>();
             colorOriginal = Renderer.color;
         }
