@@ -3,10 +3,16 @@ using ImperiosEnGuerra.Api.Contratos;
 using ImperiosEnGuerra.Api.Mapeadores;
 using ImperiosEnGuerra.Modelo.Core;
 using ImperiosEnGuerra.Modelo.Map;
+using ImperiosEnGuerra.Servicios;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+builder.Services.AddSingleton(
+    new ServicioArchivos(
+        Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "DatosPartida")));
 builder.Services.AddSingleton<EstadoPartidaService>();
 
 var app = builder.Build();
