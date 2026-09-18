@@ -294,6 +294,30 @@ public class RecoleccionUnityTests
     }
 
     [Test]
+    public void MovimientoEnCurso_NoBloqueaPrepararRecoleccion()
+    {
+        CampoAutomatico(
+            conexion,
+            "MovimientoEnCurso",
+            true);
+
+        Invocar(
+            acciones,
+            "PrepararAccion",
+            "Recolectar");
+
+        Assert.That(
+            seleccion.CapturandoDestino,
+            Is.True);
+
+        Assert.That(
+            LeerCampo(
+                acciones,
+                "accionPendiente"),
+            Is.EqualTo("Recolectar"));
+    }
+
+    [Test]
     public void CambioSeleccion_CancelaRecoleccion()
     {
         Invocar(
@@ -338,6 +362,19 @@ public class RecoleccionUnityTests
         objeto.GetType()
             .GetField(
                 nombre,
+                BindingFlags.Instance |
+                BindingFlags.NonPublic)
+            .SetValue(objeto, valor);
+    }
+
+    private static void CampoAutomatico(
+        object objeto,
+        string nombre,
+        object valor)
+    {
+        objeto.GetType()
+            .GetField(
+                $"<{nombre}>k__BackingField",
                 BindingFlags.Instance |
                 BindingFlags.NonPublic)
             .SetValue(objeto, valor);
