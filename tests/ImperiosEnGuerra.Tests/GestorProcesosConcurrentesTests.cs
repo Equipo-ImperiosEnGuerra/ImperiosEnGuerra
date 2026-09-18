@@ -129,6 +129,54 @@ namespace ImperiosEnGuerra.Tests
         }
 
         [Test]
+        public async Task ResultadoPorId_NoConsumeResultadoDeOtroProceso()
+        {
+            using var gestor = new GestorProcesosConcurrentes();
+
+            ProcesoConcurrente primero = gestor.Iniciar(
+                "primero",
+                _ => ResultadoAccion.Exitoso("resultado primero"));
+
+            ProcesoConcurrente segundo = gestor.Iniciar(
+                "segundo",
+                _ => ResultadoAccion.Exitoso("resultado segundo"));
+
+            await Task.WhenAll(
+                primero.Finalizacion,
+                segundo.Finalizacion);
+
+            Assert.That(
+                gestor.IntentarObtenerResultado(
+                    segundo.Id,
+                    out ResultadoProcesoConcurrente resultadoSegundo),
+                Is.True);
+
+            Assert.That(
+                resultadoSegundo.ProcesoId,
+                Is.EqualTo(segundo.Id));
+
+            Assert.That(
+                resultadoSegundo.Resultado.Mensaje,
+                Is.EqualTo("resultado segundo"));
+
+            Assert.That(
+                gestor.IntentarObtenerResultado(
+                    primero.Id,
+                    out ResultadoProcesoConcurrente resultadoPrimero),
+                Is.True);
+
+            Assert.That(
+                resultadoPrimero.ProcesoId,
+                Is.EqualTo(primero.Id));
+
+            Assert.That(
+                resultadoPrimero.Resultado.Mensaje,
+                Is.EqualTo("resultado primero"));
+
+            Assert.That(gestor.ResultadosPendientes, Is.Zero);
+        }
+
+        [Test]
         public async Task ExcepcionDelWorker_SeConvierteEnResultadoFallido()
         {
             using var gestor = new GestorProcesosConcurrentes();
