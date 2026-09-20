@@ -2,7 +2,7 @@
 
 Proyecto académico de Programación Orientada a Objetos desarrollado en C# y Unity.
 
-**Imperios en Guerra** es un videojuego de estrategia en tiempo real (RTS) para dos jugadores, inspirado en Age of Empires.
+**Imperios en Guerra** es un videojuego de estrategia en tiempo real (RTS) inspirado en Age of Empires. La modalidad actual del proyecto es **Humano vs Máquina**.
 
 ## Tecnologías
 
@@ -35,21 +35,23 @@ El proyecto será desarrollado utilizando el patrón:
 
 ## Concurrencia
 
-El proyecto implementará concurrencia real mediante herramientas de C# como:
+La Fase 4 implementa concurrencia real mediante C#:
 
-- Thread
-- Task
-- mecanismos de sincronización
+- `Task.Run` y ThreadPool;
+- `CancellationToken`;
+- `lock`;
+- `ConcurrentDictionary`;
+- `ConcurrentQueue`.
 
-La concurrencia se aplicará progresivamente en procesos como recolección, construcción, entrenamiento, movimiento y comunicación de red.
+Movimiento, recolección, construcción y entrenamiento se ejecutan mediante workers fuera del Main Thread de Unity. Los resultados regresan de forma thread-safe y Unity actualiza Vista/HUD únicamente desde su Main Thread.
+
+Los tiempos actuales del prototipo son configurables: movimiento 1 s, recolección 2 s, entrenamiento 5 s y construcción 7 s. Estos valores son de jugabilidad del prototipo y no sustituyen requisitos del profesor.
 
 ## Networking
 
-La comunicación entre las dos instancias del juego se realizará mediante:
+El requisito de networking permanece pendiente de revisión en una fase posterior debido al cambio de modalidad a **Humano vs Máquina**. No se eliminará ni se sustituirá sin revisar nuevamente la guía del profesor.
 
-**WebSockets**
-
-Los mensajes de red utilizarán estructuras definidas, preferiblemente mediante JSON.
+La integración actual entre Unity y la lógica de aplicación utiliza una API local con mensajes JSON estructurados.
 
 ## Flujo de Git
 
@@ -66,4 +68,18 @@ Issue → Branch → Desarrollo → Pruebas → Commit → Pull Request → Deve
 
 ## Estado
 
-Proyecto actualmente en fase de configuración técnica y construcción de la base del sistema.
+El proyecto se encuentra cerrando la **Fase 4 de concurrencia, sincronización y cancelación**.
+
+Actualmente están integrados:
+
+- mapa, recursos físicos, jugadores y Centros Urbanos;
+- selección por clic y HUD contextual;
+- movimiento y flujo base de recolección;
+- construcción y entrenamiento;
+- flujo base de ataque con validaciones;
+- comunicación Unity -> API -> Modelo -> API -> Unity;
+- mensajes de éxito/error y refresco de Vista;
+- `log_partida.txt` centralizado mediante `ServicioArchivos`;
+- pruebas automáticas .NET y EditMode de Unity.
+
+Los costos de construcción/entrenamiento, cantidades/ritmos de recolección y estadísticas de combate no se inventan mientras no estén definidos en los requisitos. La Fase 4 incorpora concurrencia real para movimiento, recolección, construcción y entrenamiento, con sincronización, cancelación y comunicación segura hacia Unity.

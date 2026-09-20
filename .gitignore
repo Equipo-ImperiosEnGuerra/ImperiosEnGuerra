@@ -12,10 +12,21 @@ MemoryCaptures/
 Recordings/
 
 # =========================
+# Proyectos .NET externos
+# =========================
+[Bb]in/
+
+# =========================
 # Visual Studio
 # =========================
 .vs/
+
+# Unity genera .csproj automáticamente,
+# pero los proyectos externos de src/ y tests/ sí se versionan.
 *.csproj
+!src/**/*.csproj
+!tests/**/*.csproj
+
 *.sln
 *.slnx
 *.suo
@@ -58,7 +69,20 @@ desktop.ini
 *.aab
 *.unitypackage
 
+
 # =========================
-# Configuración local de asistentes de desarrollo
+# Archivos generados durante la partida
+# =========================
+/src/ImperiosEnGuerra.Api/DatosPartida/
+
+# =========================
+# Configuración local de asistente
 # =========================
 AGENTS.md
+# =========================
+# Tiny Swords - archivos graficos externos, no redistribuir
+# =========================
+/Assets/Art/TinySwords/**/*.png
+/Assets/Art/TinySwords/**/*.aseprite
+/Assets/Art/TinySwords/**/*.jpg
+/Assets/Art/TinySwords/**/*.jpeg
