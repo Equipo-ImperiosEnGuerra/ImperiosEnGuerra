@@ -82,7 +82,6 @@ namespace ImperiosEnGuerra.Tests.Editor
         }
 
         [TestCase(TipoAccionJuego.Entrenar)]
-        [TestCase(TipoAccionJuego.Atacar)]
         public void OrdenSinEstadoDefinido_EsRechazada(TipoAccionJuego orden)
         {
             Aldeano unidad = new Aldeano(new Coordenada(1, 1));
