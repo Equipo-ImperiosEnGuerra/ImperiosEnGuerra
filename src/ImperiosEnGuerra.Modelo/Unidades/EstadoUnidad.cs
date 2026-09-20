@@ -8,6 +8,7 @@ namespace ImperiosEnGuerra.Modelo.Unidades
         Idle,
         Moviendo,
         Recolectando,
-        Construyendo
+        Construyendo,
+        Atacando
     }
 }

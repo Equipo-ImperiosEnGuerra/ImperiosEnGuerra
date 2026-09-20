@@ -16,6 +16,8 @@ builder.Services.AddSingleton(
             "DatosPartida")));
 builder.Services.AddSingleton<EstadoPartidaService>();
 builder.Services.AddSingleton<GestorProcesosConcurrentes>();
+builder.Services.AddSingleton<ServicioOrdenesUnidad>();
+builder.Services.AddSingleton<ServicioAccionesConcurrentes>();
 builder.Services.AddSingleton(sp =>
 {
     int movimientoSegundos =
@@ -33,14 +35,20 @@ builder.Services.AddSingleton(sp =>
     int entrenamientoSegundos =
         builder.Configuration.GetValue<int>(
             "Concurrencia:EntrenamientoSegundos");
+    
+    int ataqueSegundos =
+        builder.Configuration.GetValue<int>(
+            "Concurrencia:AtaqueSegundos");
 
     return new ServicioAccionesConcurrentes(
         sp.GetRequiredService<EstadoPartidaService>(),
         sp.GetRequiredService<GestorProcesosConcurrentes>(),
+        sp.GetRequiredService<ServicioOrdenesUnidad>(),
         TimeSpan.FromSeconds(movimientoSegundos),
         TimeSpan.FromSeconds(recoleccionSegundos),
         TimeSpan.FromSeconds(construccionSegundos),
-        TimeSpan.FromSeconds(entrenamientoSegundos));
+        TimeSpan.FromSeconds(entrenamientoSegundos),
+        TimeSpan.FromSeconds(ataqueSegundos));
 });
 
 var app = builder.Build();
@@ -377,15 +385,23 @@ app.MapPost(
 .WithName("Entrenar");
 
 app.MapPost(
-    "/api/partida/atacar",
-    (AtacarRequest? request, EstadoPartidaService estadoPartida) =>
+    "/api/partida/atacar-concurrente",
+    (
+        AtacarRequest? request,
+        ServicioAccionesConcurrentes accionesConcurrentes) =>
 {
-    var resultado = estadoPartida.Atacar(request);
+    ProcesoConcurrente proceso =
+        accionesConcurrentes.IniciarAtaque(request);
 
-    return resultado.Exito
-        ? Results.Ok(resultado)
-        : Results.BadRequest(resultado);
+    return Results.Accepted(
+        $"/api/procesos/{proceso.Id}",
+        new
+        {
+            procesoId = proceso.Id,
+            nombre = proceso.Nombre,
+            estado = "iniciado"
+        });
 })
-.WithName("Atacar");
+.WithName("IniciarAtaqueConcurrente");
 
 app.Run();

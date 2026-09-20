@@ -137,6 +137,8 @@ namespace ImperiosEnGuerra.Modelo.Unidades
                     return EstadoUnidad.Recolectando;
                 case TipoAccionJuego.Construir:
                     return EstadoUnidad.Construyendo;
+                case TipoAccionJuego.Atacar:
+                    return EstadoUnidad.Atacando;
                 default:
                     return null;
             }
