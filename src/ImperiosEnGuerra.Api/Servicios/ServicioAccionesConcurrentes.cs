@@ -21,51 +21,24 @@ public sealed class ServicioAccionesConcurrentes
     public ServicioAccionesConcurrentes(
         EstadoPartidaService estadoPartida,
         GestorProcesosConcurrentes gestorProcesos,
-        TimeSpan retardoDemostracion)
-        : this(
-            estadoPartida,
-            gestorProcesos,
-            new ServicioOrdenesUnidad(),
-            retardoDemostracion,
-            retardoDemostracion,
-            retardoDemostracion,
-            retardoDemostracion,
-            retardoDemostracion)
-    {
-    }
-
-    public ServicioAccionesConcurrentes(
-        EstadoPartidaService estadoPartida,
-        GestorProcesosConcurrentes gestorProcesos,
-        ServicioOrdenesUnidad servicioOrdenes,
-        TimeSpan retardoMovimiento,
-        TimeSpan retardoRecoleccion,
-        TimeSpan retardoConstruccion,
-        TimeSpan retardoEntrenamiento,
-        TimeSpan retardoAtaque )
+        ServicioOrdenesUnidad servicioOrdenes)
     {
         this.estadoPartida =
             estadoPartida ?? throw new ArgumentNullException(nameof(estadoPartida));
 
         this.gestorProcesos =
             gestorProcesos ?? throw new ArgumentNullException(nameof(gestorProcesos));
-        
+
         this.servicioOrdenes =
             servicioOrdenes ?? throw new ArgumentNullException(nameof(servicioOrdenes));
 
-        ValidarRetardo(retardoMovimiento, nameof(retardoMovimiento));
-        ValidarRetardo(retardoRecoleccion, nameof(retardoRecoleccion));
-        ValidarRetardo(retardoConstruccion, nameof(retardoConstruccion));
-        ValidarRetardo(retardoEntrenamiento, nameof(retardoEntrenamiento));
-        ValidarRetardo(retardoAtaque, nameof(retardoAtaque));
-
-        this.retardoMovimiento = retardoMovimiento;
-        this.retardoRecoleccion = retardoRecoleccion;
-        this.retardoConstruccion = retardoConstruccion;
-        this.retardoEntrenamiento = retardoEntrenamiento;
-        this.retardoAtaque = retardoAtaque;
+        // Configuración temporal mientras usamos los valores del prototipo
+        retardoMovimiento = TimeSpan.FromSeconds(1);
+        retardoRecoleccion = TimeSpan.FromSeconds(2);
+        retardoConstruccion = TimeSpan.FromSeconds(7);
+        retardoEntrenamiento = TimeSpan.FromSeconds(5);
+        retardoAtaque = TimeSpan.FromSeconds(1);
     }
-
     public ProcesoConcurrente IniciarMovimiento(
         MoverUnidadRequest? request)
     {
