@@ -891,7 +891,8 @@ public bool PuedeIniciarAtaque =>
                 }
 
                 yield return EsperarResultadoEntrenamiento(
-                    proceso.procesoId);
+                    proceso.procesoId,
+                    entrenamiento.edificioOrigen);
             }
             finally
             {
@@ -900,10 +901,11 @@ public bool PuedeIniciarAtaque =>
         }
 
         private IEnumerator EsperarResultadoEntrenamiento(
-            string procesoId)
+            string procesoId,
+            CoordenadaDto edificioOrigen)
         {
-            const float intervaloConsulta = 0.1f;
-            const float tiempoMaximo = 15f;
+            const float intervaloConsulta = 0.25f;
+            const float tiempoMaximo = 90f;
             float tiempoTranscurrido = 0f;
 
             while (tiempoTranscurrido < tiempoMaximo)
@@ -929,6 +931,9 @@ public bool PuedeIniciarAtaque =>
                     string.IsNullOrWhiteSpace(
                         request.downloadHandler.text))
                 {
+                    yield return ActualizarEntrenamientoEnCurso(
+                        edificioOrigen);
+
                     yield return new WaitForSecondsRealtime(
                         intervaloConsulta);
 
@@ -1013,6 +1018,76 @@ public bool PuedeIniciarAtaque =>
 
             MostrarError(
                 "El entrenamiento concurrente excedió el tiempo máximo de espera.");
+        }
+
+        private IEnumerator ActualizarEntrenamientoEnCurso(
+            CoordenadaDto edificioOrigen)
+        {
+            if (edificioOrigen == null)
+                yield break;
+
+            using UnityWebRequest request =
+                UnityWebRequest.Get(
+                    $"{urlBaseApi}/api/partida");
+
+            request.timeout = 5;
+
+            yield return request.SendWebRequest();
+
+            if (request.result !=
+                UnityWebRequest.Result.Success)
+            {
+                yield break;
+            }
+
+            EstadoPartidaDto estado;
+
+            try
+            {
+                estado =
+                    JsonUtility.FromJson<EstadoPartidaDto>(
+                        request.downloadHandler.text);
+            }
+            catch (System.ArgumentException)
+            {
+                yield break;
+            }
+
+            EdificioEstadoDto[] edificios =
+                estado?.jugadorHumano?.edificios;
+
+            if (edificios == null)
+                yield break;
+
+            foreach (EdificioEstadoDto edificio in edificios)
+            {
+                if (edificio?.coordenada == null ||
+                    edificio.coordenada.x != edificioOrigen.x ||
+                    edificio.coordenada.y != edificioOrigen.y)
+                {
+                    continue;
+                }
+
+                int cantidad =
+                    edificio.colaEntrenamiento == null
+                        ? 0
+                        : edificio.colaEntrenamiento.Length;
+
+                if (cantidad == 0)
+                    yield break;
+
+                EntrenamientoEstadoDto primero =
+                    edificio.colaEntrenamiento[0];
+
+                if (vistaHud != null)
+                {
+                    vistaHud.MostrarMensaje(
+                        $"Entrenando {primero.tipoUnidad}: " +
+                        $"{primero.progreso}% | cola: {cantidad}");
+                }
+
+                yield break;
+            }
         }
 
         private IEnumerator EnviarAtaque(

@@ -680,6 +680,248 @@ public sealed class EstadoPartidaService
         }
     }
 
+    public ResultadoAccion EncolarEntrenamiento(
+        EntrenarRequest? request,
+        out Guid entrenamientoId,
+        out Coordenada centroUrbano)
+    {
+        lock (sincronizacion)
+        {
+            entrenamientoId = Guid.Empty;
+            centroUrbano = null;
+
+            if (partidaActiva == null)
+            {
+                return ResultadoAccion.Fallido(
+                    "No hay una partida activa.");
+            }
+
+            if (request == null)
+            {
+                return ResultadoAccion.Fallido(
+                    "La solicitud de entrenamiento es obligatoria.");
+            }
+
+            if (request.EdificioOrigen == null)
+            {
+                return ResultadoAccion.Fallido(
+                    "El edificio de origen es obligatorio.");
+            }
+
+            if (!configuracionEconomia.IntentarObtenerCostoUnidad(
+                    request.TipoUnidad,
+                    out _))
+            {
+                return ResultadoAccion.Fallido(
+                    "El tipo de unidad indicado no está permitido.");
+            }
+
+            Coordenada origen =
+                PartidaRequestMapper.ConvertirCoordenada(
+                    request.EdificioOrigen);
+
+            CentroUrbano? centro =
+                partidaActiva.JugadorHumano.Edificios
+                    .OfType<CentroUrbano>()
+                    .FirstOrDefault(
+                        e =>
+                            e.Coordenada.X == origen.X &&
+                            e.Coordenada.Y == origen.Y);
+
+            if (centro == null)
+            {
+                return ResultadoAccion.Fallido(
+                    "No existe un Centro Urbano humano en la posición indicada.");
+            }
+
+            Coordenada reunion =
+                request.Destino == null
+                    ? null
+                    : PartidaRequestMapper.ConvertirCoordenada(
+                        request.Destino);
+
+            EntrenamientoPendiente pendiente =
+                centro.EncolarEntrenamiento(
+                    request.TipoUnidad ?? string.Empty,
+                    reunion);
+
+            entrenamientoId =
+                pendiente.Id;
+
+            centroUrbano =
+                centro.Coordenada;
+
+            return ResultadoAccion.Exitoso(
+                "Entrenamiento agregado a la cola.");
+        }
+    }
+
+    public bool EsTurnoEntrenamiento(
+        Coordenada centroUrbano,
+        Guid entrenamientoId)
+    {
+        lock (sincronizacion)
+        {
+            CentroUrbano? centro =
+                BuscarCentroHumano(
+                    centroUrbano);
+
+            return centro != null &&
+                   centro.EsPrimero(
+                       entrenamientoId);
+        }
+    }
+
+    public ResultadoProgresoEntrenamiento AvanzarEntrenamiento(
+        Coordenada centroUrbano,
+        Guid entrenamientoId,
+        int incremento)
+    {
+        lock (sincronizacion)
+        {
+            CentroUrbano? centro =
+                BuscarCentroHumano(
+                    centroUrbano);
+
+            return centro == null
+                ? ResultadoProgresoEntrenamiento.Fallido(
+                    "No existe el Centro Urbano indicado.")
+                : centro.AvanzarEntrenamiento(
+                    entrenamientoId,
+                    incremento);
+        }
+    }
+
+    public ResultadoSpawnEntrenamiento CompletarEntrenamientoConSpawn(
+        Coordenada centroUrbano,
+        Guid entrenamientoId,
+        string tipoUnidad)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+            {
+                return ResultadoSpawnEntrenamiento.Fallido(
+                    "No hay una partida activa.");
+            }
+
+            CentroUrbano? centro =
+                BuscarCentroHumano(
+                    centroUrbano);
+
+            if (centro == null ||
+                !centro.EsPrimero(
+                    entrenamientoId))
+            {
+                return ResultadoSpawnEntrenamiento.Fallido(
+                    "La orden no está al frente de la cola.");
+            }
+
+            EntrenamientoPendiente? pendiente =
+                centro.ColaEntrenamiento
+                    .FirstOrDefault();
+
+            if (pendiente == null ||
+                pendiente.Id != entrenamientoId ||
+                pendiente.Progreso < 100)
+            {
+                return ResultadoSpawnEntrenamiento.Fallido(
+                    "El entrenamiento todavía no está completo.");
+            }
+
+            Coordenada spawn =
+                new BuscadorCasillaSpawn()
+                    .Buscar(
+                        partidaActiva,
+                        centro.Coordenada);
+
+            if (spawn == null)
+            {
+                return ResultadoSpawnEntrenamiento.Fallido(
+                    "No existe una casilla libre cercana para crear la unidad.");
+            }
+
+            Unidad unidad =
+                FabricaUnidades.Crear(
+                    tipoUnidad,
+                    spawn);
+
+            if (unidad == null)
+            {
+                return ResultadoSpawnEntrenamiento.Fallido(
+                    "El tipo de unidad indicado no está permitido.");
+            }
+
+            Casilla? casilla =
+                partidaActiva.JugadorHumano.Mapa
+                    .ObtenerCasilla(
+                        spawn.X,
+                        spawn.Y);
+
+            if (casilla == null ||
+                !casilla.Ocupar())
+            {
+                return ResultadoSpawnEntrenamiento.Fallido(
+                    "La casilla de aparición dejó de estar disponible.");
+            }
+
+            partidaActiva.JugadorHumano
+                .AgregarUnidad(
+                    unidad);
+
+            if (!centro.CompletarEntrenamiento(
+                    entrenamientoId))
+            {
+                partidaActiva.JugadorHumano
+                    .EliminarUnidad(
+                        unidad);
+
+                casilla.Liberar();
+
+                return ResultadoSpawnEntrenamiento.Fallido(
+                    "No se pudo retirar la orden completada de la cola.");
+            }
+
+            return ResultadoSpawnEntrenamiento.Exitoso(
+                unidad.Id,
+                spawn,
+                tipoUnidad);
+        }
+    }
+
+    public bool CancelarEntrenamientoCola(
+        Coordenada centroUrbano,
+        Guid entrenamientoId)
+    {
+        lock (sincronizacion)
+        {
+            CentroUrbano? centro =
+                BuscarCentroHumano(
+                    centroUrbano);
+
+            return centro != null &&
+                   centro.CancelarEntrenamiento(
+                       entrenamientoId);
+        }
+    }
+
+    private CentroUrbano? BuscarCentroHumano(
+        Coordenada coordenada)
+    {
+        if (partidaActiva == null ||
+            coordenada == null)
+        {
+            return null;
+        }
+
+        return partidaActiva.JugadorHumano.Edificios
+            .OfType<CentroUrbano>()
+            .FirstOrDefault(
+                e =>
+                    e.Coordenada.X == coordenada.X &&
+                    e.Coordenada.Y == coordenada.Y);
+    }
+
     public ResultadoAccion Entrenar(EntrenarRequest? request)
     {
         lock (sincronizacion)

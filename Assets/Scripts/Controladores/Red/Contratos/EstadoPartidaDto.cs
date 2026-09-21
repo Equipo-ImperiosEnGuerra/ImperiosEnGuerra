@@ -51,6 +51,15 @@ namespace ImperiosEnGuerra.Controladores.Red.Contratos
     {
         public string tipo;
         public CoordenadaEstadoDto coordenada;
+        public EntrenamientoEstadoDto[] colaEntrenamiento;
+    }
+
+    [Serializable]
+    public class EntrenamientoEstadoDto
+    {
+        public string id;
+        public string tipoUnidad;
+        public int progreso;
     }
 
     [Serializable]

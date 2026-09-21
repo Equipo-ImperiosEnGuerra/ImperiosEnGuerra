@@ -25,6 +25,7 @@ public sealed class ServicioAccionesConcurrentes
     private readonly TimeSpan retardoEntrenamiento;
     private readonly TimeSpan retardoAtaque;
     private readonly ConfiguracionRecoleccion configuracionRecoleccion;
+    private readonly ConfiguracionEntrenamiento configuracionEntrenamiento;
 
 
     // ============================================================
@@ -146,6 +147,9 @@ public sealed class ServicioAccionesConcurrentes
         this.retardoAtaque = retardoAtaque;
         configuracionRecoleccion =
             new ConfiguracionRecoleccion();
+
+        configuracionEntrenamiento =
+            new ConfiguracionEntrenamiento();
     }
 
 
@@ -715,10 +719,11 @@ public sealed class ServicioAccionesConcurrentes
             "ENTRENAR",
             token =>
             {
-                CentroUrbano? centro = null;
                 CostoRecursos costo = null;
                 bool costoReservado = false;
                 bool completado = false;
+                Guid entrenamientoId = Guid.Empty;
+                Coordenada centroUrbano = null;
 
                 try
                 {
@@ -728,55 +733,103 @@ public sealed class ServicioAccionesConcurrentes
                             out costo);
 
                     if (!reserva.Exito)
-                    {
                         return reserva;
-                    }
 
                     costoReservado = true;
 
-                    if (copia?.EdificioOrigen != null)
+                    ResultadoAccion encolado =
+                        estadoPartida.EncolarEntrenamiento(
+                            copia,
+                            out entrenamientoId,
+                            out centroUrbano);
+
+                    if (!encolado.Exito)
+                        return encolado;
+
+                    while (!estadoPartida.EsTurnoEntrenamiento(
+                        centroUrbano,
+                        entrenamientoId))
                     {
-                        centro =
-                            estadoPartida.ObtenerCentroUrbano(
-                                new Coordenada(
-                                    copia.EdificioOrigen.X,
-                                    copia.EdificioOrigen.Y));
+                        EsperarAntesDeAplicar(
+                            token,
+                            TimeSpan.FromMilliseconds(10));
                     }
 
-                    if (centro != null &&
-                        !centro.IniciarEntrenamiento(
-                            copia?.TipoUnidad
-                            ?? string.Empty))
+                    if (!configuracionEntrenamiento
+                        .IntentarObtenerFactor(
+                            copia?.TipoUnidad,
+                            out double factor))
                     {
                         return ResultadoAccion.Fallido(
-                            "El Centro Urbano ya está entrenando.");
+                            "No existe tiempo configurado para la unidad.");
                     }
 
-                    EsperarAntesDeAplicar(
-                        token,
-                        retardoEntrenamiento);
+                    TimeSpan tiempoTotal =
+                        MultiplicarRetardo(
+                            retardoEntrenamiento,
+                            factor);
 
-                    ResultadoAccion resultado =
-                        estadoPartida.Entrenar(
-                            copia);
+                    TimeSpan retardoProgreso =
+                        DividirRetardo(
+                            tiempoTotal,
+                            10);
 
-                    completado =
-                        resultado.Exito;
+                    for (int i = 0; i < 10; i++)
+                    {
+                        EsperarAntesDeAplicar(
+                            token,
+                            retardoProgreso);
 
-                    return resultado;
+                        ResultadoProgresoEntrenamiento progreso =
+                            estadoPartida.AvanzarEntrenamiento(
+                                centroUrbano,
+                                entrenamientoId,
+                                10);
+
+                        if (!progreso.Exito)
+                        {
+                            return ResultadoAccion.Fallido(
+                                progreso.Mensaje);
+                        }
+
+                        Console.WriteLine(
+                            $"ENTRENAMIENTO_PROGRESO: {entrenamientoId} " +
+                            $"{progreso.Progreso}%");
+                    }
+
+                    ResultadoSpawnEntrenamiento spawn =
+                        estadoPartida.CompletarEntrenamientoConSpawn(
+                            centroUrbano,
+                            entrenamientoId,
+                            copia?.TipoUnidad ?? string.Empty);
+
+                    if (!spawn.Exito)
+                    {
+                        return ResultadoAccion.Fallido(
+                            spawn.Mensaje);
+                    }
+
+                    completado = true;
+
+                    return ResultadoAccion.Exitoso(
+                        $"{spawn.Mensaje} Spawn ({spawn.Coordenada.X},{spawn.Coordenada.Y}).");
                 }
                 finally
                 {
+                    if (!completado &&
+                        entrenamientoId != Guid.Empty &&
+                        centroUrbano != null)
+                    {
+                        estadoPartida.CancelarEntrenamientoCola(
+                            centroUrbano,
+                            entrenamientoId);
+                    }
+
                     if (!completado &&
                         costoReservado)
                     {
                         estadoPartida.ReembolsarCosto(
                             costo);
-                    }
-
-                    if (centro != null)
-                    {
-                        centro.CompletarEntrenamiento();
                     }
                 }
             });
@@ -1000,6 +1053,31 @@ public sealed class ServicioAccionesConcurrentes
         return ResultadoAccion.Exitoso(
             "Aldeano posicionado junto a la obra.");
     }
+
+    private static TimeSpan MultiplicarRetardo(
+        TimeSpan baseTiempo,
+        double factor)
+    {
+        if (baseTiempo <= TimeSpan.Zero)
+            return TimeSpan.Zero;
+
+        if (factor <= 0d ||
+            double.IsNaN(factor) ||
+            double.IsInfinity(factor))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(factor));
+        }
+
+        long ticks =
+            (long)Math.Round(
+                baseTiempo.Ticks *
+                factor);
+
+        return TimeSpan.FromTicks(
+            Math.Max(1L, ticks));
+    }
+
 
     private static TimeSpan DividirRetardo(
         TimeSpan total,

@@ -43,6 +43,14 @@ public sealed class EdificioEstadoResponse
 {
     public required string Tipo { get; init; }
     public required CoordenadaEstadoResponse Coordenada { get; init; }
+    public required IReadOnlyList<EntrenamientoEstadoResponse> ColaEntrenamiento { get; init; }
+}
+
+public sealed class EntrenamientoEstadoResponse
+{
+    public required string Id { get; init; }
+    public required string TipoUnidad { get; init; }
+    public int Progreso { get; init; }
 }
 
 public sealed class ObraConstruccionEstadoResponse

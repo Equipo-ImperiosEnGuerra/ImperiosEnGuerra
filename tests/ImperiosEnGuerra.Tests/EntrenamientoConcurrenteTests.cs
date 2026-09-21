@@ -53,9 +53,18 @@ public class EntrenamientoConcurrenteTests
             partida.JugadorHumano.Unidades[0],
             Is.TypeOf<Guerrero>());
 
+        Coordenada spawn =
+            partida.JugadorHumano.Unidades[0]
+                .Coordenada;
+
+        Assert.That(
+            Math.Abs(spawn.X - 1) +
+            Math.Abs(spawn.Y - 1),
+            Is.EqualTo(1));
+
         Assert.That(
             partida.JugadorHumano.Mapa
-                .ObtenerCasilla(2, 2)
+                .ObtenerCasilla(spawn.X, spawn.Y)
                 .EstaOcupada,
             Is.True);
     }
@@ -106,7 +115,7 @@ public class EntrenamientoConcurrenteTests
     }
 
     [Test]
-    public async Task DosEntrenamientos_MismaCasilla_SoloUnoSeAplica()
+    public async Task DosEntrenamientos_SeEncolanYAmbosUsanSpawnSeguro()
     {
         Partida partida = CrearPartida();
 
@@ -118,7 +127,7 @@ public class EntrenamientoConcurrenteTests
         var servicio = new ServicioAccionesConcurrentes(
             estado,
             gestor,
-            TimeSpan.FromMilliseconds(100));
+            TimeSpan.Zero);
 
         ProcesoConcurrente primero =
             servicio.IniciarEntrenamiento(
@@ -128,46 +137,20 @@ public class EntrenamientoConcurrenteTests
             servicio.IniciarEntrenamiento(
                 CrearRequest("Monje", 3, 3));
 
-        Assert.That(
-            gestor.ProcesosActivos,
-            Is.EqualTo(2));
-
         await Task.WhenAll(
             primero.Finalizacion,
             segundo.Finalizacion);
 
-        var resultados =
-            new List<ResultadoProcesoConcurrente>();
-
-        while (servicio.IntentarObtenerResultado(
-            out ResultadoProcesoConcurrente resultado))
-        {
-            resultados.Add(resultado);
-        }
-
-        Assert.That(resultados.Count, Is.EqualTo(2));
-
-        Assert.That(
-            resultados.Count(
-                r => r.Resultado != null &&
-                     r.Resultado.Exito),
-            Is.EqualTo(1));
-
-        Assert.That(
-            resultados.Count(
-                r => r.Resultado != null &&
-                     !r.Resultado.Exito),
-            Is.EqualTo(1));
-
         Assert.That(
             partida.JugadorHumano.Unidades.Count,
-            Is.EqualTo(1));
+            Is.EqualTo(2));
 
         Assert.That(
-            partida.JugadorHumano.Mapa
-                .ObtenerCasilla(3, 3)
-                .EstaOcupada,
-            Is.True);
+            partida.JugadorHumano.Unidades[0].Coordenada.X ==
+            partida.JugadorHumano.Unidades[1].Coordenada.X &&
+            partida.JugadorHumano.Unidades[0].Coordenada.Y ==
+            partida.JugadorHumano.Unidades[1].Coordenada.Y,
+            Is.False);
     }
 
     private static Partida CrearPartida()

@@ -1,5 +1,6 @@
 using ImperiosEnGuerra.Api.Contratos;
 using ImperiosEnGuerra.Modelo.Core;
+using ImperiosEnGuerra.Modelo.Edificios;
 using ImperiosEnGuerra.Modelo.Map;
 using ImperiosEnGuerra.Modelo.Recursos;
 using ImperiosEnGuerra.Modelo.Unidades;
@@ -48,7 +49,15 @@ public static class PartidaEstadoMapper
             Edificios = jugador.Edificios.Select(edificio => new EdificioEstadoResponse
             {
                 Tipo = edificio.GetType().Name,
-                Coordenada = ConvertirCoordenada(edificio.Coordenada)
+                Coordenada = ConvertirCoordenada(edificio.Coordenada),
+                ColaEntrenamiento = edificio is CentroUrbano centro
+                    ? centro.ColaEntrenamiento.Select(p => new EntrenamientoEstadoResponse
+                    {
+                        Id = p.Id.ToString("D"),
+                        TipoUnidad = p.TipoUnidad,
+                        Progreso = p.Progreso
+                    }).ToList()
+                    : new List<EntrenamientoEstadoResponse>()
             }).ToList(),
             ObrasConstruccion = jugador.ObrasConstruccion.Select(obra => new ObraConstruccionEstadoResponse
             {
