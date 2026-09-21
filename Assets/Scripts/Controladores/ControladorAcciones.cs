@@ -335,6 +335,15 @@ namespace ImperiosEnGuerra.Controladores
             if (entidad.Categoria != CategoriaEntidadVisual.Unidad)
                 return false;
 
+            // Una unidad mantiene una sola orden lógica a la vez. Esto no
+            // bloquea a otras unidades: el jugador puede seleccionarlas y
+            // ordenarles acciones concurrentes de forma independiente.
+            if (!string.IsNullOrWhiteSpace(
+                    entidad.OrdenActiva))
+            {
+                return false;
+            }
+
             if (accion == "Mover")
                 return true;
 
@@ -377,7 +386,7 @@ namespace ImperiosEnGuerra.Controladores
                 if (!PuedeIniciarAccion(accion))
                 {
                     vistaHud.MostrarMensaje(
-                        "La conexión no está disponible o esa acción ya está en curso.",
+                        "La conexión con la API no está disponible.",
                         true);
 
                     return;
@@ -408,7 +417,7 @@ namespace ImperiosEnGuerra.Controladores
                 if (!PuedeIniciarAccion(accion))
                 {
                     vistaHud.MostrarMensaje(
-                        "La conexión no está disponible o esa acción ya está en curso.",
+                        "La conexión con la API no está disponible.",
                         true);
 
                     return;
@@ -442,7 +451,7 @@ namespace ImperiosEnGuerra.Controladores
                 if (!PuedeIniciarAccion(accion))
                 {
                     vistaHud.MostrarMensaje(
-                        "La conexión no está disponible o esa acción ya está en curso.",
+                        "La conexión con la API no está disponible.",
                         true);
 
                     return;
