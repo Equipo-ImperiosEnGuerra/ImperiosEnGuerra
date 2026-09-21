@@ -57,6 +57,49 @@ namespace ImperiosEnGuerra.Tests.Editor
         }
 
         [Test]
+        public void VelocidadesMovimiento_SonPositivas()
+        {
+            Unidad[] unidades =
+            {
+                new Aldeano(new Coordenada(0, 0)),
+                new Guerrero(new Coordenada(0, 0)),
+                new Lancero(new Coordenada(0, 0)),
+                new Arquero(new Coordenada(0, 0)),
+                new Monje(new Coordenada(0, 0))
+            };
+
+            foreach (Unidad unidad in unidades)
+            {
+                Assert.That(
+                    unidad.VelocidadMovimiento,
+                    Is.GreaterThan(0d));
+            }
+        }
+
+        [Test]
+        public void VelocidadMovimiento_PuedeVariarSegunTipo()
+        {
+            var aldeano =
+                new Aldeano(new Coordenada(0, 0));
+
+            var lancero =
+                new Lancero(new Coordenada(0, 0));
+
+            var monje =
+                new Monje(new Coordenada(0, 0));
+
+            Assert.That(
+                lancero.VelocidadMovimiento,
+                Is.GreaterThan(
+                    aldeano.VelocidadMovimiento));
+
+            Assert.That(
+                monje.VelocidadMovimiento,
+                Is.LessThan(
+                    aldeano.VelocidadMovimiento));
+        }
+
+        [Test]
         public void UnidadesDistintas_TienenIdsDistintosYNoVacios()
         {
             var primera = new Aldeano(new Coordenada(1, 1));

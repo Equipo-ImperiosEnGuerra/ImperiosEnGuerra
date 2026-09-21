@@ -166,6 +166,21 @@ public sealed class ServicioAccionesConcurrentes
                         "El ID de la unidad debe tener formato Guid válido.");
                 }
 
+                Unidad? unidad =
+                    estadoPartida.ObtenerUnidad(
+                        unidadId);
+
+                if (unidad == null)
+                {
+                    return ResultadoAccion.Fallido(
+                        "No existe una unidad humana con ese ID.");
+                }
+
+                TimeSpan retardoPaso =
+                    CalcularRetardoPasoMovimiento(
+                        retardoMovimiento,
+                        unidad.VelocidadMovimiento);
+
                 ResultadoPlanMovimiento plan =
                     estadoPartida.PrepararMovimientoProgresivo(
                         copia);
@@ -203,7 +218,7 @@ public sealed class ServicioAccionesConcurrentes
                     {
                         EsperarAntesDeAplicar(
                             token,
-                            retardoMovimiento);
+                            retardoPaso);
 
                         token.ThrowIfCancellationRequested();
 
@@ -489,6 +504,33 @@ public sealed class ServicioAccionesConcurrentes
 
     public int ProcesosActivos =>
         gestorProcesos.ProcesosActivos;
+
+
+    private static TimeSpan CalcularRetardoPasoMovimiento(
+        TimeSpan retardoBase,
+        double velocidadMovimiento)
+    {
+        if (retardoBase <= TimeSpan.Zero)
+        {
+            return TimeSpan.Zero;
+        }
+
+        if (velocidadMovimiento <= 0d ||
+            double.IsNaN(velocidadMovimiento) ||
+            double.IsInfinity(velocidadMovimiento))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(velocidadMovimiento));
+        }
+
+        long ticks =
+            (long)Math.Round(
+                retardoBase.Ticks /
+                velocidadMovimiento);
+
+        return TimeSpan.FromTicks(
+            Math.Max(1L, ticks));
+    }
 
 
     // ============================================================

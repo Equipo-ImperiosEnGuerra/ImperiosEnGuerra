@@ -11,7 +11,7 @@ namespace ImperiosEnGuerra.Modelo.Unidades
         /// Inicializa el Lancero en la coordenada indicada.
         /// </summary>
         public Lancero(Coordenada coordenada)
-            : base(coordenada)
+            : base(coordenada, 1.20d)
         {
         }
     }

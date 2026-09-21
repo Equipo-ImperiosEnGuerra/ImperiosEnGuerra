@@ -26,6 +26,12 @@ namespace ImperiosEnGuerra.Modelo.Unidades
         public bool Disponible { get; protected set; }
 
         /// <summary>
+        /// Velocidad lógica expresada como multiplicador de casillas por unidad de tiempo.
+        /// Un valor mayor hace que el intervalo entre pasos sea menor.
+        /// </summary>
+        public double VelocidadMovimiento { get; }
+
+        /// <summary>
         /// Estado lógico autoritativo de la unidad.
         /// </summary>
         public EstadoUnidad Estado { get; private set; }
@@ -39,10 +45,22 @@ namespace ImperiosEnGuerra.Modelo.Unidades
         /// Inicializa una unidad con un identificador único, disponible, sin orden y en estado Idle.
         /// </summary>
         /// <param name="coordenada">Posición lógica inicial.</param>
-        protected Unidad(Coordenada coordenada)
+        protected Unidad(
+            Coordenada coordenada,
+            double velocidadMovimiento = 1d)
         {
+            if (velocidadMovimiento <= 0d ||
+                double.IsNaN(velocidadMovimiento) ||
+                double.IsInfinity(velocidadMovimiento))
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(velocidadMovimiento),
+                    "La velocidad de movimiento debe ser un valor positivo y finito.");
+            }
+
             Id = Guid.NewGuid();
             Coordenada = coordenada;
+            VelocidadMovimiento = velocidadMovimiento;
             Disponible = true;
             Estado = EstadoUnidad.Idle;
             OrdenActiva = null;
