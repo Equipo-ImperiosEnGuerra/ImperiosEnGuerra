@@ -241,10 +241,7 @@ public bool PuedeIniciarAtaque =>
             string unidadId)
         {
             const float intervaloConsulta = 0.1f;
-            const float tiempoMaximo = 15f;
-            float tiempoTranscurrido = 0f;
-
-            while (tiempoTranscurrido < tiempoMaximo)
+            while (isActiveAndEnabled)
             {
                 using UnityWebRequest request =
                     UnityWebRequest.Get(
@@ -271,8 +268,6 @@ public bool PuedeIniciarAtaque =>
 
                     yield return new WaitForSecondsRealtime(
                         intervaloConsulta);
-
-                    tiempoTranscurrido += intervaloConsulta;
                     continue;
                 }
 
@@ -348,8 +343,8 @@ public bool PuedeIniciarAtaque =>
                 yield break;
             }
 
-            MostrarError(
-                "El movimiento concurrente excedió el tiempo máximo de espera.");
+            Debug.Log(
+                "Seguimiento concurrente detenido porque el controlador dejó de estar activo.");
         }
 
         private IEnumerator ActualizarMovimientoEnCurso(
@@ -541,10 +536,7 @@ public bool PuedeIniciarAtaque =>
             const float intervaloConsulta = 0.1f;
             // La recolección orgánica incluye desplazamiento y varios ciclos
             // de carga, por lo que puede superar el límite anterior de 15 s.
-            const float tiempoMaximo = 60f;
-            float tiempoTranscurrido = 0f;
-
-            while (tiempoTranscurrido < tiempoMaximo)
+            while (isActiveAndEnabled)
             {
                 using UnityWebRequest request =
                     UnityWebRequest.Get(
@@ -573,8 +565,6 @@ public bool PuedeIniciarAtaque =>
 
                     yield return new WaitForSecondsRealtime(
                         intervaloConsulta);
-
-                    tiempoTranscurrido += intervaloConsulta;
                     continue;
                 }
 
@@ -598,9 +588,8 @@ public bool PuedeIniciarAtaque =>
 
                 if (resultado.estado == "Cancelado")
                 {
-                    if (vistaHud != null)
-                        vistaHud.MostrarMensaje(
-                            "Recolección cancelada.");
+                    Debug.Log(
+                        "Recolección cancelada.");
                     yield break;
                 }
 
@@ -646,8 +635,8 @@ public bool PuedeIniciarAtaque =>
                 yield break;
             }
 
-            MostrarError(
-                "La recolección concurrente excedió el tiempo máximo de espera.");
+            Debug.Log(
+                "Seguimiento concurrente detenido porque el controlador dejó de estar activo.");
         }
 
         private IEnumerator ActualizarRecoleccionEnCurso(
@@ -784,10 +773,7 @@ public bool PuedeIniciarAtaque =>
             string procesoId)
         {
             const float intervaloConsulta = 0.1f;
-            const float tiempoMaximo = 90f;
-            float tiempoTranscurrido = 0f;
-
-            while (tiempoTranscurrido < tiempoMaximo)
+            while (isActiveAndEnabled)
             {
                 using UnityWebRequest request =
                     UnityWebRequest.Get(
@@ -817,8 +803,6 @@ public bool PuedeIniciarAtaque =>
 
                     yield return new WaitForSecondsRealtime(
                         0.5f);
-
-                    tiempoTranscurrido += 0.5f;
                     continue;
                 }
 
@@ -894,8 +878,8 @@ public bool PuedeIniciarAtaque =>
                 yield break;
             }
 
-            MostrarError(
-                "La construcción concurrente excedió el tiempo máximo de espera.");
+            Debug.Log(
+                "Seguimiento concurrente detenido porque el controlador dejó de estar activo.");
         }
         
 
@@ -970,10 +954,7 @@ public bool PuedeIniciarAtaque =>
             CoordenadaDto edificioOrigen)
         {
             const float intervaloConsulta = 0.25f;
-            const float tiempoMaximo = 90f;
-            float tiempoTranscurrido = 0f;
-
-            while (tiempoTranscurrido < tiempoMaximo)
+            while (isActiveAndEnabled)
             {
                 using UnityWebRequest request =
                     UnityWebRequest.Get(
@@ -1001,8 +982,6 @@ public bool PuedeIniciarAtaque =>
 
                     yield return new WaitForSecondsRealtime(
                         intervaloConsulta);
-
-                    tiempoTranscurrido += intervaloConsulta;
                     continue;
                 }
 
@@ -1078,8 +1057,8 @@ public bool PuedeIniciarAtaque =>
                 yield break;
             }
 
-            MostrarError(
-                "El entrenamiento concurrente excedió el tiempo máximo de espera.");
+            Debug.Log(
+                "Seguimiento concurrente detenido porque el controlador dejó de estar activo.");
         }
 
         private IEnumerator ActualizarEntrenamientoEnCurso(
@@ -1285,10 +1264,48 @@ public bool PuedeIniciarAtaque =>
 
         private void MostrarError(string mensaje)
         {
-            Debug.LogError(mensaje, this);
+            bool tecnico =
+                EsErrorTecnico(mensaje);
+
+            if (tecnico)
+            {
+                Debug.LogError(
+                    mensaje,
+                    this);
+            }
+            else
+            {
+                Debug.LogWarning(
+                    mensaje,
+                    this);
+            }
 
             if (vistaHud != null)
-                vistaHud.MostrarMensaje(mensaje, true);
+            {
+                vistaHud.MostrarMensaje(
+                    mensaje,
+                    tecnico);
+            }
+        }
+
+        private static bool EsErrorTecnico(
+            string mensaje)
+        {
+            if (string.IsNullOrWhiteSpace(
+                    mensaje))
+            {
+                return false;
+            }
+
+            return
+                mensaje.Contains("HTTP") ||
+                mensaje.Contains("API no") ||
+                mensaje.Contains("No se pudo consultar") ||
+                mensaje.Contains("No se pudo conectar") ||
+                mensaje.Contains("JSON") ||
+                mensaje.Contains("worker") ||
+                mensaje.Contains("Estado concurrente no reconocido") ||
+                mensaje.Contains("VistaPartida no está configurada");
         }
 
         private void Start()
