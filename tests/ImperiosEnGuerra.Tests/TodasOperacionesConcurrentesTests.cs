@@ -167,7 +167,8 @@ public class TodasOperacionesConcurrentesTests
 
         Assert.That(
             resultado.Resultado.Exito,
-            Is.True);
+            Is.True,
+            $"{nombre}: {resultado.Resultado.Mensaje}");
     }
 
 
