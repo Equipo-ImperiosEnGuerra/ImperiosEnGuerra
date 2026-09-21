@@ -57,7 +57,7 @@ namespace ImperiosEnGuerra.Servicios
 
         /// <summary>
         /// Genera una descripción determinista del estado recibido de ambos jugadores y la guarda mediante GuardarConfiguracion.
-        /// Incluye nombres, tipos, dimensiones, saldos, edificios y recursos físicos; usa números con cultura invariable y saltos de línea LF.
+        /// Incluye nombres, tipos, dimensiones, saldos, edificios, unidades y recursos físicos; usa números con cultura invariable y saltos de línea LF.
         /// </summary>
         /// <param name="partida">Partida cuyo estado actual se registra como configuración inicial.</param>
         /// <exception cref="ArgumentNullException">La partida es nula.</exception>
@@ -106,6 +106,24 @@ namespace ImperiosEnGuerra.Servicios
                 texto.AppendFormat(CultureInfo.InvariantCulture,
                     "{0}=({1},{2})\n", edificio.GetType().Name,
                     edificio.Coordenada.X, edificio.Coordenada.Y);
+            }
+
+            texto.Append("Unidades:\n");
+            foreach (var unidad in jugador.Unidades
+                .OrderBy(unidad => unidad.GetType().Name, StringComparer.Ordinal)
+                .ThenBy(unidad => unidad.Coordenada?.X ?? int.MinValue)
+                .ThenBy(unidad => unidad.Coordenada?.Y ?? int.MinValue))
+            {
+                if (unidad.Coordenada == null)
+                {
+                    texto.Append(unidad.GetType().Name)
+                        .Append("=(sin_posicion)\n");
+                    continue;
+                }
+
+                texto.AppendFormat(CultureInfo.InvariantCulture,
+                    "{0}=({1},{2})\n", unidad.GetType().Name,
+                    unidad.Coordenada.X, unidad.Coordenada.Y);
             }
 
             texto.Append("RecursosMapa:\n");

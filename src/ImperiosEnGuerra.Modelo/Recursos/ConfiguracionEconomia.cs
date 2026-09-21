@@ -6,8 +6,9 @@ using ImperiosEnGuerra.Modelo.Unidades;
 namespace ImperiosEnGuerra.Modelo.Recursos
 {
     /// <summary>
-    /// Valores propios del prototipo académico. No representan costos oficiales de Age of Empires.
-    /// Centraliza los costos para evitar números dispersos por controladores y vistas.
+    /// Balance económico propio del prototipo académico.
+    /// Comida sostiene crecimiento y ejército; Madera se reserva a construcción;
+    /// Oro financia tropas y expansión.
     /// </summary>
     public sealed class ConfiguracionEconomia
     {
@@ -24,7 +25,7 @@ namespace ImperiosEnGuerra.Modelo.Recursos
                         nameof(CentroUrbano),
                         new CostoRecursos(
                             oro: 20,
-                            madera: 30,
+                            madera: 50,
                             comida: 0)
                     }
                 };
@@ -34,10 +35,10 @@ namespace ImperiosEnGuerra.Modelo.Recursos
                     StringComparer.OrdinalIgnoreCase)
                 {
                     { nameof(Aldeano), new CostoRecursos(0, 0, 10) },
-                    { nameof(Guerrero), new CostoRecursos(10, 0, 10) },
-                    { nameof(Lancero), new CostoRecursos(5, 10, 5) },
-                    { nameof(Arquero), new CostoRecursos(5, 10, 10) },
-                    { nameof(Monje), new CostoRecursos(15, 0, 10) }
+                    { nameof(Guerrero), new CostoRecursos(5, 0, 15) },
+                    { nameof(Lancero), new CostoRecursos(8, 0, 15) },
+                    { nameof(Arquero), new CostoRecursos(10, 0, 10) },
+                    { nameof(Monje), new CostoRecursos(20, 0, 10) }
                 };
         }
 

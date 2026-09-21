@@ -58,7 +58,8 @@ app.MapPost(
     (
         IniciarPartidaRequest request,
         EstadoPartidaService estadoPartida,
-        ServicioAccionesConcurrentes accionesConcurrentes) =>
+        ServicioAccionesConcurrentes accionesConcurrentes,
+        ServicioArchivos servicioArchivos) =>
 {
     try
     {
@@ -95,6 +96,9 @@ app.MapPost(
             mapa,
             centroMaquina,
             recursosMaquina);
+
+        servicioArchivos.GuardarConfiguracionInicial(
+            partida);
 
         estadoPartida.EstablecerPartida(partida);
 
@@ -138,6 +142,20 @@ app.MapPost(
         {
             error = ex.Message
         });
+    }
+    catch (IOException ex)
+    {
+        return Results.Problem(
+            title: "No se pudo guardar configuracion.txt.",
+            detail: ex.Message,
+            statusCode: StatusCodes.Status500InternalServerError);
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        return Results.Problem(
+            title: "No se pudo guardar configuracion.txt.",
+            detail: ex.Message,
+            statusCode: StatusCodes.Status500InternalServerError);
     }
 })
 .WithName("IniciarPartida");
