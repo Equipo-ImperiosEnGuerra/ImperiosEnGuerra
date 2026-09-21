@@ -8,6 +8,7 @@ using ImperiosEnGuerra.Servicios.Concurrencia;
 using ImperiosEnGuerra.Modelo.Edificios;
 using ImperiosEnGuerra.Modelo.Map;
 using ImperiosEnGuerra.Modelo.Movimiento;
+using ImperiosEnGuerra.Modelo.Recoleccion;
 
 namespace ImperiosEnGuerra.Api.Servicios;
 
@@ -282,48 +283,99 @@ public sealed class ServicioAccionesConcurrentes
             "RECOLECTAR",
             token =>
             {
-                Unidad? unidad = null;
+                ResultadoAproximacionRecurso plan =
+                    estadoPartida.PrepararAproximacionRecurso(
+                        copia);
 
-                if (Guid.TryParse(
-                    copia?.AldeanoId,
-                    out Guid unidadId))
+                if (!plan.Exito)
                 {
-                    unidad =
-                        estadoPartida.ObtenerUnidad(
-                            unidadId);
+                    return ResultadoAccion.Fallido(
+                        plan.Mensaje);
                 }
+
+                if (!Guid.TryParse(
+                        copia?.AldeanoId,
+                        out Guid unidadId))
+                {
+                    return ResultadoAccion.Fallido(
+                        "El ID del Aldeano debe tener formato Guid válido.");
+                }
+
+                Unidad? unidad =
+                    estadoPartida.ObtenerUnidad(
+                        unidadId);
+
+                if (!(unidad is Aldeano aldeano))
+                {
+                    return ResultadoAccion.Fallido(
+                        "La unidad seleccionada no es un Aldeano.");
+                }
+
+                if (plan.Pasos.Count == 0)
+                {
+                    return ResultadoAccion.Exitoso(
+                        $"El Aldeano ya está junto al recurso {plan.TipoRecurso}.");
+                }
+
+                bool ordenIniciada =
+                    estadoPartida.IntentarIniciarOrdenUnidad(
+                        unidadId,
+                        TipoAccionJuego.Mover);
+
+                if (!ordenIniciada)
+                {
+                    return ResultadoAccion.Fallido(
+                        "El Aldeano no está disponible.");
+                }
+
+                TimeSpan retardoPaso =
+                    CalcularRetardoPasoMovimiento(
+                        retardoMovimiento,
+                        aldeano.VelocidadMovimiento);
 
                 try
                 {
-                    EsperarAntesDeAplicar(
-                        token,
-                        retardoRecoleccion);
+                    var pasos =
+                        new Queue<Coordenada>(
+                            plan.Pasos);
 
-                    var resultado =
-                        estadoPartida.IniciarRecoleccion(
-                            copia);
-
-                    if (resultado.Exito &&
-                        unidad != null)
+                    while (pasos.Count > 0)
                     {
-                        servicioOrdenes.Iniciar(
-                            unidad,
-                            TipoAccionJuego.Recolectar);
+                        EsperarAntesDeAplicar(
+                            token,
+                            retardoPaso);
+
+                        token.ThrowIfCancellationRequested();
+
+                        Coordenada siguiente =
+                            pasos.Dequeue();
+
+                        ResultadoAccion resultadoPaso =
+                            estadoPartida.AvanzarMovimiento(
+                                unidadId,
+                                siguiente);
+
+                        if (!resultadoPaso.Exito)
+                        {
+                            return ResultadoAccion.Fallido(
+                                resultadoPaso.Mensaje);
+                        }
+
+                        Console.WriteLine(
+                            $"RECOLECCION_MOVIMIENTO: {unidadId} -> " +
+                            $"({siguiente.X},{siguiente.Y})");
                     }
 
-                    return resultado;
+                    return ResultadoAccion.Exitoso(
+                        $"Aldeano posicionado junto al recurso {plan.TipoRecurso}.");
                 }
                 finally
                 {
-                    if (unidad != null)
-                    {
-                        servicioOrdenes.Completar(
-                            unidad);
-                    }
+                    estadoPartida.CompletarOrdenUnidad(
+                        unidadId);
                 }
             });
     }
-
 
     // ============================================================
     // CONSTRUCCIÓN

@@ -45,6 +45,22 @@ public class RecoleccionConcurrenteTests
         Assert.That(
             resultado.Resultado.Mensaje,
             Does.Contain("Oro"));
+
+        Assert.That(
+            Math.Abs(
+                aldeano.Coordenada.X - 2) +
+            Math.Abs(
+                aldeano.Coordenada.Y - 2),
+            Is.EqualTo(1));
+
+        Assert.That(
+            aldeano.Estado,
+            Is.EqualTo(
+                EstadoUnidad.Idle));
+
+        Assert.That(
+            aldeano.OrdenActiva,
+            Is.Null);
     }
 
     [Test]

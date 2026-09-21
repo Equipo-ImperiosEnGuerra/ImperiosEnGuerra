@@ -8,6 +8,7 @@ using ImperiosEnGuerra.Servicios;
 using ImperiosEnGuerra.Modelo.Edificios;
 using ImperiosEnGuerra.Modelo.Map;
 using ImperiosEnGuerra.Modelo.Movimiento;
+using ImperiosEnGuerra.Modelo.Recoleccion;
 using System.Linq; // para usar FirstOrDefault()
 
 namespace ImperiosEnGuerra.Api.Servicios;
@@ -153,6 +154,50 @@ public sealed class EstadoPartidaService
                     partidaActiva,
                     unidadId,
                     siguiente);
+        }
+    }
+
+    public ResultadoAproximacionRecurso PrepararAproximacionRecurso(
+        RecolectarRequest? request)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+            {
+                return ResultadoAproximacionRecurso.Fallido(
+                    "No hay una partida activa.");
+            }
+
+            if (request == null)
+            {
+                return ResultadoAproximacionRecurso.Fallido(
+                    "La solicitud de recolección es obligatoria.");
+            }
+
+            if (!Guid.TryParse(
+                    request.AldeanoId,
+                    out Guid aldeanoId))
+            {
+                return ResultadoAproximacionRecurso.Fallido(
+                    "El ID del Aldeano debe tener formato Guid válido.");
+            }
+
+            if (request.Objetivo == null)
+            {
+                return ResultadoAproximacionRecurso.Fallido(
+                    "El objetivo de recolección es obligatorio.");
+            }
+
+            var solicitud =
+                new SolicitudRecoleccion(
+                    aldeanoId,
+                    PartidaRequestMapper.ConvertirCoordenada(
+                        request.Objetivo));
+
+            return new PlanificadorAproximacionRecurso()
+                .Preparar(
+                    partidaActiva,
+                    solicitud);
         }
     }
 
