@@ -17,6 +17,7 @@ namespace ImperiosEnGuerra.Modelo.Recoleccion
         public string Mensaje { get; }
         public TipoRecurso? TipoRecurso { get; }
         public Coordenada PuntoInteraccion { get; }
+        public bool Reintentable { get; }
 
         public IReadOnlyList<Coordenada> Pasos
         {
@@ -28,12 +29,14 @@ namespace ImperiosEnGuerra.Modelo.Recoleccion
             string mensaje,
             TipoRecurso? tipoRecurso,
             Coordenada puntoInteraccion,
-            IEnumerable<Coordenada> pasos)
+            IEnumerable<Coordenada> pasos,
+            bool reintentable)
         {
             Exito = exito;
             Mensaje = mensaje ?? string.Empty;
             TipoRecurso = tipoRecurso;
             PuntoInteraccion = puntoInteraccion;
+            Reintentable = reintentable;
             this.pasos = pasos == null
                 ? new List<Coordenada>()
                 : new List<Coordenada>(pasos);
@@ -61,18 +64,21 @@ namespace ImperiosEnGuerra.Modelo.Recoleccion
                 $"Ruta hacia recurso {tipoRecurso} preparada.",
                 tipoRecurso,
                 puntoInteraccion,
-                pasos);
+                pasos,
+                false);
         }
 
         public static ResultadoAproximacionRecurso Fallido(
-            string mensaje)
+            string mensaje,
+            bool reintentable = false)
         {
             return new ResultadoAproximacionRecurso(
                 false,
                 mensaje,
                 null,
                 null,
-                Array.Empty<Coordenada>());
+                Array.Empty<Coordenada>(),
+                reintentable);
         }
     }
 }

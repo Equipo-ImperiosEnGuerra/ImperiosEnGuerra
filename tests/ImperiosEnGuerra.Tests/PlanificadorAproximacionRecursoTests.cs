@@ -219,6 +219,10 @@ public class PlanificadorAproximacionRecursoTests
         Assert.That(
             resultado.Mensaje,
             Does.Contain("accesible"));
+
+        Assert.That(
+            resultado.Reintentable,
+            Is.True);
     }
 
     [Test]
@@ -241,6 +245,10 @@ public class PlanificadorAproximacionRecursoTests
         Assert.That(
             resultado.Mensaje,
             Does.Contain("agotado"));
+
+        Assert.That(
+            resultado.Reintentable,
+            Is.False);
     }
 
     private static int Distancia(

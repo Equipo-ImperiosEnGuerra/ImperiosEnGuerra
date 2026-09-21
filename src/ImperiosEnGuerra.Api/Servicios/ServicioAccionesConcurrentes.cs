@@ -284,8 +284,9 @@ public sealed class ServicioAccionesConcurrentes
             token =>
             {
                 ResultadoAproximacionRecurso plan =
-                    estadoPartida.PrepararAproximacionRecurso(
-                        copia);
+                    PrepararAproximacionRecursoConReintentos(
+                        copia,
+                        token);
 
                 if (!plan.Exito)
                 {
@@ -556,6 +557,43 @@ public sealed class ServicioAccionesConcurrentes
 
     public int ProcesosActivos =>
         gestorProcesos.ProcesosActivos;
+
+
+    private ResultadoAproximacionRecurso
+        PrepararAproximacionRecursoConReintentos(
+            RecolectarRequest? request,
+            CancellationToken token)
+    {
+        const int maximoIntentos = 3;
+
+        ResultadoAproximacionRecurso ultimoResultado =
+            ResultadoAproximacionRecurso.Fallido(
+                "No se pudo preparar la aproximación al recurso.");
+
+        for (int intento = 1;
+             intento <= maximoIntentos;
+             intento++)
+        {
+            token.ThrowIfCancellationRequested();
+
+            ultimoResultado =
+                estadoPartida.PrepararAproximacionRecurso(
+                    request);
+
+            if (ultimoResultado.Exito ||
+                !ultimoResultado.Reintentable ||
+                intento == maximoIntentos)
+            {
+                return ultimoResultado;
+            }
+
+            EsperarAntesDeAplicar(
+                token,
+                retardoMovimiento);
+        }
+
+        return ultimoResultado;
+    }
 
 
     private static TimeSpan CalcularRetardoPasoMovimiento(

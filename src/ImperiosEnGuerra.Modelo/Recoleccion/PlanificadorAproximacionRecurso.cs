@@ -120,7 +120,8 @@ namespace ImperiosEnGuerra.Modelo.Recoleccion
                 mejorPunto == null)
             {
                 return ResultadoAproximacionRecurso.Fallido(
-                    "No existe una casilla accesible junto al recurso.");
+                    "No existe una casilla accesible junto al recurso.",
+                    true);
             }
 
             return ResultadoAproximacionRecurso.Exitoso(
