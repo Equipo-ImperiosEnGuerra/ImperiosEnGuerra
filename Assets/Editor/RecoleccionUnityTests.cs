@@ -383,6 +383,28 @@ public class RecoleccionUnityTests
     }
 
     [Test]
+    public void RecoleccionEnCurso_NoBloqueaPrepararOtroAldeano()
+    {
+        CampoAutomatico(
+            conexion,
+            "RecoleccionEnCurso",
+            true);
+
+        Invocar(
+            acciones,
+            "PrepararAccion",
+            "Recolectar");
+
+        Assert.That(
+            seleccion.CapturandoDestino,
+            Is.True);
+
+        Assert.That(
+            seleccion.CapturandoRecurso,
+            Is.True);
+    }
+
+    [Test]
     public void CambioSeleccion_CancelaRecoleccion()
     {
         Invocar(
