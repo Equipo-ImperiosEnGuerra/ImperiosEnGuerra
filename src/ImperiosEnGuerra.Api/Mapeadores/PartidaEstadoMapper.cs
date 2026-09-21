@@ -30,7 +30,59 @@ public static class PartidaEstadoMapper
                 }).ToList()
             },
             JugadorHumano = ConvertirJugador(partida.JugadorHumano),
-            JugadorMaquina = ConvertirJugador(partida.JugadorMaquina)
+            JugadorMaquina = ConvertirJugador(partida.JugadorMaquina),
+            Economia = ConvertirEconomia()
+        };
+    }
+
+    private static EconomiaEstadoResponse ConvertirEconomia()
+    {
+        var configuracion =
+            new ConfiguracionEconomia();
+
+        configuracion.IntentarObtenerCostoEdificio(
+            "CentroUrbano",
+            out CostoRecursos centro);
+
+        configuracion.IntentarObtenerCostoUnidad(
+            "Aldeano",
+            out CostoRecursos aldeano);
+
+        configuracion.IntentarObtenerCostoUnidad(
+            "Guerrero",
+            out CostoRecursos guerrero);
+
+        configuracion.IntentarObtenerCostoUnidad(
+            "Lancero",
+            out CostoRecursos lancero);
+
+        configuracion.IntentarObtenerCostoUnidad(
+            "Arquero",
+            out CostoRecursos arquero);
+
+        configuracion.IntentarObtenerCostoUnidad(
+            "Monje",
+            out CostoRecursos monje);
+
+        return new EconomiaEstadoResponse
+        {
+            CentroUrbano = ConvertirCosto(centro),
+            Aldeano = ConvertirCosto(aldeano),
+            Guerrero = ConvertirCosto(guerrero),
+            Lancero = ConvertirCosto(lancero),
+            Arquero = ConvertirCosto(arquero),
+            Monje = ConvertirCosto(monje)
+        };
+    }
+
+    private static CostoEstadoResponse ConvertirCosto(
+        CostoRecursos costo)
+    {
+        return new CostoEstadoResponse
+        {
+            Oro = costo.Oro,
+            Madera = costo.Madera,
+            Comida = costo.Comida
         };
     }
 

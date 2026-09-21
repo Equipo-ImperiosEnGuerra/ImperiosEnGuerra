@@ -18,6 +18,8 @@ namespace ImperiosEnGuerra.Controladores.Red
         [SerializeField]
         private VistaHud vistaHud;
 
+        private EconomiaEstadoDto economiaActual;
+
     public bool MovimientoEnCurso { get; private set; }
     public bool RecoleccionEnCurso { get; private set; }
     public bool ConstruccionEnCurso { get; private set; }
@@ -717,7 +719,7 @@ public bool PuedeIniciarAtaque =>
             string procesoId)
         {
             const float intervaloConsulta = 0.1f;
-            const float tiempoMaximo = 15f;
+            const float tiempoMaximo = 90f;
             float tiempoTranscurrido = 0f;
 
             while (tiempoTranscurrido < tiempoMaximo)
@@ -1188,6 +1190,57 @@ public bool PuedeIniciarAtaque =>
             return alternativa;
         }
 
+        public string DescribirCostoConstruccion()
+        {
+            return DescribirCosto(
+                economiaActual?.centroUrbano);
+        }
+
+        public string DescribirCostoUnidad(
+            string tipoUnidad)
+        {
+            if (economiaActual == null ||
+                string.IsNullOrWhiteSpace(tipoUnidad))
+            {
+                return string.Empty;
+            }
+
+            CostoEstadoDto costo = null;
+
+            switch (tipoUnidad)
+            {
+                case "Aldeano":
+                    costo = economiaActual.aldeano;
+                    break;
+                case "Guerrero":
+                    costo = economiaActual.guerrero;
+                    break;
+                case "Lancero":
+                    costo = economiaActual.lancero;
+                    break;
+                case "Arquero":
+                    costo = economiaActual.arquero;
+                    break;
+                case "Monje":
+                    costo = economiaActual.monje;
+                    break;
+            }
+
+            return DescribirCosto(
+                costo);
+        }
+
+        private static string DescribirCosto(
+            CostoEstadoDto costo)
+        {
+            if (costo == null)
+                return string.Empty;
+
+            return $"Costo: Oro {costo.oro}, " +
+                   $"Madera {costo.madera}, " +
+                   $"Comida {costo.comida}.";
+        }
+
         private void MostrarError(string mensaje)
         {
             Debug.LogError(mensaje, this);
@@ -1321,6 +1374,9 @@ public bool PuedeIniciarAtaque =>
             {
                 estadoPartida =
                     JsonUtility.FromJson<EstadoPartidaDto>(json);
+
+                economiaActual =
+                    estadoPartida?.economia;
             }
             catch (System.ArgumentException ex)
             {

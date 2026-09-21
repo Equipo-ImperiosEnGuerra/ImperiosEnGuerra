@@ -36,6 +36,10 @@ public class ConstruccionTests
 
         aldeano = new Aldeano(new Coordenada(1, 1));
 
+        partida.JugadorHumano.Recursos.Agregar(TipoRecurso.Oro, 100);
+        partida.JugadorHumano.Recursos.Agregar(TipoRecurso.Madera, 100);
+        partida.JugadorHumano.Recursos.Agregar(TipoRecurso.Comida, 100);
+
         partida.JugadorHumano.AgregarUnidad(aldeano);
 
         operacion = new OperacionConstruccion();

@@ -473,8 +473,14 @@ namespace ImperiosEnGuerra.Controladores
                 }
                 else
                 {
+                    string costo =
+                        conexionApi == null
+                            ? string.Empty
+                            : conexionApi.DescribirCostoConstruccion();
+
                     vistaHud.MostrarMensaje(
-                        "Selecciona una casilla para construir el Centro Urbano.");
+                        "Selecciona una casilla para construir el Centro Urbano. " +
+                        costo);
                 }
 
                 return;
@@ -501,8 +507,15 @@ namespace ImperiosEnGuerra.Controladores
 
             controladorSeleccion.IniciarCapturaDestino();
 
+            string costo =
+                conexionApi == null
+                    ? string.Empty
+                    : conexionApi.DescribirCostoUnidad(
+                        tipoUnidad);
+
             vistaHud.MostrarMensaje(
-                $"Selecciona una casilla para crear {tipoUnidad}.");
+                $"Selecciona una casilla de reunión para {tipoUnidad}. " +
+                costo);
         }
 
         private static string ObtenerMensajeCancelacion(string accion)

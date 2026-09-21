@@ -674,9 +674,40 @@ public sealed class EstadoPartidaService
                 request.TipoEdificio ?? string.Empty,
                 PartidaRequestMapper.ConvertirCoordenada(request.Destino));
 
+            if (!configuracionEconomia.IntentarObtenerCostoEdificio(
+                    request.TipoEdificio,
+                    out CostoRecursos costo))
+            {
+                return RegistrarResultado(
+                    "CONSTRUIR",
+                    ResultadoAccion.Fallido(
+                        "El tipo de edificio no tiene un costo configurado."));
+            }
+
+            if (!partidaActiva.JugadorHumano.Recursos
+                .IntentarGastar(costo))
+            {
+                return RegistrarResultado(
+                    "CONSTRUIR",
+                    ResultadoAccion.Fallido(
+                        $"Recursos insuficientes. Costo: {costo}."));
+            }
+
+            ResultadoAccion resultado =
+                new OperacionConstruccion()
+                    .Ejecutar(
+                        partidaActiva,
+                        solicitud);
+
+            if (!resultado.Exito)
+            {
+                partidaActiva.JugadorHumano.Recursos
+                    .Reintegrar(costo);
+            }
+
             return RegistrarResultado(
                 "CONSTRUIR",
-                new OperacionConstruccion().Ejecutar(partidaActiva, solicitud));
+                resultado);
         }
     }
 
@@ -951,9 +982,40 @@ public sealed class EstadoPartidaService
                 request.TipoUnidad ?? string.Empty,
                 PartidaRequestMapper.ConvertirCoordenada(request.Destino));
 
+            if (!configuracionEconomia.IntentarObtenerCostoUnidad(
+                    request.TipoUnidad,
+                    out CostoRecursos costo))
+            {
+                return RegistrarResultado(
+                    "ENTRENAR",
+                    ResultadoAccion.Fallido(
+                        "El tipo de unidad no tiene un costo configurado."));
+            }
+
+            if (!partidaActiva.JugadorHumano.Recursos
+                .IntentarGastar(costo))
+            {
+                return RegistrarResultado(
+                    "ENTRENAR",
+                    ResultadoAccion.Fallido(
+                        $"Recursos insuficientes. Costo: {costo}."));
+            }
+
+            ResultadoAccion resultado =
+                new OperacionEntrenamiento()
+                    .Ejecutar(
+                        partidaActiva,
+                        solicitud);
+
+            if (!resultado.Exito)
+            {
+                partidaActiva.JugadorHumano.Recursos
+                    .Reintegrar(costo);
+            }
+
             return RegistrarResultado(
                 "ENTRENAR",
-                new OperacionEntrenamiento().Ejecutar(partidaActiva, solicitud));
+                resultado);
         }
     }
 

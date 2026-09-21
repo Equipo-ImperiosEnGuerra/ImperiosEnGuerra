@@ -49,7 +49,7 @@ public sealed class ServicioAccionesConcurrentes
             gestorProcesos,
             servicioOrdenes,
             TimeSpan.FromSeconds(1),
-            TimeSpan.FromSeconds(2),
+            TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(7),
             TimeSpan.FromSeconds(5),
             TimeSpan.FromSeconds(1))

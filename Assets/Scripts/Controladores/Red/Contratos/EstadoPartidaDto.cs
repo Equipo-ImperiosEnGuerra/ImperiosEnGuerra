@@ -9,6 +9,26 @@ namespace ImperiosEnGuerra.Controladores.Red.Contratos
         public MapaEstadoDto mapa;
         public JugadorEstadoDto jugadorHumano;
         public JugadorEstadoDto jugadorMaquina;
+        public EconomiaEstadoDto economia;
+    }
+
+    [Serializable]
+    public class EconomiaEstadoDto
+    {
+        public CostoEstadoDto centroUrbano;
+        public CostoEstadoDto aldeano;
+        public CostoEstadoDto guerrero;
+        public CostoEstadoDto lancero;
+        public CostoEstadoDto arquero;
+        public CostoEstadoDto monje;
+    }
+
+    [Serializable]
+    public class CostoEstadoDto
+    {
+        public int oro;
+        public int madera;
+        public int comida;
     }
 
     [Serializable]

@@ -11,9 +11,9 @@ namespace ImperiosEnGuerra.Modelo.Recursos
         private readonly Dictionary<TipoRecurso, int> tasas;
 
         public ConfiguracionRecoleccion(
-            int tasaOro = 1,
-            int tasaMadera = 1,
-            int tasaComida = 1)
+            int tasaOro = 5,
+            int tasaMadera = 5,
+            int tasaComida = 5)
         {
             ValidarTasa(
                 tasaOro,

@@ -6,6 +6,24 @@ public sealed class EstadoPartidaResponse
     public required MapaEstadoResponse Mapa { get; init; }
     public required JugadorEstadoResponse JugadorHumano { get; init; }
     public required JugadorEstadoResponse JugadorMaquina { get; init; }
+    public required EconomiaEstadoResponse Economia { get; init; }
+}
+
+public sealed class EconomiaEstadoResponse
+{
+    public required CostoEstadoResponse CentroUrbano { get; init; }
+    public required CostoEstadoResponse Aldeano { get; init; }
+    public required CostoEstadoResponse Guerrero { get; init; }
+    public required CostoEstadoResponse Lancero { get; init; }
+    public required CostoEstadoResponse Arquero { get; init; }
+    public required CostoEstadoResponse Monje { get; init; }
+}
+
+public sealed class CostoEstadoResponse
+{
+    public int Oro { get; init; }
+    public int Madera { get; init; }
+    public int Comida { get; init; }
 }
 
 public sealed class MapaEstadoResponse
