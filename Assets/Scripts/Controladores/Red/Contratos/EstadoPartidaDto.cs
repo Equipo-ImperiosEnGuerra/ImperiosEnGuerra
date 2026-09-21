@@ -58,10 +58,7 @@ namespace ImperiosEnGuerra.Controladores.Red.Contratos
         public string tipo;
         public CoordenadaEstadoDto coordenada;
         public bool disponible;
-
-        public string estado;
-        public string ordenActiva;
-}
+    }
 
     [Serializable]
     public class CoordenadaEstadoDto

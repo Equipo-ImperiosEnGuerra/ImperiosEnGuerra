@@ -96,41 +96,10 @@ namespace ImperiosEnGuerra.Vistas
 
         public void MostrarSeleccion(EntidadSeleccionableVista entidad)
         {
-            if (seleccion == null)
-                return;
-
-            if (entidad == null)
-            {
-                seleccion.text = "Sin selección";
-                return;
-            }
-
-            string texto =
-                $"{entidad.TipoLogico}\n" +
-                $"Propietario: {entidad.Propietario}\n" +
-                $"Coordenada: ({entidad.X},{entidad.Y})";
-
-            if (entidad.Categoria == CategoriaEntidadVisual.Unidad)
-            {
-                string estado =
-                    string.IsNullOrWhiteSpace(entidad.EstadoLogico)
-                        ? "Desconocido"
-                        : entidad.EstadoLogico;
-
-                string orden =
-                    string.IsNullOrWhiteSpace(entidad.OrdenActiva)
-                        ? "Ninguna"
-                        : entidad.OrdenActiva;
-
-                texto +=
-                    $"\nEstado: {estado}" +
-                    $"\nOrden: {orden}";
-            }
-
-            if (entidad.Propietario == "Maquina")
-                texto += " — Enemigo";
-
-            seleccion.text = texto;
+            if (seleccion == null) return;
+            seleccion.text = entidad == null ? "Sin selección" :
+                $"{entidad.TipoLogico}\nPropietario: {entidad.Propietario}\nCoordenada: ({entidad.X},{entidad.Y})" +
+                (entidad.Propietario == "Maquina" ? " — Enemigo" : "");
         }
 
         public void MostrarSelectorEntrenamiento(bool mostrar)

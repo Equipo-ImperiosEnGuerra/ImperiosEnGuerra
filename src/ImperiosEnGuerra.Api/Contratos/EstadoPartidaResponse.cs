@@ -49,9 +49,6 @@ public sealed class UnidadEstadoResponse
     public required string Tipo { get; init; }
     public CoordenadaEstadoResponse? Coordenada { get; init; }
     public bool Disponible { get; init; }
-
-    public required string Estado { get; init; }
-    public string? OrdenActiva { get; init; }
 }
 
 public sealed class CoordenadaEstadoResponse

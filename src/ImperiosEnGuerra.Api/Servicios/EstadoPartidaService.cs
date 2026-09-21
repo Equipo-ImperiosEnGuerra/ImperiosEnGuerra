@@ -3,11 +3,7 @@ using ImperiosEnGuerra.Api.Contratos;
 using ImperiosEnGuerra.Api.Mapeadores;
 using ImperiosEnGuerra.Modelo.Acciones;
 using ImperiosEnGuerra.Modelo.Core;
-using ImperiosEnGuerra.Modelo.Unidades;
 using ImperiosEnGuerra.Servicios;
-using ImperiosEnGuerra.Modelo.Edificios;
-using ImperiosEnGuerra.Modelo.Map;
-using System.Linq; // para usar FirstOrDefault()
 
 namespace ImperiosEnGuerra.Api.Servicios;
 
@@ -227,32 +223,7 @@ public sealed class EstadoPartidaService
             return partidaActiva;
         }
     }
-    public Unidad? ObtenerUnidad(Guid id)
-    {
-        lock (sincronizacion)
-        {
-            if (partidaActiva == null)
-                return null;
 
-            return partidaActiva.JugadorHumano.Unidades
-                .FirstOrDefault(u => u.Id == id);
-        }
-    }
-
-    public CentroUrbano? ObtenerCentroUrbano(Coordenada coordenada)
-    {
-        lock (sincronizacion)
-        {
-            if (partidaActiva == null || coordenada == null)
-                return null;
-
-            return partidaActiva.JugadorHumano.Edificios
-                .OfType<CentroUrbano>()
-                .FirstOrDefault(e =>
-                    e.Coordenada.X == coordenada.X &&
-                    e.Coordenada.Y == coordenada.Y);
-        }
-    }
     public bool HayPartidaActiva()
     {
         lock (sincronizacion)
@@ -291,4 +262,3 @@ public sealed class EstadoPartidaService
         }
     }
 }
-
