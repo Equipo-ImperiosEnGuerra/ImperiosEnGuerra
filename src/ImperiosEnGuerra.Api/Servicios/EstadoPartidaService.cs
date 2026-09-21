@@ -265,6 +265,22 @@ public sealed class EstadoPartidaService
         }
     }
 
+    public bool RecursoExiste(
+        Coordenada objetivo)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null ||
+                objetivo == null)
+            {
+                return false;
+            }
+
+            return partidaActiva.JugadorHumano.Mapa
+                .ObtenerRecursoEn(objetivo) != null;
+        }
+    }
+
     public bool RecursoDisponible(
         Coordenada objetivo)
     {
