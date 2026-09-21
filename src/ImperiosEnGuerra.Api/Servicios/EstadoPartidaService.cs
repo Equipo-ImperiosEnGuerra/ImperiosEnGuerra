@@ -9,6 +9,7 @@ using ImperiosEnGuerra.Modelo.Edificios;
 using ImperiosEnGuerra.Modelo.Map;
 using ImperiosEnGuerra.Modelo.Movimiento;
 using ImperiosEnGuerra.Modelo.Recoleccion;
+using ImperiosEnGuerra.Modelo.Recursos;
 using System.Linq; // para usar FirstOrDefault()
 
 namespace ImperiosEnGuerra.Api.Servicios;
@@ -17,6 +18,8 @@ public sealed class EstadoPartidaService
 {
     private readonly object sincronizacion = new();
     private readonly ServicioArchivos? servicioArchivos;
+    private readonly ConfiguracionEconomia configuracionEconomia =
+        new ConfiguracionEconomia();
     private Partida? partidaActiva;
 
     public EstadoPartidaService()
@@ -335,6 +338,89 @@ public sealed class EstadoPartidaService
             return RegistrarResultado(
                 "RECOLECTAR",
                 new OperacionRecoleccion().Ejecutar(partidaActiva, solicitud));
+        }
+    }
+
+    public ResultadoAccion ReservarCostoConstruccion(
+        string tipoEdificio,
+        out CostoRecursos costo)
+    {
+        lock (sincronizacion)
+        {
+            costo = null;
+
+            if (partidaActiva == null)
+            {
+                return ResultadoAccion.Fallido(
+                    "No hay una partida activa.");
+            }
+
+            if (!configuracionEconomia
+                .IntentarObtenerCostoEdificio(
+                    tipoEdificio,
+                    out costo))
+            {
+                return ResultadoAccion.Fallido(
+                    "El tipo de edificio no tiene un costo configurado.");
+            }
+
+            if (!partidaActiva.JugadorHumano.Recursos
+                .IntentarGastar(costo))
+            {
+                return ResultadoAccion.Fallido(
+                    $"Recursos insuficientes. Costo: {costo}.");
+            }
+
+            return ResultadoAccion.Exitoso(
+                $"Costo reservado: {costo}.");
+        }
+    }
+
+    public ResultadoAccion ReservarCostoEntrenamiento(
+        string tipoUnidad,
+        out CostoRecursos costo)
+    {
+        lock (sincronizacion)
+        {
+            costo = null;
+
+            if (partidaActiva == null)
+            {
+                return ResultadoAccion.Fallido(
+                    "No hay una partida activa.");
+            }
+
+            if (!configuracionEconomia
+                .IntentarObtenerCostoUnidad(
+                    tipoUnidad,
+                    out costo))
+            {
+                return ResultadoAccion.Fallido(
+                    "El tipo de unidad no tiene un costo configurado.");
+            }
+
+            if (!partidaActiva.JugadorHumano.Recursos
+                .IntentarGastar(costo))
+            {
+                return ResultadoAccion.Fallido(
+                    $"Recursos insuficientes. Costo: {costo}.");
+            }
+
+            return ResultadoAccion.Exitoso(
+                $"Costo reservado: {costo}.");
+        }
+    }
+
+    public void ReembolsarCosto(
+        CostoRecursos costo)
+    {
+        if (costo == null)
+            return;
+
+        lock (sincronizacion)
+        {
+            partidaActiva?.JugadorHumano
+                .Recursos.Reintegrar(costo);
         }
     }
 

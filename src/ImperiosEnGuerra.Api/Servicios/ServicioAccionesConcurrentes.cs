@@ -543,24 +543,39 @@ public sealed class ServicioAccionesConcurrentes
             "CONSTRUIR",
             token =>
             {
+                CostoRecursos costo = null;
+                bool costoReservado = false;
+                bool completada = false;
                 Unidad? unidad = null;
-
-                if (Guid.TryParse(
-                    copia?.AldeanoId,
-                    out Guid unidadId))
-                {
-                    unidad =
-                        estadoPartida.ObtenerUnidad(
-                            unidadId);
-                }
 
                 try
                 {
+                    ResultadoAccion reserva =
+                        estadoPartida.ReservarCostoConstruccion(
+                            copia?.TipoEdificio,
+                            out costo);
+
+                    if (!reserva.Exito)
+                    {
+                        return reserva;
+                    }
+
+                    costoReservado = true;
+
+                    if (Guid.TryParse(
+                        copia?.AldeanoId,
+                        out Guid unidadId))
+                    {
+                        unidad =
+                            estadoPartida.ObtenerUnidad(
+                                unidadId);
+                    }
+
                     EsperarAntesDeAplicar(
                         token,
                         retardoConstruccion);
 
-                    var resultado =
+                    ResultadoAccion resultado =
                         estadoPartida.Construir(
                             copia);
 
@@ -570,12 +585,21 @@ public sealed class ServicioAccionesConcurrentes
                         servicioOrdenes.Iniciar(
                             unidad,
                             TipoAccionJuego.Construir);
+
+                        completada = true;
                     }
 
                     return resultado;
                 }
                 finally
                 {
+                    if (!completada &&
+                        costoReservado)
+                    {
+                        estadoPartida.ReembolsarCosto(
+                            costo);
+                    }
+
                     if (unidad != null)
                     {
                         servicioOrdenes.Completar(
@@ -584,7 +608,6 @@ public sealed class ServicioAccionesConcurrentes
                 }
             });
     }
-
 
     // ============================================================
     // ENTRENAMIENTO
@@ -601,38 +624,64 @@ public sealed class ServicioAccionesConcurrentes
             token =>
             {
                 CentroUrbano? centro = null;
-
-                if (copia?.EdificioOrigen != null)
-                {
-                    centro =
-                        estadoPartida.ObtenerCentroUrbano(
-                            new Coordenada(
-                                copia.EdificioOrigen.X,
-                                copia.EdificioOrigen.Y));
-                }
+                CostoRecursos costo = null;
+                bool costoReservado = false;
+                bool completado = false;
 
                 try
                 {
-                    if (centro != null)
+                    ResultadoAccion reserva =
+                        estadoPartida.ReservarCostoEntrenamiento(
+                            copia?.TipoUnidad,
+                            out costo);
+
+                    if (!reserva.Exito)
                     {
-                        if (!centro.IniciarEntrenamiento(
+                        return reserva;
+                    }
+
+                    costoReservado = true;
+
+                    if (copia?.EdificioOrigen != null)
+                    {
+                        centro =
+                            estadoPartida.ObtenerCentroUrbano(
+                                new Coordenada(
+                                    copia.EdificioOrigen.X,
+                                    copia.EdificioOrigen.Y));
+                    }
+
+                    if (centro != null &&
+                        !centro.IniciarEntrenamiento(
                             copia?.TipoUnidad
                             ?? string.Empty))
-                        {
-                            return ResultadoAccion.Fallido(
-                                "El Centro Urbano ya está entrenando.");
-                        }
+                    {
+                        return ResultadoAccion.Fallido(
+                            "El Centro Urbano ya está entrenando.");
                     }
 
                     EsperarAntesDeAplicar(
                         token,
                         retardoEntrenamiento);
 
-                    return estadoPartida.Entrenar(
-                        copia);
+                    ResultadoAccion resultado =
+                        estadoPartida.Entrenar(
+                            copia);
+
+                    completado =
+                        resultado.Exito;
+
+                    return resultado;
                 }
                 finally
                 {
+                    if (!completado &&
+                        costoReservado)
+                    {
+                        estadoPartida.ReembolsarCosto(
+                            costo);
+                    }
+
                     if (centro != null)
                     {
                         centro.CompletarEntrenamiento();
@@ -640,7 +689,6 @@ public sealed class ServicioAccionesConcurrentes
                 }
             });
     }
-
 
     // ============================================================
     // ATAQUE
