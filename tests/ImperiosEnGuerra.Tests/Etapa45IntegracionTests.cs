@@ -21,6 +21,12 @@ public class Etapa45IntegracionTests
         var maquina = new Jugador(
             "Maquina", TipoJugador.Maquina, mapa, new RecursosJugador());
 
+        // Esta prueba construye la partida manualmente para controlar el mapa,
+        // así que aplicamos explícitamente el mismo balance inicial usado por
+        // InicializadorPartida: 0 Oro, 20 Madera y 30 Comida.
+        new ConfiguracionInicioPartida()
+            .AplicarSaldoInicial(humano.Recursos);
+
         var aldeano = new Aldeano(new Coordenada(2, 1));
         humano.AgregarUnidad(aldeano);
         humano.AgregarEdificio(new CentroUrbano(new Coordenada(1, 1)));
