@@ -42,8 +42,11 @@ public class TodasOperacionesConcurrentesTests
                     UnidadId = aldeanoMovimiento.Id.ToString(),
                     Destino = new CoordenadaRequest
                     {
-                        X = 3,
-                        Y = 3
+                        // Destino independiente de las zonas usadas por
+                        // construcción y recolección. Esta prueba valida
+                        // convivencia concurrente, no colisión intencional.
+                        X = 5,
+                        Y = 0
                     }
                 });
 
