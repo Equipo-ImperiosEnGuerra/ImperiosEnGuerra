@@ -30,6 +30,7 @@ namespace ImperiosEnGuerra.Controladores.Red
     private int recoleccionesActivas;
     private int construccionesActivas;
     private int entrenamientosActivos;
+    private int ataquesActivos;
 
 public bool AccionEnCurso =>
     MovimientoEnCurso ||
@@ -39,30 +40,25 @@ public bool AccionEnCurso =>
     AtaqueEnCurso;
 
 public bool PuedeIniciarMovimiento =>
-    isActiveAndEnabled &&
-    !AtaqueEnCurso;
+    isActiveAndEnabled;
 
 public bool PuedeIniciarRecoleccion =>
-    isActiveAndEnabled &&
-    !AtaqueEnCurso;
+    isActiveAndEnabled;
 
 public bool PuedeIniciarConstruccion =>
-    isActiveAndEnabled &&
-    !AtaqueEnCurso;
+    isActiveAndEnabled;
 
 public bool PuedeIniciarEntrenamiento =>
-    isActiveAndEnabled &&
-    !AtaqueEnCurso;
+    isActiveAndEnabled;
 
 public bool PuedeIniciarAtaque =>
-    isActiveAndEnabled &&
-    !AccionEnCurso;
+    isActiveAndEnabled;
 
         public void MoverUnidad(string unidadId, int x, int y)
         {
             if (!PuedeIniciarMovimiento)
             {
-                MostrarError("La conexión no está disponible o ya hay un movimiento en curso.");
+                MostrarError("La conexión con la API no está disponible.");
                 return;
             }
 
@@ -77,7 +73,7 @@ public bool PuedeIniciarAtaque =>
         {
             if (!PuedeIniciarRecoleccion)
             {
-                MostrarError("La conexión no está disponible o ya hay una recolección en curso.");
+                MostrarError("La conexión con la API no está disponible.");
                 return;
             }
 
@@ -97,7 +93,7 @@ public bool PuedeIniciarAtaque =>
         if (!PuedeIniciarConstruccion)
         {
             MostrarError(
-                "La conexión no está disponible o ya hay una construcción en curso.");
+                "La conexión con la API no está disponible.");
             return;
         }
 
@@ -121,7 +117,7 @@ public bool PuedeIniciarAtaque =>
             if (!PuedeIniciarEntrenamiento)
             {
                 MostrarError(
-                    "La conexión no está disponible o ya hay un entrenamiento en curso.");
+                    "La conexión con la API no está disponible.");
                 return;
             }
 
@@ -150,7 +146,7 @@ public bool PuedeIniciarAtaque =>
             if (!PuedeIniciarAtaque)
             {
                 MostrarError(
-                    "La conexión no está disponible o hay otra acción en curso.");
+                    "La conexión con la API no está disponible.");
                 return;
             }
 
@@ -171,6 +167,7 @@ public bool PuedeIniciarAtaque =>
             recoleccionesActivas = 0;
             construccionesActivas = 0;
             entrenamientosActivos = 0;
+            ataquesActivos = 0;
 
             MovimientoEnCurso = false;
             RecoleccionEnCurso = false;
@@ -223,12 +220,6 @@ public bool PuedeIniciarAtaque =>
                         "La API no devolvió un identificador válido para el movimiento concurrente.");
 
                     yield break;
-                }
-
-                if (vistaHud != null)
-                {
-                    vistaHud.MostrarMensaje(
-                        "Movimiento concurrente en curso...");
                 }
 
                 yield return EsperarResultadoMovimiento(
@@ -307,11 +298,7 @@ public bool PuedeIniciarAtaque =>
 
                 if (resultado.estado == "Cancelado")
                 {
-                    if (vistaHud != null)
-                    {
-                        vistaHud.MostrarMensaje(
-                            "Movimiento cancelado.");
-                    }
+                    Debug.Log("Movimiento cancelado.");
 
                     yield break;
                 }
@@ -355,7 +342,8 @@ public bool PuedeIniciarAtaque =>
                         resultado.mensaje)
                         ? "Movimiento realizado."
                         : resultado.mensaje,
-                    "Movimiento completado, pero no se pudo actualizar la vista. ");
+                    "Movimiento completado, pero no se pudo actualizar la vista. ",
+                    false);
 
                 yield break;
             }
@@ -532,10 +520,6 @@ public bool PuedeIniciarAtaque =>
                     yield break;
                 }
 
-                if (vistaHud != null)
-                    vistaHud.MostrarMensaje(
-                        "Recolección concurrente en curso...");
-
                 yield return EsperarResultadoRecoleccion(
                     proceso.procesoId,
                     recoleccion.aldeanoId);
@@ -656,7 +640,8 @@ public bool PuedeIniciarAtaque =>
                         resultado.mensaje)
                         ? "Recolección preparada."
                         : resultado.mensaje,
-                    "Recolección completada, pero no se pudo actualizar la vista. ");
+                    "Recolección completada, pero no se pudo actualizar la vista. ",
+                    false);
 
                 yield break;
             }
@@ -727,19 +712,6 @@ public bool PuedeIniciarAtaque =>
                     recursos.madera,
                     recursos.comida);
 
-                if (unidad != null)
-                {
-                    string tipo =
-                        string.IsNullOrWhiteSpace(
-                            unidad.tipoCarga)
-                            ? ""
-                            : " " + unidad.tipoCarga;
-
-                    vistaHud.MostrarMensaje(
-                        $"Recolección: carga " +
-                        $"{unidad.cargaActual}/{unidad.capacidadCarga}" +
-                        tipo + ".");
-                }
             }
         }
 
@@ -795,12 +767,6 @@ public bool PuedeIniciarAtaque =>
                     yield break;
                 }
 
-                if (vistaHud != null)
-                {
-                    vistaHud.MostrarMensaje(
-                        "Construcción concurrente en curso...");
-                }
-
                 yield return EsperarResultadoConstruccion(
                     proceso.procesoId);
             }
@@ -845,7 +811,9 @@ public bool PuedeIniciarAtaque =>
                         request.downloadHandler.text))
                 {
                     yield return ObtenerPartidaActiva(
-                        "Construcción en progreso...");
+                        "",
+                        "",
+                        false);
 
                     yield return new WaitForSecondsRealtime(
                         0.5f);
@@ -876,11 +844,7 @@ public bool PuedeIniciarAtaque =>
 
                 if (resultado.estado == "Cancelado")
                 {
-                    if (vistaHud != null)
-                    {
-                        vistaHud.MostrarMensaje(
-                            "Construcción cancelada.");
-                    }
+                    Debug.Log("Construcción cancelada.");
 
                     yield break;
                 }
@@ -924,7 +888,8 @@ public bool PuedeIniciarAtaque =>
                         resultado.mensaje)
                         ? "Construcción realizada."
                         : resultado.mensaje,
-                    "Construcción completada, pero no se pudo actualizar la vista. ");
+                    "Construcción completada, pero no se pudo actualizar la vista. ",
+                    false);
 
                 yield break;
             }
@@ -984,12 +949,6 @@ public bool PuedeIniciarAtaque =>
                         "La API no devolvió un identificador válido para el entrenamiento concurrente.");
 
                     yield break;
-                }
-
-                if (vistaHud != null)
-                {
-                    vistaHud.MostrarMensaje(
-                        "Entrenamiento concurrente en curso...");
                 }
 
                 yield return EsperarResultadoEntrenamiento(
@@ -1069,11 +1028,7 @@ public bool PuedeIniciarAtaque =>
 
                 if (resultado.estado == "Cancelado")
                 {
-                    if (vistaHud != null)
-                    {
-                        vistaHud.MostrarMensaje(
-                            "Entrenamiento cancelado.");
-                    }
+                    Debug.Log("Entrenamiento cancelado.");
 
                     yield break;
                 }
@@ -1117,7 +1072,8 @@ public bool PuedeIniciarAtaque =>
                         resultado.mensaje)
                         ? "Entrenamiento realizado."
                         : resultado.mensaje,
-                    "Entrenamiento completado, pero no se pudo actualizar la vista. ");
+                    "Entrenamiento completado, pero no se pudo actualizar la vista. ",
+                    false);
 
                 yield break;
             }
@@ -1159,47 +1115,24 @@ public bool PuedeIniciarAtaque =>
                 yield break;
             }
 
-            EdificioEstadoDto[] edificios =
-                estado?.jugadorHumano?.edificios;
+            var recursos =
+                estado?.jugadorHumano?.recursos;
 
-            if (edificios == null)
-                yield break;
-
-            foreach (EdificioEstadoDto edificio in edificios)
+            if (vistaHud != null &&
+                recursos != null)
             {
-                if (edificio?.coordenada == null ||
-                    edificio.coordenada.x != edificioOrigen.x ||
-                    edificio.coordenada.y != edificioOrigen.y)
-                {
-                    continue;
-                }
-
-                int cantidad =
-                    edificio.colaEntrenamiento == null
-                        ? 0
-                        : edificio.colaEntrenamiento.Length;
-
-                if (cantidad == 0)
-                    yield break;
-
-                EntrenamientoEstadoDto primero =
-                    edificio.colaEntrenamiento[0];
-
-                if (vistaHud != null)
-                {
-                    vistaHud.MostrarMensaje(
-                        $"Entrenando {primero.tipoUnidad}: " +
-                        $"{primero.progreso}% | cola: {cantidad}");
-                }
-
-                yield break;
+                vistaHud.MostrarRecursos(
+                    recursos.oro,
+                    recursos.madera,
+                    recursos.comida);
             }
         }
 
         private IEnumerator EnviarAtaque(
             AtaqueDto ataque)
         {
-            AtaqueEnCurso = true;
+            ataquesActivos++;
+            AtaqueEnCurso = ataquesActivos > 0;
 
             try
             {
@@ -1255,11 +1188,16 @@ public bool PuedeIniciarAtaque =>
                         resultado.mensaje)
                         ? "Ataque preparado."
                         : resultado.mensaje,
-                    "Ataque aceptado, pero no se pudo actualizar la vista. ");
+                    "Ataque aceptado, pero no se pudo actualizar la vista. ",
+                    false);
             }
             finally
             {
-                AtaqueEnCurso = false;
+                ataquesActivos =
+                    Mathf.Max(0, ataquesActivos - 1);
+
+                AtaqueEnCurso =
+                    ataquesActivos > 0;
             }
         }
 
@@ -1433,7 +1371,8 @@ public bool PuedeIniciarAtaque =>
 
         private IEnumerator ObtenerPartidaActiva(
             string mensajeExito = "Partida recibida correctamente.",
-            string contextoError = "")
+            string contextoError = "",
+            bool mostrarMensaje = true)
         {
             string url =
                 $"{urlBaseApi}/api/partida";
@@ -1504,7 +1443,7 @@ public bool PuedeIniciarAtaque =>
                 yield break;
             }
 
-            vistaPartida.Renderizar(estadoPartida);
+            vistaPartida.Sincronizar(estadoPartida);
 
             if (vistaHud != null)
             {
@@ -1518,8 +1457,11 @@ public bool PuedeIniciarAtaque =>
                         recursos.madera,
                         recursos.comida);
 
-                    vistaHud.MostrarMensaje(
-                        mensajeExito);
+                    if (mostrarMensaje)
+                    {
+                        vistaHud.MostrarMensaje(
+                            mensajeExito);
+                    }
                 }
                 else
                 {
