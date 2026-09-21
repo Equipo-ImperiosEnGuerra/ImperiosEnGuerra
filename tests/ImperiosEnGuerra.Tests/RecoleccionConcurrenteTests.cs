@@ -1,6 +1,7 @@
 using ImperiosEnGuerra.Api.Contratos;
 using ImperiosEnGuerra.Api.Servicios;
 using ImperiosEnGuerra.Modelo.Core;
+using ImperiosEnGuerra.Modelo.Edificios;
 using ImperiosEnGuerra.Modelo.Map;
 using ImperiosEnGuerra.Modelo.Recursos;
 using ImperiosEnGuerra.Modelo.Unidades;
@@ -48,9 +49,9 @@ public class RecoleccionConcurrenteTests
 
         Assert.That(
             Math.Abs(
-                aldeano.Coordenada.X - 2) +
+                aldeano.Coordenada.X - 0) +
             Math.Abs(
-                aldeano.Coordenada.Y - 2),
+                aldeano.Coordenada.Y - 0),
             Is.EqualTo(1));
 
         Assert.That(
@@ -64,18 +65,24 @@ public class RecoleccionConcurrenteTests
 
         Assert.That(
             aldeano.CargaActual,
-            Is.EqualTo(
-                aldeano.CapacidadCarga));
+            Is.Zero);
 
         Assert.That(
             aldeano.TipoCarga,
-            Is.EqualTo(
-                TipoRecurso.Oro));
+            Is.Null);
 
         Assert.That(
             partida.JugadorHumano.Recursos
                 .ObtenerCantidad(
                     TipoRecurso.Oro),
+            Is.EqualTo(
+                Recurso.CantidadInicialPredeterminada));
+
+        Assert.That(
+            partida.JugadorHumano.Mapa
+                .ObtenerRecursoEn(
+                    new Coordenada(2, 2))
+                .CantidadRestante,
             Is.Zero);
     }
 
@@ -197,6 +204,76 @@ public class RecoleccionConcurrenteTests
     }
 
     [Test]
+    public async Task CargaConservada_EnSiguienteOrdenSeDepositaAntesDeContinuar()
+    {
+        Partida partida =
+            CrearPartida(
+                out Aldeano aldeano);
+
+        Recurso recurso =
+            partida.JugadorHumano.Mapa
+                .ObtenerRecursoEn(
+                    new Coordenada(2, 2));
+
+        aldeano.RecolectarDesde(
+            recurso,
+            4);
+
+        int restanteAntes =
+            recurso.CantidadRestante;
+
+        var estado =
+            new EstadoPartidaService();
+
+        estado.EstablecerPartida(
+            partida);
+
+        using var gestor =
+            new GestorProcesosConcurrentes();
+
+        var servicio =
+            new ServicioAccionesConcurrentes(
+                estado,
+                gestor,
+                TimeSpan.Zero);
+
+        ProcesoConcurrente proceso =
+            servicio.IniciarRecoleccion(
+                CrearRequest(
+                    aldeano,
+                    2,
+                    2));
+
+        await proceso.Finalizacion;
+
+        Assert.That(
+            servicio.IntentarObtenerResultado(
+                proceso.Id,
+                out ResultadoProcesoConcurrente resultado),
+            Is.True);
+
+        Assert.That(
+            resultado.Resultado?.Exito,
+            Is.True,
+            resultado.Resultado?.Mensaje);
+
+        Assert.That(
+            partida.JugadorHumano.Recursos
+                .ObtenerCantidad(
+                    TipoRecurso.Oro),
+            Is.EqualTo(
+                restanteAntes + 4));
+
+        Assert.That(
+            aldeano.CargaActual,
+            Is.Zero);
+
+        Assert.That(
+            recurso.CantidadRestante,
+            Is.Zero);
+    }
+
+    [Test]
     public async Task RecoleccionInvalida_ConservaRechazoDelModelo()
     {
         Partida partida = CrearPartida(out Aldeano aldeano);
@@ -250,6 +327,14 @@ public class RecoleccionConcurrenteTests
             new Coordenada(1, 1));
 
         humano.AgregarUnidad(aldeano);
+
+        humano.AgregarEdificio(
+            new CentroUrbano(
+                new Coordenada(0, 0)));
+
+        Assert.That(
+            mapa.ObtenerCasilla(0, 0).Ocupar(),
+            Is.True);
 
         Assert.That(
             mapa.ColocarRecurso(
