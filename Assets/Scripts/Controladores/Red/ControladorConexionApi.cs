@@ -253,10 +253,13 @@ public bool PuedeIniciarAtaque =>
 
                 if (request.result != UnityWebRequest.Result.Success)
                 {
-                    MostrarError(
-                        $"No se pudo consultar el movimiento concurrente. HTTP {request.responseCode}: {request.error}");
+                    Debug.LogWarning(
+                        $"Consulta temporal de movimiento fallida. Se reintentará: " +
+                        $"HTTP {request.responseCode}: {request.error}",
+                        this);
 
-                    yield break;
+                    yield return new WaitForSecondsRealtime(0.5f);
+                    continue;
                 }
 
                 if (request.responseCode == 204 ||
@@ -280,6 +283,7 @@ public bool PuedeIniciarAtaque =>
                     MostrarError(
                         "La API devolvió un resultado concurrente inválido.");
 
+                    yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
                 }
 
@@ -288,13 +292,14 @@ public bool PuedeIniciarAtaque =>
                     MostrarError(
                         "Se recibió el resultado de un proceso distinto al movimiento esperado.");
 
+                    yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
                 }
 
                 if (resultado.estado == "Cancelado")
                 {
                     Debug.Log("Movimiento cancelado.");
-
+                    yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
                 }
 
@@ -306,6 +311,7 @@ public bool PuedeIniciarAtaque =>
                             ? "El worker de movimiento finalizó con error."
                             : resultado.errorTecnico);
 
+                    yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
                 }
 
@@ -314,6 +320,7 @@ public bool PuedeIniciarAtaque =>
                     MostrarError(
                         $"Estado concurrente no reconocido: {resultado.estado}");
 
+                    yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
                 }
 
@@ -325,6 +332,7 @@ public bool PuedeIniciarAtaque =>
                             ? "El movimiento fue rechazado por el Modelo."
                             : resultado.mensaje);
 
+                    yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
                 }
 
@@ -548,9 +556,13 @@ public bool PuedeIniciarAtaque =>
 
                 if (request.result != UnityWebRequest.Result.Success)
                 {
-                    MostrarError(
-                        $"No se pudo consultar la recolección concurrente. HTTP {request.responseCode}: {request.error}");
-                    yield break;
+                    Debug.LogWarning(
+                        $"Consulta temporal de recolección fallida. Se reintentará: " +
+                        $"HTTP {request.responseCode}: {request.error}",
+                        this);
+
+                    yield return new WaitForSecondsRealtime(0.5f);
+                    continue;
                 }
 
                 if (request.responseCode == 204 ||
@@ -576,6 +588,7 @@ public bool PuedeIniciarAtaque =>
                 {
                     MostrarError(
                         "La API devolvió un resultado concurrente inválido.");
+                    yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
                 }
 
@@ -583,6 +596,7 @@ public bool PuedeIniciarAtaque =>
                 {
                     MostrarError(
                         "Se recibió el resultado de un proceso distinto a la recolección esperada.");
+                    yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
                 }
 
@@ -590,6 +604,7 @@ public bool PuedeIniciarAtaque =>
                 {
                     Debug.Log(
                         "Recolección cancelada.");
+                    yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
                 }
 
@@ -600,6 +615,8 @@ public bool PuedeIniciarAtaque =>
                             resultado.errorTecnico)
                             ? "El worker de recolección finalizó con error."
                             : resultado.errorTecnico);
+
+                    yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
                 }
 
@@ -607,6 +624,7 @@ public bool PuedeIniciarAtaque =>
                 {
                     MostrarError(
                         $"Estado concurrente no reconocido: {resultado.estado}");
+                    yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
                 }
 
@@ -617,6 +635,7 @@ public bool PuedeIniciarAtaque =>
                             resultado.mensaje)
                             ? "La recolección fue rechazada por el Modelo."
                             : resultado.mensaje);
+                    yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
                 }
 
@@ -786,10 +805,13 @@ public bool PuedeIniciarAtaque =>
                 if (request.result !=
                     UnityWebRequest.Result.Success)
                 {
-                    MostrarError(
-                        $"No se pudo consultar la construcción concurrente. HTTP {request.responseCode}: {request.error}");
+                    Debug.LogWarning(
+                        $"Consulta temporal de construcción fallida. Se reintentará: " +
+                        $"HTTP {request.responseCode}: {request.error}",
+                        this);
 
-                    yield break;
+                    yield return new WaitForSecondsRealtime(0.5f);
+                    continue;
                 }
 
                 if (request.responseCode == 204 ||
@@ -815,6 +837,7 @@ public bool PuedeIniciarAtaque =>
                     MostrarError(
                         "La API devolvió un resultado concurrente inválido.");
 
+                    yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
                 }
 
@@ -823,13 +846,14 @@ public bool PuedeIniciarAtaque =>
                     MostrarError(
                         "Se recibió el resultado de un proceso distinto a la construcción esperada.");
 
+                    yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
                 }
 
                 if (resultado.estado == "Cancelado")
                 {
                     Debug.Log("Construcción cancelada.");
-
+                    yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
                 }
 
@@ -841,6 +865,7 @@ public bool PuedeIniciarAtaque =>
                             ? "El worker de construcción finalizó con error."
                             : resultado.errorTecnico);
 
+                    yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
                 }
 
@@ -849,6 +874,7 @@ public bool PuedeIniciarAtaque =>
                     MostrarError(
                         $"Estado concurrente no reconocido: {resultado.estado}");
 
+                    yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
                 }
 
@@ -860,6 +886,7 @@ public bool PuedeIniciarAtaque =>
                             ? "La construcción fue rechazada por el Modelo."
                             : resultado.mensaje);
 
+                    yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
                 }
 
@@ -967,10 +994,13 @@ public bool PuedeIniciarAtaque =>
                 if (request.result !=
                     UnityWebRequest.Result.Success)
                 {
-                    MostrarError(
-                        $"No se pudo consultar el entrenamiento concurrente. HTTP {request.responseCode}: {request.error}");
+                    Debug.LogWarning(
+                        $"Consulta temporal de entrenamiento fallida. Se reintentará: " +
+                        $"HTTP {request.responseCode}: {request.error}",
+                        this);
 
-                    yield break;
+                    yield return new WaitForSecondsRealtime(0.5f);
+                    continue;
                 }
 
                 if (request.responseCode == 204 ||
@@ -994,6 +1024,7 @@ public bool PuedeIniciarAtaque =>
                     MostrarError(
                         "La API devolvió un resultado concurrente inválido.");
 
+                    yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
                 }
 
@@ -1002,13 +1033,14 @@ public bool PuedeIniciarAtaque =>
                     MostrarError(
                         "Se recibió el resultado de un proceso distinto al entrenamiento esperado.");
 
+                    yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
                 }
 
                 if (resultado.estado == "Cancelado")
                 {
                     Debug.Log("Entrenamiento cancelado.");
-
+                    yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
                 }
 
@@ -1020,6 +1052,7 @@ public bool PuedeIniciarAtaque =>
                             ? "El worker de entrenamiento finalizó con error."
                             : resultado.errorTecnico);
 
+                    yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
                 }
 
@@ -1028,6 +1061,7 @@ public bool PuedeIniciarAtaque =>
                     MostrarError(
                         $"Estado concurrente no reconocido: {resultado.estado}");
 
+                    yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
                 }
 
@@ -1039,6 +1073,7 @@ public bool PuedeIniciarAtaque =>
                             ? "El entrenamiento fue rechazado por el Modelo."
                             : resultado.mensaje);
 
+                    yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
                 }
 
@@ -1178,6 +1213,18 @@ public bool PuedeIniciarAtaque =>
                 AtaqueEnCurso =
                     ataquesActivos > 0;
             }
+        }
+
+        private IEnumerator SincronizarEstadoDespuesDeProceso()
+        {
+            // Los workers limpian OrdenActiva/Estado en sus bloques finally.
+            // Esta sincronización evita que Unity conserve una copia visual
+            // antigua (por ejemplo Estado=Moviendo) después de un fallo,
+            // cancelación o rechazo del Modelo.
+            yield return ObtenerPartidaActiva(
+                "",
+                "",
+                false);
         }
 
         private static ResultadoAccionDto LeerResultado(string json)
