@@ -998,14 +998,14 @@ public sealed class ServicioAccionesConcurrentes
                 pasos.Dequeue();
 
             ResultadoAccion resultado =
-                estadoPartida.AvanzarMovimiento(
+                AvanzarMovimientoConReintentos(
                     unidadId,
-                    siguiente);
+                    siguiente,
+                    token);
 
             if (!resultado.Exito)
             {
-                return ResultadoAccion.Fallido(
-                    resultado.Mensaje);
+                return resultado;
             }
 
             Console.WriteLine(
@@ -1038,9 +1038,10 @@ public sealed class ServicioAccionesConcurrentes
                 pasos.Dequeue();
 
             ResultadoAccion resultado =
-                estadoPartida.AvanzarMovimiento(
+                AvanzarMovimientoConReintentos(
                     unidadId,
-                    siguiente);
+                    siguiente,
+                    token);
 
             if (!resultado.Exito)
                 return resultado;
@@ -1053,6 +1054,47 @@ public sealed class ServicioAccionesConcurrentes
         return ResultadoAccion.Exitoso(
             "Aldeano posicionado junto a la obra.");
     }
+
+    private ResultadoAccion AvanzarMovimientoConReintentos(
+        Guid unidadId,
+        Coordenada siguiente,
+        CancellationToken token)
+    {
+        const int maximoIntentos = 8;
+
+        ResultadoAccion ultimo =
+            ResultadoAccion.Fallido(
+                "No se pudo avanzar el movimiento.");
+
+        for (int intento = 1;
+             intento <= maximoIntentos;
+             intento++)
+        {
+            token.ThrowIfCancellationRequested();
+
+            ultimo =
+                estadoPartida.AvanzarMovimiento(
+                    unidadId,
+                    siguiente);
+
+            if (ultimo.Exito)
+            {
+                return ultimo;
+            }
+
+            if (intento < maximoIntentos)
+            {
+                EsperarAntesDeAplicar(
+                    token,
+                    retardoMovimiento);
+            }
+        }
+
+        return ResultadoAccion.Fallido(
+            $"El paso siguió bloqueado tras {maximoIntentos} intentos. " +
+            ultimo.Mensaje);
+    }
+
 
     private static TimeSpan MultiplicarRetardo(
         TimeSpan baseTiempo,
