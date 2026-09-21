@@ -535,7 +535,9 @@ public bool PuedeIniciarAtaque =>
             string procesoId)
         {
             const float intervaloConsulta = 0.1f;
-            const float tiempoMaximo = 15f;
+            // La recolección orgánica incluye desplazamiento y varios ciclos
+            // de carga, por lo que puede superar el límite anterior de 15 s.
+            const float tiempoMaximo = 60f;
             float tiempoTranscurrido = 0f;
 
             while (tiempoTranscurrido < tiempoMaximo)
