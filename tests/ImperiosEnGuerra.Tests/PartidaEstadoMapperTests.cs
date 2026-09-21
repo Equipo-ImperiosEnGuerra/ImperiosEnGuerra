@@ -55,15 +55,16 @@ namespace ImperiosEnGuerra.Tests.Editor
             Assert.That(humano.ObrasConstruccion, Is.Empty);
 
             Assert.That(respuesta.Economia.CentroUrbano.Oro, Is.EqualTo(20));
-            Assert.That(respuesta.Economia.CentroUrbano.Madera, Is.EqualTo(30));
-            Assert.That(respuesta.Economia.Guerrero.Oro, Is.EqualTo(10));
-            Assert.That(respuesta.Economia.Guerrero.Comida, Is.EqualTo(10));
+            Assert.That(respuesta.Economia.CentroUrbano.Madera, Is.EqualTo(50));
+            Assert.That(respuesta.Economia.Guerrero.Oro, Is.EqualTo(5));
+            Assert.That(respuesta.Economia.Guerrero.Comida, Is.EqualTo(15));
+            Assert.That(respuesta.Economia.Guerrero.Madera, Is.Zero);
 
-            Assert.That(humano.Unidades, Has.Count.EqualTo(1));
-            Assert.That(humano.Unidades[0].Tipo, Is.EqualTo("Guerrero"));
-            Assert.That(humano.Unidades[0].Coordenada.X, Is.EqualTo(2));
-            Assert.That(humano.Unidades[0].Coordenada.Y, Is.EqualTo(2));
-            Assert.That(humano.Unidades[0].Disponible, Is.True);
+            Assert.That(humano.Unidades, Has.Count.EqualTo(3));
+            var guerreroEstado = humano.Unidades.Single(u => u.Tipo == "Guerrero");
+            Assert.That(guerreroEstado.Coordenada.X, Is.EqualTo(2));
+            Assert.That(guerreroEstado.Coordenada.Y, Is.EqualTo(2));
+            Assert.That(guerreroEstado.Disponible, Is.True);
 
             var maquina = respuesta.JugadorMaquina;
             Assert.That(maquina.Nombre, Is.EqualTo("Máquina"));
@@ -75,11 +76,11 @@ namespace ImperiosEnGuerra.Tests.Editor
             Assert.That(maquina.Edificios[0].Tipo, Is.EqualTo("CentroUrbano"));
             Assert.That(maquina.Edificios[0].Coordenada.X, Is.EqualTo(9));
             Assert.That(maquina.Edificios[0].Coordenada.Y, Is.EqualTo(7));
-            Assert.That(maquina.Unidades, Has.Count.EqualTo(1));
-            Assert.That(maquina.Unidades[0].Tipo, Is.EqualTo("Monje"));
-            Assert.That(maquina.Unidades[0].Coordenada.X, Is.EqualTo(7));
-            Assert.That(maquina.Unidades[0].Coordenada.Y, Is.EqualTo(6));
-            Assert.That(maquina.Unidades[0].Disponible, Is.False);
+            Assert.That(maquina.Unidades, Has.Count.EqualTo(3));
+            var monjeEstado = maquina.Unidades.Single(u => u.Tipo == "Monje");
+            Assert.That(monjeEstado.Coordenada.X, Is.EqualTo(7));
+            Assert.That(monjeEstado.Coordenada.Y, Is.EqualTo(6));
+            Assert.That(monjeEstado.Disponible, Is.False);
         }
 
         [Test]
@@ -96,10 +97,15 @@ namespace ImperiosEnGuerra.Tests.Editor
 
             var respuesta = PartidaEstadoMapper.Convertir(partida);
 
-            Assert.That(respuesta.JugadorHumano.Unidades[0].Coordenada, Is.Null);
-            Assert.That(respuesta.JugadorHumano.Unidades[0].Tipo, Is.EqualTo("Aldeano"));
-            Assert.That(respuesta.JugadorHumano.Unidades[0].Disponible, Is.True);
-            Assert.That(respuesta.JugadorMaquina.Unidades, Is.Empty);
+            var unidadSinCoordenada =
+                respuesta.JugadorHumano.Unidades.Single(
+                    u => u.Coordenada == null);
+
+            Assert.That(unidadSinCoordenada.Tipo, Is.EqualTo("Aldeano"));
+            Assert.That(unidadSinCoordenada.Disponible, Is.True);
+            Assert.That(
+                respuesta.JugadorMaquina.Unidades.Count,
+                Is.EqualTo(ConfiguracionInicioPartida.AldeanosInicialesPredeterminados));
         }
 
         [Test]

@@ -83,7 +83,7 @@ public class EconomiaTests
     }
 
     [Test]
-    public void ConfiguracionEconomia_DefineSoloTiposActuales()
+    public void ConfiguracionEconomia_UsaMaderaSoloParaConstruccion()
     {
         var config =
             new ConfiguracionEconomia();
@@ -94,28 +94,30 @@ public class EconomiaTests
                 out CostoRecursos edificio),
             Is.True);
 
-        Assert.That(
-            edificio.EsCero,
-            Is.False);
+        Assert.That(edificio.Oro, Is.EqualTo(20));
+        Assert.That(edificio.Madera, Is.EqualTo(50));
+        Assert.That(edificio.Comida, Is.Zero);
 
-        foreach (string tipo in new[]
+        var esperados = new Dictionary<string, (int Oro, int Comida)>
         {
-            "Aldeano",
-            "Guerrero",
-            "Lancero",
-            "Arquero",
-            "Monje"
-        })
+            { "Aldeano", (0, 10) },
+            { "Guerrero", (5, 15) },
+            { "Lancero", (8, 15) },
+            { "Arquero", (10, 10) },
+            { "Monje", (20, 10) }
+        };
+
+        foreach (var esperado in esperados)
         {
             Assert.That(
                 config.IntentarObtenerCostoUnidad(
-                    tipo,
+                    esperado.Key,
                     out CostoRecursos costo),
                 Is.True);
 
-            Assert.That(
-                costo.EsCero,
-                Is.False);
+            Assert.That(costo.Madera, Is.Zero, esperado.Key);
+            Assert.That(costo.Oro, Is.EqualTo(esperado.Value.Oro), esperado.Key);
+            Assert.That(costo.Comida, Is.EqualTo(esperado.Value.Comida), esperado.Key);
         }
     }
 }

@@ -23,8 +23,12 @@ namespace ImperiosEnGuerra.Tests.Editor
             var segundaRespuesta = PartidaEstadoMapper.Convertir(partida);
 
             string idEsperado = unidad.Id.ToString("D");
-            Assert.That(primeraRespuesta.JugadorHumano.Unidades[0].Id, Is.EqualTo(idEsperado));
-            Assert.That(segundaRespuesta.JugadorHumano.Unidades[0].Id, Is.EqualTo(idEsperado));
+            Assert.That(
+                primeraRespuesta.JugadorHumano.Unidades.Any(u => u.Id == idEsperado),
+                Is.True);
+            Assert.That(
+                segundaRespuesta.JugadorHumano.Unidades.Any(u => u.Id == idEsperado),
+                Is.True);
         }
 
         private static IReadOnlyList<Recurso> CrearRecursos(int y)
