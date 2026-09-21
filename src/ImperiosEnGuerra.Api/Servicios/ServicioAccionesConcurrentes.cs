@@ -219,6 +219,9 @@ public sealed class ServicioAccionesConcurrentes
 
                 try
                 {
+                    const int maximoReplanes = 12;
+                    int replanteos = 0;
+
                     var pasos =
                         new Queue<Coordenada>(
                             plan.Pasos);
@@ -241,6 +244,20 @@ public sealed class ServicioAccionesConcurrentes
 
                         if (!resultadoPaso.Exito)
                         {
+                            replanteos++;
+
+                            if (replanteos > maximoReplanes)
+                            {
+                                return ResultadoAccion.Fallido(
+                                    "Movimiento detenido para evitar un bucle de colisiones entre unidades. " +
+                                    "La unidad queda libre para recibir una nueva orden.");
+                            }
+
+                            EsperarCesionPaso(
+                                unidadId,
+                                token,
+                                replanteos);
+
                             ResultadoPlanMovimiento
                                 nuevoPlan =
                                     estadoPartida
@@ -1125,6 +1142,11 @@ public sealed class ServicioAccionesConcurrentes
             if (intento == maximoReplanes)
                 break;
 
+            EsperarCesionPaso(
+                unidadId,
+                token,
+                intento);
+
             planFinal =
                 PrepararAproximacionRecursoConReintentos(
                     request,
@@ -1175,6 +1197,11 @@ public sealed class ServicioAccionesConcurrentes
             if (intento == maximoReplanes)
                 break;
 
+            EsperarCesionPaso(
+                unidadId,
+                token,
+                intento);
+
             planFinal =
                 PrepararAproximacionDepositoConReintentos(
                     unidadId,
@@ -1224,6 +1251,11 @@ public sealed class ServicioAccionesConcurrentes
 
             if (intento == maximoReplanes)
                 break;
+
+            EsperarCesionPaso(
+                unidadId,
+                token,
+                intento);
 
             planActual =
                 estadoPartida.PrepararAproximacionConstruccion(
@@ -1361,15 +1393,51 @@ public sealed class ServicioAccionesConcurrentes
 
             if (intento < maximoIntentos)
             {
-                EsperarAntesDeAplicar(
+                EsperarCesionPaso(
+                    unidadId,
                     token,
-                    retardoMovimiento);
+                    intento);
             }
         }
 
         return ResultadoAccion.Fallido(
             $"El paso está temporalmente bloqueado tras {maximoIntentos} intentos. " +
             ultimo.Mensaje);
+    }
+
+
+    private void EsperarCesionPaso(
+        Guid unidadId,
+        CancellationToken token,
+        int intento)
+    {
+        if (retardoMovimiento <= TimeSpan.Zero)
+            return;
+
+        byte[] bytes =
+            unidadId.ToByteArray();
+
+        int marca =
+            bytes[0] ^
+            bytes[5] ^
+            bytes[10] ^
+            bytes[15];
+
+        double baseMs =
+            Math.Max(
+                50d,
+                Math.Min(
+                    250d,
+                    retardoMovimiento.TotalMilliseconds * 0.20d));
+
+        double esperaMs =
+            baseMs * (1 + (marca % 5)) +
+            Math.Min(intento, 4) * 25d;
+
+        EsperarAntesDeAplicar(
+            token,
+            TimeSpan.FromMilliseconds(
+                esperaMs));
     }
 
 

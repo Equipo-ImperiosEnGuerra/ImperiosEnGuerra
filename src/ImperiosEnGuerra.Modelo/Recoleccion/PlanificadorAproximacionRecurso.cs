@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using ImperiosEnGuerra.Modelo.Acciones;
 using ImperiosEnGuerra.Modelo.Core;
@@ -10,11 +11,14 @@ using ImperiosEnGuerra.Modelo.Unidades;
 namespace ImperiosEnGuerra.Modelo.Recoleccion
 {
     /// <summary>
-    /// Busca la mejor casilla transitable adyacente a un recurso y reutiliza
-    /// el pathfinding de movimiento para llegar hasta ella.
+    /// Busca una casilla transitable adyacente a un recurso. Cuando varias
+    /// opciones son casi equivalentes, distribuye Aldeanos en lados distintos
+    /// para reducir colisiones entre workers concurrentes.
     /// </summary>
     public sealed class PlanificadorAproximacionRecurso
     {
+        private const int HolguraRutaPreferida = 2;
+
         private static readonly (int X, int Y)[] Direcciones =
         {
             (1, 0),
@@ -123,21 +127,33 @@ namespace ImperiosEnGuerra.Modelo.Recoleccion
                     "El recurso objetivo está agotado.");
             }
 
-            ResultadoPlanMovimiento mejorPlan = null;
-            Coordenada mejorPunto = null;
-
-            foreach ((int X, int Y) direccion
-                     in Direcciones)
+            if (Distancia(
+                    aldeano.Coordenada,
+                    recurso.Coordenada) == 1)
             {
+                return ResultadoAproximacionRecurso.Exitoso(
+                    recurso.Tipo,
+                    aldeano.Coordenada,
+                    Array.Empty<Coordenada>());
+            }
+
+            var candidatos =
+                new List<(int Indice, Coordenada Punto, ResultadoPlanMovimiento Plan)>();
+
+            for (int i = 0;
+                 i < Direcciones.Length;
+                 i++)
+            {
+                (int X, int Y) direccion =
+                    Direcciones[i];
+
                 Coordenada candidato =
                     new Coordenada(
-                        recurso.Coordenada.X +
-                        direccion.X,
-                        recurso.Coordenada.Y +
-                        direccion.Y);
+                        recurso.Coordenada.X + direccion.X,
+                        recurso.Coordenada.Y + direccion.Y);
 
                 if (!mapa.EstaDentroDeLimites(
-                    candidato))
+                        candidato))
                 {
                     continue;
                 }
@@ -150,32 +166,82 @@ namespace ImperiosEnGuerra.Modelo.Recoleccion
                             candidato),
                         permitirOrdenMovimientoActiva);
 
-                if (!plan.Exito)
+                if (plan.Exito)
                 {
-                    continue;
-                }
-
-                if (mejorPlan == null ||
-                    plan.Pasos.Count <
-                    mejorPlan.Pasos.Count)
-                {
-                    mejorPlan = plan;
-                    mejorPunto = candidato;
+                    candidatos.Add(
+                        (i, candidato, plan));
                 }
             }
 
-            if (mejorPlan == null ||
-                mejorPunto == null)
+            if (candidatos.Count == 0)
             {
                 return ResultadoAproximacionRecurso.Fallido(
                     "No existe una casilla accesible junto al recurso.",
                     true);
             }
 
+            int minimo =
+                candidatos.Min(
+                    c => c.Plan.Pasos.Count);
+
+            int inicio =
+                PreferenciaCasillaInteraccion
+                    .ObtenerIndiceInicial(
+                        partida,
+                        aldeano.Id,
+                        Direcciones.Length);
+
+            for (int desplazamiento = 0;
+                 desplazamiento < Direcciones.Length;
+                 desplazamiento++)
+            {
+                int indice =
+                    (inicio + desplazamiento) %
+                    Direcciones.Length;
+
+                var elegido =
+                    candidatos
+                        .Where(
+                            c =>
+                                c.Indice == indice &&
+                                c.Plan.Pasos.Count <=
+                                minimo + HolguraRutaPreferida)
+                        .OrderBy(
+                            c => c.Plan.Pasos.Count)
+                        .FirstOrDefault();
+
+                if (elegido.Plan != null)
+                {
+                    return ResultadoAproximacionRecurso.Exitoso(
+                        recurso.Tipo,
+                        elegido.Punto,
+                        elegido.Plan.Pasos);
+                }
+            }
+
+            var masCorto =
+                candidatos
+                    .OrderBy(
+                        c => c.Plan.Pasos.Count)
+                    .First();
+
             return ResultadoAproximacionRecurso.Exitoso(
                 recurso.Tipo,
-                mejorPunto,
-                mejorPlan.Pasos);
+                masCorto.Punto,
+                masCorto.Plan.Pasos);
+        }
+
+        private static int Distancia(
+            Coordenada primera,
+            Coordenada segunda)
+        {
+            return Math.Abs(
+                       primera.X -
+                       segunda.X)
+                   +
+                   Math.Abs(
+                       primera.Y -
+                       segunda.Y);
         }
     }
 }

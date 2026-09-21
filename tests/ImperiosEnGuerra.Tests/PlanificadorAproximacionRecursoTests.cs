@@ -188,6 +188,47 @@ public class PlanificadorAproximacionRecursoTests
     }
 
     [Test]
+    public void DosAldeanosMismoRecurso_PrefierenLadosDistintos()
+    {
+        var segundo =
+            new Aldeano(
+                new Coordenada(1, 2));
+
+        partida.JugadorHumano
+            .AgregarUnidad(
+                segundo);
+
+        ResultadoAproximacionRecurso primero =
+            planificador.Preparar(
+                partida,
+                new SolicitudRecoleccion(
+                    aldeano.Id,
+                    recurso.Coordenada));
+
+        ResultadoAproximacionRecurso segundoPlan =
+            planificador.Preparar(
+                partida,
+                new SolicitudRecoleccion(
+                    segundo.Id,
+                    recurso.Coordenada));
+
+        Assert.That(
+            primero.Exito,
+            Is.True);
+
+        Assert.That(
+            segundoPlan.Exito,
+            Is.True);
+
+        Assert.That(
+            Coincide(
+                primero.PuntoInteraccion,
+                segundoPlan.PuntoInteraccion),
+            Is.False,
+            "Dos recolectores no deberían competir por la misma casilla adyacente cuando existen alternativas.");
+    }
+
+    [Test]
     public void RecursoSinCasillasAdyacentesTransitables_Falla()
     {
         foreach ((int x, int y) in new[]

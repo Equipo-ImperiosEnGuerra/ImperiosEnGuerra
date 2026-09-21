@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using ImperiosEnGuerra.Modelo.Acciones;
 using ImperiosEnGuerra.Modelo.Core;
@@ -10,11 +11,14 @@ using ImperiosEnGuerra.Modelo.Unidades;
 namespace ImperiosEnGuerra.Modelo.Recoleccion
 {
     /// <summary>
-    /// Selecciona el Centro Urbano humano accesible más cercano y una casilla
-    /// ortogonal adyacente desde la cual el Aldeano puede depositar.
+    /// Selecciona un Centro Urbano humano accesible y distribuye Aldeanos
+    /// entre sus casillas adyacentes para evitar que todos compitan por el
+    /// mismo punto de depósito.
     /// </summary>
     public sealed class PlanificadorAproximacionDeposito
     {
+        private const int HolguraRutaPreferida = 2;
+
         private static readonly (int X, int Y)[] Direcciones =
         {
             (1, 0),
@@ -81,24 +85,41 @@ namespace ImperiosEnGuerra.Modelo.Recoleccion
                     "No existe un Centro Urbano humano para depositar.");
             }
 
+            foreach (CentroUrbano centro in centros)
+            {
+                if (Distancia(
+                        aldeano.Coordenada,
+                        centro.Coordenada) == 1)
+                {
+                    return ResultadoAproximacionDeposito.Exitoso(
+                        centro.Coordenada,
+                        aldeano.Coordenada,
+                        Array.Empty<Coordenada>());
+                }
+            }
+
             Mapa mapa =
                 partida.JugadorHumano.Mapa;
 
-            ResultadoPlanMovimiento mejorPlan = null;
-            Coordenada mejorCentro = null;
-            Coordenada mejorPunto = null;
+            var candidatos =
+                new List<(int Indice, Coordenada Centro, Coordenada Punto, ResultadoPlanMovimiento Plan)>();
 
             foreach (CentroUrbano centro in centros)
             {
-                foreach ((int X, int Y) direccion
-                         in Direcciones)
+                for (int i = 0;
+                     i < Direcciones.Length;
+                     i++)
                 {
+                    (int X, int Y) direccion =
+                        Direcciones[i];
+
                     Coordenada candidato =
                         new Coordenada(
                             centro.Coordenada.X + direccion.X,
                             centro.Coordenada.Y + direccion.Y);
 
-                    if (!mapa.EstaDentroDeLimites(candidato))
+                    if (!mapa.EstaDentroDeLimites(
+                            candidato))
                     {
                         continue;
                     }
@@ -111,32 +132,83 @@ namespace ImperiosEnGuerra.Modelo.Recoleccion
                                 candidato),
                             permitirOrdenMovimientoActiva);
 
-                    if (!plan.Exito)
+                    if (plan.Exito)
                     {
-                        continue;
-                    }
-
-                    if (mejorPlan == null ||
-                        plan.Pasos.Count < mejorPlan.Pasos.Count)
-                    {
-                        mejorPlan = plan;
-                        mejorCentro = centro.Coordenada;
-                        mejorPunto = candidato;
+                        candidatos.Add(
+                            (i, centro.Coordenada, candidato, plan));
                     }
                 }
             }
 
-            if (mejorPlan == null)
+            if (candidatos.Count == 0)
             {
                 return ResultadoAproximacionDeposito.Fallido(
                     "No existe una ruta accesible hasta un Centro Urbano.",
                     true);
             }
 
+            int minimo =
+                candidatos.Min(
+                    c => c.Plan.Pasos.Count);
+
+            int inicio =
+                PreferenciaCasillaInteraccion
+                    .ObtenerIndiceInicial(
+                        partida,
+                        aldeano.Id,
+                        Direcciones.Length);
+
+            for (int desplazamiento = 0;
+                 desplazamiento < Direcciones.Length;
+                 desplazamiento++)
+            {
+                int indice =
+                    (inicio + desplazamiento) %
+                    Direcciones.Length;
+
+                var elegido =
+                    candidatos
+                        .Where(
+                            c =>
+                                c.Indice == indice &&
+                                c.Plan.Pasos.Count <=
+                                minimo + HolguraRutaPreferida)
+                        .OrderBy(
+                            c => c.Plan.Pasos.Count)
+                        .FirstOrDefault();
+
+                if (elegido.Plan != null)
+                {
+                    return ResultadoAproximacionDeposito.Exitoso(
+                        elegido.Centro,
+                        elegido.Punto,
+                        elegido.Plan.Pasos);
+                }
+            }
+
+            var masCorto =
+                candidatos
+                    .OrderBy(
+                        c => c.Plan.Pasos.Count)
+                    .First();
+
             return ResultadoAproximacionDeposito.Exitoso(
-                mejorCentro,
-                mejorPunto,
-                mejorPlan.Pasos);
+                masCorto.Centro,
+                masCorto.Punto,
+                masCorto.Plan.Pasos);
+        }
+
+        private static int Distancia(
+            Coordenada primera,
+            Coordenada segunda)
+        {
+            return Math.Abs(
+                       primera.X -
+                       segunda.X)
+                   +
+                   Math.Abs(
+                       primera.Y -
+                       segunda.Y);
         }
     }
 }
