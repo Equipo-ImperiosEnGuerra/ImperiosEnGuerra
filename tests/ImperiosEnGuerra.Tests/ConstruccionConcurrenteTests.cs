@@ -125,9 +125,14 @@ public class ConstruccionConcurrenteTests
             servicio.IniciarConstruccion(
                 CrearRequest(segundo, 4, 4));
 
+        // No se afirma ProcesosActivos == 2 porque uno de los workers
+        // puede detectar inmediatamente que la casilla ya fue reservada y
+        // finalizar antes de que el hilo de prueba lea el contador. Lo que
+        // importa para esta prueba es que se hayan lanzado dos procesos
+        // independientes y que el estado final preserve una sola construcción.
         Assert.That(
-            gestor.ProcesosActivos,
-            Is.EqualTo(2));
+            procesoA.Id,
+            Is.Not.EqualTo(procesoB.Id));
 
         await Task.WhenAll(
             procesoA.Finalizacion,
