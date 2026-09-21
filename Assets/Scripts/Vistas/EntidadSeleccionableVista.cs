@@ -69,6 +69,18 @@ namespace ImperiosEnGuerra.Vistas
             colorOriginal = Renderer.color;
         }
 
+        public void ActualizarDatosLogicos(
+            int x,
+            int y,
+            string estadoLogico,
+            string ordenActiva)
+        {
+            X = x;
+            Y = y;
+            EstadoLogico = estadoLogico ?? string.Empty;
+            OrdenActiva = ordenActiva ?? string.Empty;
+        }
+
         public void MostrarSeleccion()
         {
             if (Renderer == null || seleccionada)

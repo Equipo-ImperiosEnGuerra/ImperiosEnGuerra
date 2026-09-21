@@ -12,7 +12,7 @@ namespace ImperiosEnGuerra.Modelo.Unidades
        /// </summary>
        /// <param name="coordenada">Posición lógica inicial, conservada sin validación.</param>
        public Arquero(Coordenada coordenada)
-       : base(coordenada)
+       : base(coordenada, 1.10d)
         {
             
         } 

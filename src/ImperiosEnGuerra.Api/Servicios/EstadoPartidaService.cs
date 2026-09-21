@@ -7,6 +7,7 @@ using ImperiosEnGuerra.Modelo.Unidades;
 using ImperiosEnGuerra.Servicios;
 using ImperiosEnGuerra.Modelo.Edificios;
 using ImperiosEnGuerra.Modelo.Map;
+using ImperiosEnGuerra.Modelo.Movimiento;
 using System.Linq; // para usar FirstOrDefault()
 
 namespace ImperiosEnGuerra.Api.Servicios;
@@ -58,6 +59,100 @@ public sealed class EstadoPartidaService
             return RegistrarResultado(
                 "MOVER",
                 new OperacionMovimiento().Ejecutar(partidaActiva, solicitud));
+        }
+    }
+
+    public ResultadoPlanMovimiento PrepararMovimientoProgresivo(
+        MoverUnidadRequest? request,
+        bool permitirOrdenMovimientoActiva = false)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+                return ResultadoPlanMovimiento.Fallido(
+                    "No hay una partida activa.");
+
+            if (request == null)
+                return ResultadoPlanMovimiento.Fallido(
+                    "La solicitud de movimiento es obligatoria.");
+
+            if (!Guid.TryParse(
+                    request.UnidadId,
+                    out Guid unidadId))
+            {
+                return ResultadoPlanMovimiento.Fallido(
+                    "El ID de la unidad debe tener formato Guid válido.");
+            }
+
+            if (request.Destino == null)
+                return ResultadoPlanMovimiento.Fallido(
+                    "El destino es obligatorio.");
+
+            var solicitud =
+                new SolicitudMovimiento(
+                    unidadId,
+                    PartidaRequestMapper.ConvertirCoordenada(
+                        request.Destino));
+
+            return new PlanificadorMovimiento()
+                .Preparar(
+                    partidaActiva,
+                    solicitud,
+                    permitirOrdenMovimientoActiva);
+        }
+    }
+
+    public bool IntentarIniciarOrdenUnidad(
+        Guid unidadId,
+        TipoAccionJuego tipo)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+                return false;
+
+            Unidad? unidad =
+                partidaActiva.JugadorHumano.Unidades
+                    .FirstOrDefault(
+                        u => u.Id == unidadId);
+
+            return unidad != null &&
+                   unidad.IntentarIniciarOrden(tipo);
+        }
+    }
+
+    public void CompletarOrdenUnidad(
+        Guid unidadId)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+                return;
+
+            Unidad? unidad =
+                partidaActiva.JugadorHumano.Unidades
+                    .FirstOrDefault(
+                        u => u.Id == unidadId);
+
+            unidad?.CompletarOrden();
+        }
+    }
+
+    public ResultadoAccion AvanzarMovimiento(
+        Guid unidadId,
+        Coordenada siguiente)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+                return ResultadoAccion.Fallido(
+                    "No hay una partida activa.");
+
+            return new OperacionPasoMovimiento()
+                .Ejecutar(
+                    partidaActiva,
+                    unidadId,
+                    siguiente);
         }
     }
 
