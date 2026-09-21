@@ -26,6 +26,11 @@ namespace ImperiosEnGuerra.Controladores.Red
     public bool EntrenamientoEnCurso { get; private set; }
     public bool AtaqueEnCurso { get; private set; }
 
+    private int movimientosActivos;
+    private int recoleccionesActivas;
+    private int construccionesActivas;
+    private int entrenamientosActivos;
+
 public bool AccionEnCurso =>
     MovimientoEnCurso ||
     RecoleccionEnCurso ||
@@ -35,22 +40,18 @@ public bool AccionEnCurso =>
 
 public bool PuedeIniciarMovimiento =>
     isActiveAndEnabled &&
-    !MovimientoEnCurso &&
     !AtaqueEnCurso;
 
 public bool PuedeIniciarRecoleccion =>
     isActiveAndEnabled &&
-    !RecoleccionEnCurso &&
     !AtaqueEnCurso;
 
 public bool PuedeIniciarConstruccion =>
     isActiveAndEnabled &&
-    !ConstruccionEnCurso &&
     !AtaqueEnCurso;
 
 public bool PuedeIniciarEntrenamiento =>
     isActiveAndEnabled &&
-    !EntrenamientoEnCurso &&
     !AtaqueEnCurso;
 
 public bool PuedeIniciarAtaque =>
@@ -166,6 +167,11 @@ public bool PuedeIniciarAtaque =>
         {
             StopAllCoroutines();
 
+            movimientosActivos = 0;
+            recoleccionesActivas = 0;
+            construccionesActivas = 0;
+            entrenamientosActivos = 0;
+
             MovimientoEnCurso = false;
             RecoleccionEnCurso = false;
             ConstruccionEnCurso = false;
@@ -175,7 +181,8 @@ public bool PuedeIniciarAtaque =>
 
         private IEnumerator EnviarMovimiento(MoverUnidadDto movimiento)
         {
-            MovimientoEnCurso = true;
+            movimientosActivos++;
+            MovimientoEnCurso = movimientosActivos > 0;
 
             try
             {
@@ -230,7 +237,11 @@ public bool PuedeIniciarAtaque =>
             }
             finally
             {
-                MovimientoEnCurso = false;
+                movimientosActivos =
+                    Mathf.Max(0, movimientosActivos - 1);
+
+                MovimientoEnCurso =
+                    movimientosActivos > 0;
             }
         }
 
@@ -479,7 +490,8 @@ public bool PuedeIniciarAtaque =>
 
         private IEnumerator EnviarRecoleccion(RecolectarDto recoleccion)
         {
-            RecoleccionEnCurso = true;
+            recoleccionesActivas++;
+            RecoleccionEnCurso = recoleccionesActivas > 0;
 
             try
             {
@@ -530,7 +542,11 @@ public bool PuedeIniciarAtaque =>
             }
             finally
             {
-                RecoleccionEnCurso = false;
+                recoleccionesActivas =
+                    Mathf.Max(0, recoleccionesActivas - 1);
+
+                RecoleccionEnCurso =
+                    recoleccionesActivas > 0;
             }
         }
 
@@ -730,7 +746,8 @@ public bool PuedeIniciarAtaque =>
         private IEnumerator EnviarConstruccion(
             ConstruirDto construccion)
         {
-            ConstruccionEnCurso = true;
+            construccionesActivas++;
+            ConstruccionEnCurso = construccionesActivas > 0;
 
             try
             {
@@ -789,7 +806,11 @@ public bool PuedeIniciarAtaque =>
             }
             finally
             {
-                ConstruccionEnCurso = false;
+                construccionesActivas =
+                    Mathf.Max(0, construccionesActivas - 1);
+
+                ConstruccionEnCurso =
+                    construccionesActivas > 0;
             }
         }
 
@@ -916,7 +937,8 @@ public bool PuedeIniciarAtaque =>
         private IEnumerator EnviarEntrenamiento(
             EntrenarDto entrenamiento)
         {
-            EntrenamientoEnCurso = true;
+            entrenamientosActivos++;
+            EntrenamientoEnCurso = entrenamientosActivos > 0;
 
             try
             {
@@ -976,7 +998,11 @@ public bool PuedeIniciarAtaque =>
             }
             finally
             {
-                EntrenamientoEnCurso = false;
+                entrenamientosActivos =
+                    Mathf.Max(0, entrenamientosActivos - 1);
+
+                EntrenamientoEnCurso =
+                    entrenamientosActivos > 0;
             }
         }
 
