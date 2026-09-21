@@ -35,7 +35,7 @@ public sealed class ServicioAccionesConcurrentes
     // Mantiene los tiempos de demostración actuales del proyecto:
     //
     // Movimiento:      1 segundo
-    // Recolección:     2 segundos
+    // Recolección:     1 segundo
     // Construcción:    7 segundos
     // Entrenamiento:   5 segundos
     // Ataque:          1 segundo
@@ -363,11 +363,12 @@ public sealed class ServicioAccionesConcurrentes
                         ordenIniciada = true;
 
                         ResultadoAccion regresoPendiente =
-                            EjecutarPasosRecoleccion(
+                            EjecutarHaciaDepositoConReplan(
                                 unidadId,
-                                cargaPendiente.Pasos,
+                                cargaPendiente,
                                 retardoPaso,
-                                token);
+                                token,
+                                out cargaPendiente);
 
                         if (!regresoPendiente.Exito)
                             return regresoPendiente;
@@ -463,11 +464,13 @@ public sealed class ServicioAccionesConcurrentes
                     }
 
                     ResultadoAccion movimientoInicial =
-                        EjecutarPasosRecoleccion(
+                        EjecutarHaciaRecursoConReplan(
+                            copia,
                             unidadId,
-                            planInicial.Pasos,
+                            planInicial,
                             retardoPaso,
-                            token);
+                            token,
+                            out planInicial);
 
                     if (!movimientoInicial.Exito)
                         return movimientoInicial;
@@ -548,11 +551,12 @@ public sealed class ServicioAccionesConcurrentes
                             }
 
                             ResultadoAccion regreso =
-                                EjecutarPasosRecoleccion(
+                                EjecutarHaciaDepositoConReplan(
                                     unidadId,
-                                    depositoPlan.Pasos,
+                                    depositoPlan,
                                     retardoPaso,
-                                    token);
+                                    token,
+                                    out depositoPlan);
 
                             if (!regreso.Exito)
                                 return regreso;
@@ -622,11 +626,13 @@ public sealed class ServicioAccionesConcurrentes
                         }
 
                         ResultadoAccion regresoRecurso =
-                            EjecutarPasosRecoleccion(
+                            EjecutarHaciaRecursoConReplan(
+                                copia,
                                 unidadId,
-                                nuevoPlan.Pasos,
+                                nuevoPlan,
                                 retardoPaso,
-                                token);
+                                token,
+                                out nuevoPlan);
 
                         if (!regresoRecurso.Exito)
                             return regresoRecurso;
@@ -729,9 +735,10 @@ public sealed class ServicioAccionesConcurrentes
                             aldeano.VelocidadMovimiento);
 
                     ResultadoAccion movimiento =
-                        EjecutarPasosConstruccion(
+                        EjecutarHaciaObraConReplan(
                             unidadId,
-                            plan.Pasos,
+                            obraId,
+                            plan,
                             retardoPaso,
                             token);
 
@@ -1088,6 +1095,166 @@ public sealed class ServicioAccionesConcurrentes
         return ultimoResultado;
     }
 
+    private ResultadoAccion EjecutarHaciaRecursoConReplan(
+        RecolectarRequest? request,
+        Guid unidadId,
+        ResultadoAproximacionRecurso planInicial,
+        TimeSpan retardoPaso,
+        CancellationToken token,
+        out ResultadoAproximacionRecurso planFinal)
+    {
+        const int maximoReplanes = 12;
+        planFinal = planInicial;
+
+        for (int intento = 1;
+             intento <= maximoReplanes;
+             intento++)
+        {
+            token.ThrowIfCancellationRequested();
+
+            ResultadoAccion movimiento =
+                EjecutarPasosRecoleccion(
+                    unidadId,
+                    planFinal.Pasos,
+                    retardoPaso,
+                    token);
+
+            if (movimiento.Exito)
+                return movimiento;
+
+            if (intento == maximoReplanes)
+                break;
+
+            planFinal =
+                PrepararAproximacionRecursoConReintentos(
+                    request,
+                    token,
+                    true);
+
+            if (!planFinal.Exito)
+            {
+                return ResultadoAccion.Fallido(
+                    planFinal.Mensaje);
+            }
+
+            Console.WriteLine(
+                $"RECOLECCION_REPLAN: {unidadId} intento {intento + 1}");
+        }
+
+        return ResultadoAccion.Fallido(
+            "No se encontró una ruta libre hacia el recurso tras varios cambios del mapa. " +
+            "La orden terminó sin bloquear los demás workers.");
+    }
+
+    private ResultadoAccion EjecutarHaciaDepositoConReplan(
+        Guid unidadId,
+        ResultadoAproximacionDeposito planInicial,
+        TimeSpan retardoPaso,
+        CancellationToken token,
+        out ResultadoAproximacionDeposito planFinal)
+    {
+        const int maximoReplanes = 12;
+        planFinal = planInicial;
+
+        for (int intento = 1;
+             intento <= maximoReplanes;
+             intento++)
+        {
+            token.ThrowIfCancellationRequested();
+
+            ResultadoAccion movimiento =
+                EjecutarPasosRecoleccion(
+                    unidadId,
+                    planFinal.Pasos,
+                    retardoPaso,
+                    token);
+
+            if (movimiento.Exito)
+                return movimiento;
+
+            if (intento == maximoReplanes)
+                break;
+
+            planFinal =
+                PrepararAproximacionDepositoConReintentos(
+                    unidadId,
+                    token);
+
+            if (!planFinal.Exito)
+            {
+                return ResultadoAccion.Fallido(
+                    planFinal.Mensaje);
+            }
+
+            Console.WriteLine(
+                $"DEPOSITO_REPLAN: {unidadId} intento {intento + 1}");
+        }
+
+        return ResultadoAccion.Fallido(
+            "No se encontró una ruta libre hacia un Centro Urbano tras varios cambios del mapa. " +
+            "La carga del Aldeano se conserva para poder reintentarla.");
+    }
+
+    private ResultadoAccion EjecutarHaciaObraConReplan(
+        Guid unidadId,
+        Guid obraId,
+        ResultadoAproximacionConstruccion planInicial,
+        TimeSpan retardoPaso,
+        CancellationToken token)
+    {
+        const int maximoReplanes = 12;
+        ResultadoAproximacionConstruccion planActual =
+            planInicial;
+
+        for (int intento = 1;
+             intento <= maximoReplanes;
+             intento++)
+        {
+            token.ThrowIfCancellationRequested();
+
+            ResultadoAccion movimiento =
+                EjecutarPasosConstruccion(
+                    unidadId,
+                    planActual.Pasos,
+                    retardoPaso,
+                    token);
+
+            if (movimiento.Exito)
+                return movimiento;
+
+            if (intento == maximoReplanes)
+                break;
+
+            planActual =
+                estadoPartida.PrepararAproximacionConstruccion(
+                    unidadId,
+                    obraId,
+                    true);
+
+            if (!planActual.Exito)
+            {
+                if (planActual.Reintentable)
+                {
+                    EsperarAntesDeAplicar(
+                        token,
+                        retardoMovimiento);
+
+                    continue;
+                }
+
+                return ResultadoAccion.Fallido(
+                    planActual.Mensaje);
+            }
+
+            Console.WriteLine(
+                $"CONSTRUCCION_REPLAN: {unidadId} intento {intento + 1}");
+        }
+
+        return ResultadoAccion.Fallido(
+            "No se encontró una ruta libre hasta la obra tras varios cambios del mapa. " +
+            "La obra se cancelará y su costo será reembolsado.");
+    }
+
     private ResultadoAccion EjecutarPasosRecoleccion(
         Guid unidadId,
         IReadOnlyList<Coordenada> pasosPlanificados,
@@ -1170,7 +1337,7 @@ public sealed class ServicioAccionesConcurrentes
         Coordenada siguiente,
         CancellationToken token)
     {
-        const int maximoIntentos = 8;
+        const int maximoIntentos = 3;
 
         ResultadoAccion ultimo =
             ResultadoAccion.Fallido(
@@ -1201,7 +1368,7 @@ public sealed class ServicioAccionesConcurrentes
         }
 
         return ResultadoAccion.Fallido(
-            $"El paso siguió bloqueado tras {maximoIntentos} intentos. " +
+            $"El paso está temporalmente bloqueado tras {maximoIntentos} intentos. " +
             ultimo.Mensaje);
     }
 
