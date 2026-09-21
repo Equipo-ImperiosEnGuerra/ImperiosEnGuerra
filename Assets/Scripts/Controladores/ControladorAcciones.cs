@@ -20,6 +20,10 @@ namespace ImperiosEnGuerra.Controladores
         private EntidadSeleccionableVista edificioPendiente;
         private string tipoUnidadPendiente;
 
+        private string ultimaEntidadMostrada;
+        private string ultimoEstadoMostrado;
+        private string ultimaOrdenMostrada;
+
         private bool EsperandoObjetivo =>
             !string.IsNullOrEmpty(accionPendiente);
 
@@ -77,12 +81,11 @@ namespace ImperiosEnGuerra.Controladores
 
             vistaHud.MostrarSeleccion(entidad);
 
-            vistaHud.MostrarOpciones(
-                PermiteOpcion(entidad, "Mover"),
-                PermiteOpcion(entidad, "Recolectar"),
-                PermiteOpcion(entidad, "Construir"),
-                PermiteOpcion(entidad, "Entrenar"),
-                PermiteOpcion(entidad, "Atacar"));
+            ActualizarOpcionesHud(
+                entidad);
+
+            RegistrarEstadoMostrado(
+                entidad);
 
             vistaHud.MostrarMensaje(
                 cancelar
@@ -92,8 +95,108 @@ namespace ImperiosEnGuerra.Controladores
 
         private void Update()
         {
-            if (EsperandoObjetivo && !ConservaSeleccion())
+            if (EsperandoObjetivo &&
+                !ConservaSeleccion())
+            {
                 CancelarCaptura();
+                return;
+            }
+
+            if (!EsperandoObjetivo)
+            {
+                RefrescarSeleccionSiCambioEstado();
+            }
+        }
+
+        private void RefrescarSeleccionSiCambioEstado()
+        {
+            if (vistaHud == null ||
+                controladorSeleccion == null)
+            {
+                return;
+            }
+
+            EntidadSeleccionableVista entidad =
+                controladorSeleccion.SeleccionActual;
+
+            if (entidad == null)
+            {
+                if (!string.IsNullOrEmpty(
+                        ultimaEntidadMostrada))
+                {
+                    vistaHud.MostrarSeleccion(null);
+                    ActualizarOpcionesHud(null);
+                    RegistrarEstadoMostrado(null);
+                }
+
+                return;
+            }
+
+            string identidad =
+                !string.IsNullOrWhiteSpace(
+                    entidad.IdLogico)
+                    ? entidad.IdLogico
+                    : $"{entidad.Categoria}:{entidad.Propietario}:{entidad.TipoLogico}:{entidad.X}:{entidad.Y}";
+
+            if (identidad == ultimaEntidadMostrada &&
+                entidad.EstadoLogico == ultimoEstadoMostrado &&
+                entidad.OrdenActiva == ultimaOrdenMostrada)
+            {
+                return;
+            }
+
+            vistaHud.MostrarSeleccion(
+                entidad);
+
+            ActualizarOpcionesHud(
+                entidad);
+
+            RegistrarEstadoMostrado(
+                entidad);
+        }
+
+        private void ActualizarOpcionesHud(
+            EntidadSeleccionableVista entidad)
+        {
+            if (vistaHud == null)
+                return;
+
+            vistaHud.MostrarOpciones(
+                PermiteOpcion(entidad, "Mover"),
+                PermiteOpcion(entidad, "Recolectar"),
+                PermiteOpcion(entidad, "Construir"),
+                PermiteOpcion(entidad, "Entrenar"),
+                PermiteOpcion(entidad, "Atacar"));
+        }
+
+        private void RegistrarEstadoMostrado(
+            EntidadSeleccionableVista entidad)
+        {
+            if (entidad == null)
+            {
+                ultimaEntidadMostrada =
+                    string.Empty;
+
+                ultimoEstadoMostrado =
+                    string.Empty;
+
+                ultimaOrdenMostrada =
+                    string.Empty;
+
+                return;
+            }
+
+            ultimaEntidadMostrada =
+                !string.IsNullOrWhiteSpace(
+                    entidad.IdLogico)
+                    ? entidad.IdLogico
+                    : $"{entidad.Categoria}:{entidad.Propietario}:{entidad.TipoLogico}:{entidad.X}:{entidad.Y}";
+
+            ultimoEstadoMostrado =
+                entidad.EstadoLogico ?? string.Empty;
+
+            ultimaOrdenMostrada =
+                entidad.OrdenActiva ?? string.Empty;
         }
 
         private bool ConservaSeleccion()
