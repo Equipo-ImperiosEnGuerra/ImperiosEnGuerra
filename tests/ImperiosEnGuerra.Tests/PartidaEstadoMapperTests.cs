@@ -51,6 +51,14 @@ namespace ImperiosEnGuerra.Tests.Editor
             Assert.That(humano.Edificios[0].Tipo, Is.EqualTo("CentroUrbano"));
             Assert.That(humano.Edificios[0].Coordenada.X, Is.EqualTo(0));
             Assert.That(humano.Edificios[0].Coordenada.Y, Is.EqualTo(0));
+            Assert.That(humano.Edificios[0].ColaEntrenamiento, Is.Empty);
+            Assert.That(humano.ObrasConstruccion, Is.Empty);
+
+            Assert.That(respuesta.Economia.CentroUrbano.Oro, Is.EqualTo(20));
+            Assert.That(respuesta.Economia.CentroUrbano.Madera, Is.EqualTo(30));
+            Assert.That(respuesta.Economia.Guerrero.Oro, Is.EqualTo(10));
+            Assert.That(respuesta.Economia.Guerrero.Comida, Is.EqualTo(10));
+
             Assert.That(humano.Unidades, Has.Count.EqualTo(1));
             Assert.That(humano.Unidades[0].Tipo, Is.EqualTo("Guerrero"));
             Assert.That(humano.Unidades[0].Coordenada.X, Is.EqualTo(2));
