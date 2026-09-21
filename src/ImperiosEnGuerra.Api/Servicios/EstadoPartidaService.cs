@@ -122,6 +122,25 @@ public sealed class EstadoPartidaService
         }
     }
 
+    public bool IntentarReemplazarOrdenUnidad(
+        Guid unidadId,
+        TipoAccionJuego tipo)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+                return false;
+
+            Unidad? unidad =
+                partidaActiva.JugadorHumano.Unidades
+                    .FirstOrDefault(
+                        u => u.Id == unidadId);
+
+            return unidad != null &&
+                   unidad.IntentarReemplazarOrden(tipo);
+        }
+    }
+
     public void CompletarOrdenUnidad(
         Guid unidadId)
     {
@@ -198,6 +217,28 @@ public sealed class EstadoPartidaService
                 .Preparar(
                     partidaActiva,
                     solicitud);
+        }
+    }
+
+    public ResultadoPasoRecoleccion RecolectarPaso(
+        Guid aldeanoId,
+        Coordenada objetivo,
+        int tasa)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+            {
+                return ResultadoPasoRecoleccion.Fallido(
+                    "No hay una partida activa.");
+            }
+
+            return new OperacionPasoRecoleccion()
+                .Ejecutar(
+                    partidaActiva,
+                    aldeanoId,
+                    objetivo,
+                    tasa);
         }
     }
 

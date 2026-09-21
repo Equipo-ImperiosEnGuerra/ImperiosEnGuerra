@@ -9,6 +9,7 @@ using ImperiosEnGuerra.Modelo.Edificios;
 using ImperiosEnGuerra.Modelo.Map;
 using ImperiosEnGuerra.Modelo.Movimiento;
 using ImperiosEnGuerra.Modelo.Recoleccion;
+using ImperiosEnGuerra.Modelo.Recursos;
 
 namespace ImperiosEnGuerra.Api.Servicios;
 
@@ -23,6 +24,7 @@ public sealed class ServicioAccionesConcurrentes
     private readonly TimeSpan retardoConstruccion;
     private readonly TimeSpan retardoEntrenamiento;
     private readonly TimeSpan retardoAtaque;
+    private readonly ConfiguracionRecoleccion configuracionRecoleccion;
 
 
     // ============================================================
@@ -142,6 +144,8 @@ public sealed class ServicioAccionesConcurrentes
         this.retardoConstruccion = retardoConstruccion;
         this.retardoEntrenamiento = retardoEntrenamiento;
         this.retardoAtaque = retardoAtaque;
+        configuracionRecoleccion =
+            new ConfiguracionRecoleccion();
     }
 
 
@@ -312,16 +316,15 @@ public sealed class ServicioAccionesConcurrentes
                         "La unidad seleccionada no es un Aldeano.");
                 }
 
-                if (plan.Pasos.Count == 0)
-                {
-                    return ResultadoAccion.Exitoso(
-                        $"El Aldeano ya está junto al recurso {plan.TipoRecurso}.");
-                }
+                TipoAccionJuego ordenInicial =
+                    plan.Pasos.Count > 0
+                        ? TipoAccionJuego.Mover
+                        : TipoAccionJuego.Recolectar;
 
                 bool ordenIniciada =
                     estadoPartida.IntentarIniciarOrdenUnidad(
                         unidadId,
-                        TipoAccionJuego.Mover);
+                        ordenInicial);
 
                 if (!ordenIniciada)
                 {
@@ -336,39 +339,101 @@ public sealed class ServicioAccionesConcurrentes
 
                 try
                 {
-                    var pasos =
-                        new Queue<Coordenada>(
-                            plan.Pasos);
+                    if (plan.Pasos.Count > 0)
+                    {
+                        var pasos =
+                            new Queue<Coordenada>(
+                                plan.Pasos);
 
-                    while (pasos.Count > 0)
+                        while (pasos.Count > 0)
+                        {
+                            EsperarAntesDeAplicar(
+                                token,
+                                retardoPaso);
+
+                            token.ThrowIfCancellationRequested();
+
+                            Coordenada siguiente =
+                                pasos.Dequeue();
+
+                            ResultadoAccion resultadoPasoMovimiento =
+                                estadoPartida.AvanzarMovimiento(
+                                    unidadId,
+                                    siguiente);
+
+                            if (!resultadoPasoMovimiento.Exito)
+                            {
+                                return ResultadoAccion.Fallido(
+                                    resultadoPasoMovimiento.Mensaje);
+                            }
+
+                            Console.WriteLine(
+                                $"RECOLECCION_MOVIMIENTO: {unidadId} -> " +
+                                $"({siguiente.X},{siguiente.Y})");
+                        }
+
+                        if (!estadoPartida.IntentarReemplazarOrdenUnidad(
+                                unidadId,
+                                TipoAccionJuego.Recolectar))
+                        {
+                            return ResultadoAccion.Fallido(
+                                "No se pudo iniciar la fase de recolección.");
+                        }
+                    }
+
+                    if (copia?.Objetivo == null ||
+                        !plan.TipoRecurso.HasValue)
+                    {
+                        return ResultadoAccion.Fallido(
+                            "No se pudo determinar el recurso objetivo.");
+                    }
+
+                    Coordenada objetivo =
+                        new Coordenada(
+                            copia.Objetivo.X,
+                            copia.Objetivo.Y);
+
+                    int tasa =
+                        configuracionRecoleccion.ObtenerTasa(
+                            plan.TipoRecurso.Value);
+
+                    ResultadoPasoRecoleccion ultimoPaso = null;
+
+                    while (aldeano.CapacidadDisponible > 0)
                     {
                         EsperarAntesDeAplicar(
                             token,
-                            retardoPaso);
+                            retardoRecoleccion);
 
                         token.ThrowIfCancellationRequested();
 
-                        Coordenada siguiente =
-                            pasos.Dequeue();
-
-                        ResultadoAccion resultadoPaso =
-                            estadoPartida.AvanzarMovimiento(
+                        ultimoPaso =
+                            estadoPartida.RecolectarPaso(
                                 unidadId,
-                                siguiente);
+                                objetivo,
+                                tasa);
 
-                        if (!resultadoPaso.Exito)
+                        if (!ultimoPaso.Exito)
                         {
                             return ResultadoAccion.Fallido(
-                                resultadoPaso.Mensaje);
+                                ultimoPaso.Mensaje);
                         }
 
                         Console.WriteLine(
-                            $"RECOLECCION_MOVIMIENTO: {unidadId} -> " +
-                            $"({siguiente.X},{siguiente.Y})");
+                            $"RECOLECCION_PASO: {unidadId} +{ultimoPaso.CantidadExtraida} " +
+                            $"{ultimoPaso.TipoRecurso} " +
+                            $"carga={ultimoPaso.CargaActual}/{ultimoPaso.CapacidadCarga}");
+
+                        if (ultimoPaso.CapacidadCompleta ||
+                            ultimoPaso.RecursoAgotado ||
+                            ultimoPaso.CantidadExtraida == 0)
+                        {
+                            break;
+                        }
                     }
 
                     return ResultadoAccion.Exitoso(
-                        $"Aldeano posicionado junto al recurso {plan.TipoRecurso}.");
+                        $"Aldeano cargó {aldeano.CargaActual}/{aldeano.CapacidadCarga} de {aldeano.TipoCarga?.ToString() ?? plan.TipoRecurso.Value.ToString()}. El saldo aún no fue depositado.");
                 }
                 finally
                 {

@@ -61,6 +61,22 @@ public class RecoleccionConcurrenteTests
         Assert.That(
             aldeano.OrdenActiva,
             Is.Null);
+
+        Assert.That(
+            aldeano.CargaActual,
+            Is.EqualTo(
+                aldeano.CapacidadCarga));
+
+        Assert.That(
+            aldeano.TipoCarga,
+            Is.EqualTo(
+                TipoRecurso.Oro));
+
+        Assert.That(
+            partida.JugadorHumano.Recursos
+                .ObtenerCantidad(
+                    TipoRecurso.Oro),
+            Is.Zero);
     }
 
     [Test]
@@ -96,6 +112,88 @@ public class RecoleccionConcurrenteTests
         Assert.That(
             resultado.Estado,
             Is.EqualTo(EstadoProcesoConcurrente.Cancelado));
+    }
+
+    [Test]
+    public async Task CancelarTrasPrimerCiclo_ConservaCargaParcialYVuelveIdle()
+    {
+        Partida partida =
+            CrearPartida(
+                out Aldeano aldeano);
+
+        var estado =
+            new EstadoPartidaService();
+
+        estado.EstablecerPartida(
+            partida);
+
+        using var gestor =
+            new GestorProcesosConcurrentes();
+
+        var servicio =
+            new ServicioAccionesConcurrentes(
+                estado,
+                gestor,
+                new ServicioOrdenesUnidad(),
+                TimeSpan.Zero,
+                TimeSpan.FromMilliseconds(30),
+                TimeSpan.Zero,
+                TimeSpan.Zero,
+                TimeSpan.Zero);
+
+        ProcesoConcurrente proceso =
+            servicio.IniciarRecoleccion(
+                CrearRequest(
+                    aldeano,
+                    2,
+                    2));
+
+        DateTime limite =
+            DateTime.UtcNow.AddSeconds(2);
+
+        while (aldeano.CargaActual == 0 &&
+               DateTime.UtcNow < limite)
+        {
+            await Task.Delay(5);
+        }
+
+        Assert.That(
+            aldeano.CargaActual,
+            Is.GreaterThan(0));
+
+        Assert.That(
+            servicio.Cancelar(
+                proceso.Id),
+            Is.True);
+
+        await proceso.Finalizacion;
+
+        int cargaConservada =
+            aldeano.CargaActual;
+
+        Assert.That(
+            cargaConservada,
+            Is.GreaterThan(0));
+
+        Assert.That(
+            cargaConservada,
+            Is.LessThanOrEqualTo(
+                aldeano.CapacidadCarga));
+
+        Assert.That(
+            partida.JugadorHumano.Recursos
+                .ObtenerCantidad(
+                    TipoRecurso.Oro),
+            Is.Zero);
+
+        Assert.That(
+            aldeano.Estado,
+            Is.EqualTo(
+                EstadoUnidad.Idle));
+
+        Assert.That(
+            aldeano.OrdenActiva,
+            Is.Null);
     }
 
     [Test]
