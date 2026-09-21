@@ -568,7 +568,7 @@ public bool PuedeIniciarAtaque =>
                     // La recolección también contiene una fase de movimiento.
                     // Consumimos snapshots intermedios para que Unity represente
                     // cada paso en vez de saltar a la posición final.
-                    yield return ActualizarMovimientoEnCurso(
+                    yield return ActualizarRecoleccionEnCurso(
                         unidadId);
 
                     yield return new WaitForSecondsRealtime(
@@ -647,6 +647,84 @@ public bool PuedeIniciarAtaque =>
 
             MostrarError(
                 "La recolección concurrente excedió el tiempo máximo de espera.");
+        }
+
+        private IEnumerator ActualizarRecoleccionEnCurso(
+            string unidadId)
+        {
+            if (vistaPartida == null ||
+                string.IsNullOrWhiteSpace(unidadId))
+            {
+                yield break;
+            }
+
+            using UnityWebRequest request =
+                UnityWebRequest.Get(
+                    $"{urlBaseApi}/api/partida");
+
+            request.timeout = 5;
+
+            yield return request.SendWebRequest();
+
+            if (request.result !=
+                UnityWebRequest.Result.Success)
+            {
+                yield break;
+            }
+
+            EstadoPartidaDto estado;
+
+            try
+            {
+                estado =
+                    JsonUtility.FromJson<EstadoPartidaDto>(
+                        request.downloadHandler.text);
+            }
+            catch (System.ArgumentException)
+            {
+                yield break;
+            }
+
+            UnidadEstadoDto unidad =
+                BuscarUnidadHumana(
+                    estado,
+                    unidadId);
+
+            if (unidad?.coordenada != null)
+            {
+                vistaPartida.ActualizarMovimientoUnidad(
+                    unidad.id,
+                    unidad.coordenada.x,
+                    unidad.coordenada.y,
+                    unidad.estado,
+                    unidad.ordenActiva);
+            }
+
+            var recursos =
+                estado?.jugadorHumano?.recursos;
+
+            if (vistaHud != null &&
+                recursos != null)
+            {
+                vistaHud.MostrarRecursos(
+                    recursos.oro,
+                    recursos.madera,
+                    recursos.comida);
+
+                if (unidad != null)
+                {
+                    string tipo =
+                        string.IsNullOrWhiteSpace(
+                            unidad.tipoCarga)
+                            ? ""
+                            : " " + unidad.tipoCarga;
+
+                    vistaHud.MostrarMensaje(
+                        $"Recolección: carga " +
+                        $"{unidad.cargaActual}/{unidad.capacidadCarga}" +
+                        tipo + ".");
+                }
+            }
         }
 
         private IEnumerator EnviarConstruccion(
