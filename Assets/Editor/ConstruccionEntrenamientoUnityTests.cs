@@ -272,7 +272,7 @@ public class ConstruccionEntrenamientoUnityTests
         Assert.That(
             mensaje.text,
             Is.EqualTo(
-                "Selecciona una casilla para crear Arquero."));
+                "Selecciona una casilla de referencia para Arquero."));
     }
 
     [Test]
