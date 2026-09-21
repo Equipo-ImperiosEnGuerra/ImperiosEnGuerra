@@ -30,6 +30,10 @@ namespace ImperiosEnGuerra.Tests.Editor
             Assert.That(respuesta.Mapa.Ancho, Is.EqualTo(10));
             Assert.That(respuesta.Mapa.Alto, Is.EqualTo(8));
             Assert.That(respuesta.Mapa.Recursos, Has.Count.EqualTo(6));
+            Assert.That(
+                respuesta.Mapa.Recursos.All(
+                    r => r.CantidadRestante == Recurso.CantidadInicialPredeterminada),
+                Is.True);
             Assert.That(respuesta.Mapa.Recursos.Select(r => (r.Tipo, r.Coordenada.X, r.Coordenada.Y)),
                 Is.EquivalentTo(new[]
                 {

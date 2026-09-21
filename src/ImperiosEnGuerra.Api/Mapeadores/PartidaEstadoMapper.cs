@@ -2,6 +2,7 @@ using ImperiosEnGuerra.Api.Contratos;
 using ImperiosEnGuerra.Modelo.Core;
 using ImperiosEnGuerra.Modelo.Map;
 using ImperiosEnGuerra.Modelo.Recursos;
+using ImperiosEnGuerra.Modelo.Unidades;
 
 namespace ImperiosEnGuerra.Api.Mapeadores;
 
@@ -23,7 +24,8 @@ public static class PartidaEstadoMapper
                 Recursos = mapa.Recursos.Select(recurso => new RecursoEstadoResponse
                 {
                     Tipo = recurso.Tipo.ToString(),
-                    Coordenada = ConvertirCoordenada(recurso.Coordenada)
+                    Coordenada = ConvertirCoordenada(recurso.Coordenada),
+                    CantidadRestante = recurso.CantidadRestante
                 }).ToList()
             },
             JugadorHumano = ConvertirJugador(partida.JugadorHumano),
@@ -57,7 +59,16 @@ public static class PartidaEstadoMapper
                     : ConvertirCoordenada(unidad.Coordenada),
                 Disponible = unidad.Disponible,
                 Estado = unidad.Estado.ToString(),
-                OrdenActiva = unidad.OrdenActiva?.ToString()
+                OrdenActiva = unidad.OrdenActiva?.ToString(),
+                CapacidadCarga = unidad is Aldeano aldeano
+                    ? aldeano.CapacidadCarga
+                    : 0,
+                CargaActual = unidad is Aldeano aldeanoCarga
+                    ? aldeanoCarga.CargaActual
+                    : 0,
+                TipoCarga = unidad is Aldeano aldeanoTipo
+                    ? aldeanoTipo.TipoCarga?.ToString()
+                    : null
             }).ToList()
         };
     }

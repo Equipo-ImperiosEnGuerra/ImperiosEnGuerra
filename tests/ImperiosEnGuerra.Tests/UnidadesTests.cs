@@ -2,6 +2,7 @@ using System;
 using NUnit.Framework;
 using ImperiosEnGuerra.Modelo.Map;
 using ImperiosEnGuerra.Modelo.Unidades;
+using ImperiosEnGuerra.Modelo.Recursos;
 
 namespace ImperiosEnGuerra.Tests.Editor
 {
@@ -97,6 +98,142 @@ namespace ImperiosEnGuerra.Tests.Editor
                 monje.VelocidadMovimiento,
                 Is.LessThan(
                     aldeano.VelocidadMovimiento));
+        }
+
+        [Test]
+        public void Aldeano_IniciaSinCargaYConCapacidad()
+        {
+            var aldeano =
+                new Aldeano(
+                    new Coordenada(1, 1));
+
+            Assert.That(
+                aldeano.CapacidadCarga,
+                Is.EqualTo(
+                    Aldeano.CapacidadCargaPredeterminada));
+
+            Assert.That(
+                aldeano.CargaActual,
+                Is.Zero);
+
+            Assert.That(
+                aldeano.TipoCarga,
+                Is.Null);
+        }
+
+        [Test]
+        public void Aldeano_RecolectarDesde_RespetaCapacidad()
+        {
+            var aldeano =
+                new Aldeano(
+                    new Coordenada(1, 1),
+                    4);
+
+            var recurso =
+                new Recurso(
+                    TipoRecurso.Oro,
+                    new Coordenada(2, 1),
+                    10);
+
+            Assert.That(
+                aldeano.RecolectarDesde(
+                    recurso,
+                    10),
+                Is.EqualTo(4));
+
+            Assert.That(
+                aldeano.CargaActual,
+                Is.EqualTo(4));
+
+            Assert.That(
+                aldeano.TipoCarga,
+                Is.EqualTo(
+                    TipoRecurso.Oro));
+
+            Assert.That(
+                recurso.CantidadRestante,
+                Is.EqualTo(6));
+        }
+
+        [Test]
+        public void Aldeano_NoMezclaTiposEnLaMismaCarga()
+        {
+            var aldeano =
+                new Aldeano(
+                    new Coordenada(1, 1),
+                    10);
+
+            var oro =
+                new Recurso(
+                    TipoRecurso.Oro,
+                    new Coordenada(2, 1),
+                    10);
+
+            var madera =
+                new Recurso(
+                    TipoRecurso.Madera,
+                    new Coordenada(3, 1),
+                    10);
+
+            Assert.That(
+                aldeano.RecolectarDesde(
+                    oro,
+                    3),
+                Is.EqualTo(3));
+
+            Assert.That(
+                aldeano.RecolectarDesde(
+                    madera,
+                    3),
+                Is.Zero);
+
+            Assert.That(
+                aldeano.CargaActual,
+                Is.EqualTo(3));
+
+            Assert.That(
+                madera.CantidadRestante,
+                Is.EqualTo(10));
+        }
+
+        [Test]
+        public void Aldeano_VaciarCarga_DevuelveCantidadYTipo()
+        {
+            var aldeano =
+                new Aldeano(
+                    new Coordenada(1, 1),
+                    10);
+
+            var comida =
+                new Recurso(
+                    TipoRecurso.Comida,
+                    new Coordenada(2, 1),
+                    10);
+
+            aldeano.RecolectarDesde(
+                comida,
+                6);
+
+            int cantidad =
+                aldeano.VaciarCarga(
+                    out TipoRecurso? tipo);
+
+            Assert.That(
+                cantidad,
+                Is.EqualTo(6));
+
+            Assert.That(
+                tipo,
+                Is.EqualTo(
+                    TipoRecurso.Comida));
+
+            Assert.That(
+                aldeano.CargaActual,
+                Is.Zero);
+
+            Assert.That(
+                aldeano.TipoCarga,
+                Is.Null);
         }
 
         [Test]

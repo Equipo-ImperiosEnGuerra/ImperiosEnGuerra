@@ -35,6 +35,7 @@ public sealed class RecursoEstadoResponse
 {
     public required string Tipo { get; init; }
     public required CoordenadaEstadoResponse Coordenada { get; init; }
+    public int CantidadRestante { get; init; }
 }
 
 public sealed class EdificioEstadoResponse
@@ -52,6 +53,10 @@ public sealed class UnidadEstadoResponse
 
     public required string Estado { get; init; }
     public string? OrdenActiva { get; init; }
+
+    public int CapacidadCarga { get; init; }
+    public int CargaActual { get; init; }
+    public string? TipoCarga { get; init; }
 }
 
 public sealed class CoordenadaEstadoResponse

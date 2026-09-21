@@ -42,6 +42,7 @@ namespace ImperiosEnGuerra.Controladores.Red.Contratos
     {
         public string tipo;
         public CoordenadaEstadoDto coordenada;
+        public int cantidadRestante;
     }
 
     [Serializable]
@@ -61,6 +62,10 @@ namespace ImperiosEnGuerra.Controladores.Red.Contratos
 
         public string estado;
         public string ordenActiva;
+
+        public int capacidadCarga;
+        public int cargaActual;
+        public string tipoCarga;
 }
 
     [Serializable]
