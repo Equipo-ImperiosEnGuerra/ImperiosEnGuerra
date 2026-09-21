@@ -222,7 +222,9 @@ public bool PuedeIniciarAtaque =>
                         "Movimiento concurrente en curso...");
                 }
 
-                yield return EsperarResultadoMovimiento(proceso.procesoId);
+                yield return EsperarResultadoMovimiento(
+                    proceso.procesoId,
+                    movimiento.unidadId);
             }
             finally
             {
@@ -230,7 +232,9 @@ public bool PuedeIniciarAtaque =>
             }
         }
 
-        private IEnumerator EsperarResultadoMovimiento(string procesoId)
+        private IEnumerator EsperarResultadoMovimiento(
+            string procesoId,
+            string unidadId)
         {
             const float intervaloConsulta = 0.1f;
             const float tiempoMaximo = 15f;
@@ -258,6 +262,9 @@ public bool PuedeIniciarAtaque =>
                     string.IsNullOrWhiteSpace(
                         request.downloadHandler.text))
                 {
+                    yield return ActualizarMovimientoEnCurso(
+                        unidadId);
+
                     yield return new WaitForSecondsRealtime(
                         intervaloConsulta);
 
@@ -342,6 +349,92 @@ public bool PuedeIniciarAtaque =>
 
             MostrarError(
                 "El movimiento concurrente excedió el tiempo máximo de espera.");
+        }
+
+        private IEnumerator ActualizarMovimientoEnCurso(
+            string unidadId)
+        {
+            if (vistaPartida == null ||
+                string.IsNullOrWhiteSpace(unidadId))
+            {
+                yield break;
+            }
+
+            using UnityWebRequest request =
+                UnityWebRequest.Get(
+                    $"{urlBaseApi}/api/partida");
+
+            request.timeout = 5;
+
+            yield return request.SendWebRequest();
+
+            if (request.result !=
+                UnityWebRequest.Result.Success)
+            {
+                Debug.LogWarning(
+                    $"No se pudo actualizar el snapshot de movimiento: {request.error}",
+                    this);
+
+                yield break;
+            }
+
+            EstadoPartidaDto estado;
+
+            try
+            {
+                estado =
+                    JsonUtility.FromJson<EstadoPartidaDto>(
+                        request.downloadHandler.text);
+            }
+            catch (System.ArgumentException ex)
+            {
+                Debug.LogWarning(
+                    $"Snapshot de movimiento inválido: {ex.Message}",
+                    this);
+
+                yield break;
+            }
+
+            UnidadEstadoDto unidad =
+                BuscarUnidadHumana(
+                    estado,
+                    unidadId);
+
+            if (unidad?.coordenada == null)
+            {
+                yield break;
+            }
+
+            vistaPartida.ActualizarMovimientoUnidad(
+                unidad.id,
+                unidad.coordenada.x,
+                unidad.coordenada.y,
+                unidad.estado,
+                unidad.ordenActiva);
+        }
+
+        private static UnidadEstadoDto BuscarUnidadHumana(
+            EstadoPartidaDto estado,
+            string unidadId)
+        {
+            UnidadEstadoDto[] unidades =
+                estado?.jugadorHumano?.unidades;
+
+            if (unidades == null)
+            {
+                return null;
+            }
+
+            foreach (UnidadEstadoDto unidad in unidades)
+            {
+                if (unidad != null &&
+                    unidad.id == unidadId)
+                {
+                    return unidad;
+                }
+            }
+
+            return null;
         }
 
         private static ProcesoIniciadoDto LeerProcesoIniciado(

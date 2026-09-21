@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using ImperiosEnGuerra.Controladores.Red.Contratos;
 using UnityEngine;
 
@@ -31,6 +32,19 @@ namespace ImperiosEnGuerra.Vistas
         private GameObject contenidoGenerado;
         private int anchoVisual;
         private int altoVisual;
+
+        [SerializeField, Min(0.1f)]
+        private float velocidadMovimientoVisual = 2.5f;
+
+        private sealed class MovimientoVisualPendiente
+        {
+            public EntidadSeleccionableVista Entidad;
+            public Vector3 Destino;
+        }
+
+        private readonly Dictionary<string, MovimientoVisualPendiente>
+            movimientosVisuales =
+                new Dictionary<string, MovimientoVisualPendiente>();
 
         public event System.Action AntesDeLimpiarContenido;
 
@@ -68,6 +82,7 @@ namespace ImperiosEnGuerra.Vistas
         private void Limpiar()
         {
             AntesDeLimpiarContenido?.Invoke();
+            movimientosVisuales.Clear();
             anchoVisual = 0;
             altoVisual = 0;
             if (contenidoGenerado == null)
@@ -228,6 +243,107 @@ namespace ImperiosEnGuerra.Vistas
         private Vector3 PosicionVisual(float x, float y)
         {
             return new Vector3(x * espacioCasilla, y * espacioCasilla, 0f);
+        }
+
+        public bool ActualizarMovimientoUnidad(
+            string unidadId,
+            int x,
+            int y,
+            string estadoLogico,
+            string ordenActiva)
+        {
+            if (string.IsNullOrWhiteSpace(unidadId))
+            {
+                return false;
+            }
+
+            EntidadSeleccionableVista[] entidades =
+                GetComponentsInChildren<EntidadSeleccionableVista>(true);
+
+            EntidadSeleccionableVista encontrada = null;
+
+            foreach (EntidadSeleccionableVista entidad in entidades)
+            {
+                if (entidad != null &&
+                    entidad.Categoria == CategoriaEntidadVisual.Unidad &&
+                    entidad.IdLogico == unidadId)
+                {
+                    encontrada = entidad;
+                    break;
+                }
+            }
+
+            if (encontrada == null)
+            {
+                return false;
+            }
+
+            encontrada.ActualizarDatosLogicos(
+                x,
+                y,
+                estadoLogico,
+                ordenActiva);
+
+            movimientosVisuales[unidadId] =
+                new MovimientoVisualPendiente
+                {
+                    Entidad = encontrada,
+                    Destino = PosicionVisual(x, y)
+                };
+
+            return true;
+        }
+
+        private void Update()
+        {
+            if (movimientosVisuales.Count == 0)
+            {
+                return;
+            }
+
+            var completados =
+                new List<string>();
+
+            foreach (KeyValuePair<string, MovimientoVisualPendiente> par
+                     in movimientosVisuales)
+            {
+                MovimientoVisualPendiente movimiento = par.Value;
+
+                if (movimiento == null ||
+                    movimiento.Entidad == null ||
+                    !movimiento.Entidad.isActiveAndEnabled)
+                {
+                    completados.Add(par.Key);
+                    continue;
+                }
+
+                Transform transformUnidad =
+                    movimiento.Entidad.transform;
+
+                float paso =
+                    velocidadMovimientoVisual *
+                    Time.unscaledDeltaTime;
+
+                transformUnidad.position =
+                    Vector3.MoveTowards(
+                        transformUnidad.position,
+                        movimiento.Destino,
+                        paso);
+
+                if ((transformUnidad.position - movimiento.Destino)
+                    .sqrMagnitude <= 0.0001f)
+                {
+                    transformUnidad.position =
+                        movimiento.Destino;
+
+                    completados.Add(par.Key);
+                }
+            }
+
+            foreach (string unidadId in completados)
+            {
+                movimientosVisuales.Remove(unidadId);
+            }
         }
 
         public bool TryObtenerCoordenadaLogica(Vector3 posicionMundo, out int x, out int y)
