@@ -1,5 +1,6 @@
 using ImperiosEnGuerra.Api.Contratos;
 using ImperiosEnGuerra.Api.Servicios;
+using ImperiosEnGuerra.Modelo.Acciones;
 using ImperiosEnGuerra.Modelo.Core;
 using ImperiosEnGuerra.Modelo.Edificios;
 using ImperiosEnGuerra.Modelo.Map;
@@ -105,6 +106,123 @@ public class ColaEntrenamientoTests
             partida.JugadorHumano.Recursos
                 .ObtenerCantidad(TipoRecurso.Oro),
             Is.LessThan(oroInicial));
+    }
+
+    [Test]
+    public void EntrenamientoNoCompleto_NoCreaUnidadAntesDeTiempo()
+    {
+        Partida partida =
+            CrearPartida();
+
+        var estado =
+            new EstadoPartidaService();
+
+        estado.EstablecerPartida(
+            partida);
+
+        ResultadoAccion encolado =
+            estado.EncolarEntrenamiento(
+                Request("Guerrero"),
+                out Guid entrenamientoId,
+                out Coordenada centro);
+
+        Assert.That(encolado.Exito, Is.True);
+
+        for (int i = 0; i < 9; i++)
+        {
+            ResultadoProgresoEntrenamiento progreso =
+                estado.AvanzarEntrenamiento(
+                    centro,
+                    entrenamientoId,
+                    10);
+
+            Assert.That(progreso.Exito, Is.True);
+            Assert.That(progreso.Terminado, Is.False);
+        }
+
+        Assert.That(
+            partida.JugadorHumano.Unidades,
+            Is.Empty);
+
+        ResultadoSpawnEntrenamiento spawn =
+            estado.CompletarEntrenamientoConSpawn(
+                centro,
+                entrenamientoId,
+                "Guerrero");
+
+        Assert.That(spawn.Exito, Is.False);
+        Assert.That(
+            spawn.Mensaje,
+            Does.Contain("todavía"));
+        Assert.That(
+            partida.JugadorHumano.Unidades,
+            Is.Empty);
+    }
+
+    [Test]
+    public void SinEspacioParaSpawn_DevuelveFalloControlado()
+    {
+        Partida partida =
+            CrearPartida();
+
+        var estado =
+            new EstadoPartidaService();
+
+        estado.EstablecerPartida(
+            partida);
+
+        ResultadoAccion encolado =
+            estado.EncolarEntrenamiento(
+                Request("Arquero"),
+                out Guid entrenamientoId,
+                out Coordenada centro);
+
+        Assert.That(encolado.Exito, Is.True);
+
+        for (int x = 0;
+             x < partida.JugadorHumano.Mapa.Ancho;
+             x++)
+        {
+            for (int y = 0;
+                 y < partida.JugadorHumano.Mapa.Alto;
+                 y++)
+            {
+                partida.JugadorHumano.Mapa
+                    .ObtenerCasilla(x, y)
+                    .Ocupar();
+            }
+        }
+
+        for (int i = 0; i < 10; i++)
+        {
+            ResultadoProgresoEntrenamiento progreso =
+                estado.AvanzarEntrenamiento(
+                    centro,
+                    entrenamientoId,
+                    10);
+
+            Assert.That(progreso.Exito, Is.True);
+        }
+
+        ResultadoSpawnEntrenamiento spawn =
+            estado.CompletarEntrenamientoConSpawn(
+                centro,
+                entrenamientoId,
+                "Arquero");
+
+        Assert.That(spawn.Exito, Is.False);
+        Assert.That(
+            spawn.Mensaje,
+            Does.Contain("casilla libre"));
+        Assert.That(
+            partida.JugadorHumano.Unidades,
+            Is.Empty);
+
+        Assert.That(
+            estado.CancelarEntrenamientoCola(
+                centro,
+                entrenamientoId),
+            Is.True);
     }
 
     private static Partida CrearPartida()
