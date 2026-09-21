@@ -199,6 +199,58 @@ namespace ImperiosEnGuerra.Vistas
                 }
             }
 
+            if (jugador.obrasConstruccion != null)
+            {
+                foreach (ObraConstruccionEstadoDto obra in jugador.obrasConstruccion)
+                {
+                    if (obra == null ||
+                        obra.coordenada == null ||
+                        obra.tipo != "CentroUrbano")
+                    {
+                        continue;
+                    }
+
+                    Sprite sprite =
+                        humano
+                            ? centroHumano
+                            : centroMaquina;
+
+                    float factor =
+                        Mathf.Lerp(
+                            0.35f,
+                            0.85f,
+                            Mathf.Clamp01(
+                                obra.progreso / 100f));
+
+                    GameObject objeto =
+                        CrearSprite(
+                            $"Obra_{propietario}_{obra.tipo}_{obra.coordenada.x}_{obra.coordenada.y}",
+                            sprite,
+                            obra.coordenada.x,
+                            obra.coordenada.y,
+                            18,
+                            edificios,
+                            Vector3.one *
+                            escalaEdificios *
+                            factor);
+
+                    if (objeto != null)
+                    {
+                        SpriteRenderer renderer =
+                            objeto.GetComponent<SpriteRenderer>();
+
+                        if (renderer != null)
+                        {
+                            Color color =
+                                renderer.color;
+
+                            color.a = 0.55f;
+                            renderer.color = color;
+                        }
+                    }
+                }
+            }
+
             if (jugador.unidades == null)
             {
                 return;

@@ -424,6 +424,227 @@ public sealed class EstadoPartidaService
         }
     }
 
+    public ResultadoAccion IniciarObra(
+        ConstruirRequest? request,
+        out Guid obraId)
+    {
+        lock (sincronizacion)
+        {
+            obraId = Guid.Empty;
+
+            if (partidaActiva == null)
+            {
+                return ResultadoAccion.Fallido(
+                    "No hay una partida activa.");
+            }
+
+            if (request == null)
+            {
+                return ResultadoAccion.Fallido(
+                    "La solicitud de construcción es obligatoria.");
+            }
+
+            if (!Guid.TryParse(
+                    request.AldeanoId,
+                    out Guid aldeanoId))
+            {
+                return ResultadoAccion.Fallido(
+                    "El ID del Aldeano debe tener formato Guid válido.");
+            }
+
+            Aldeano? aldeano =
+                partidaActiva.JugadorHumano.Unidades
+                    .OfType<Aldeano>()
+                    .FirstOrDefault(
+                        u => u.Id == aldeanoId);
+
+            if (aldeano == null)
+            {
+                return ResultadoAccion.Fallido(
+                    "No existe un Aldeano humano con ese ID.");
+            }
+
+            if (!aldeano.Disponible)
+            {
+                return ResultadoAccion.Fallido(
+                    "El Aldeano no está disponible.");
+            }
+
+            if (request.Destino == null)
+            {
+                return ResultadoAccion.Fallido(
+                    "La posición de construcción es obligatoria.");
+            }
+
+            if (!string.Equals(
+                    request.TipoEdificio,
+                    nameof(CentroUrbano),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return ResultadoAccion.Fallido(
+                    "El tipo de edificio indicado no está permitido.");
+            }
+
+            Coordenada destino =
+                PartidaRequestMapper.ConvertirCoordenada(
+                    request.Destino);
+
+            Mapa mapa =
+                partidaActiva.JugadorHumano.Mapa;
+
+            if (!mapa.EstaDentroDeLimites(destino))
+            {
+                return ResultadoAccion.Fallido(
+                    "La posición está fuera del mapa.");
+            }
+
+            if (!mapa.PuedeColocar(destino))
+            {
+                return ResultadoAccion.Fallido(
+                    "La posición indicada no está disponible.");
+            }
+
+            Casilla? casilla =
+                mapa.ObtenerCasilla(
+                    destino.X,
+                    destino.Y);
+
+            if (casilla == null ||
+                !casilla.Ocupar())
+            {
+                return ResultadoAccion.Fallido(
+                    "No se pudo reservar la casilla de construcción.");
+            }
+
+            var obra =
+                new ObraConstruccion(
+                    aldeanoId,
+                    nameof(CentroUrbano),
+                    destino);
+
+            partidaActiva.JugadorHumano
+                .AgregarObraConstruccion(
+                    obra);
+
+            obraId = obra.Id;
+
+            return ResultadoAccion.Exitoso(
+                "Obra reservada correctamente.");
+        }
+    }
+
+    public ResultadoAproximacionConstruccion
+        PrepararAproximacionConstruccion(
+            Guid aldeanoId,
+            Guid obraId,
+            bool permitirOrdenMovimientoActiva = false)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+            {
+                return ResultadoAproximacionConstruccion.Fallido(
+                    "No hay una partida activa.");
+            }
+
+            ObraConstruccion? obra =
+                partidaActiva.JugadorHumano.ObrasConstruccion
+                    .FirstOrDefault(
+                        o => o.Id == obraId);
+
+            if (obra == null)
+            {
+                return ResultadoAproximacionConstruccion.Fallido(
+                    "No existe la obra indicada.");
+            }
+
+            return new PlanificadorAproximacionConstruccion()
+                .Preparar(
+                    partidaActiva,
+                    aldeanoId,
+                    obra.Coordenada,
+                    permitirOrdenMovimientoActiva);
+        }
+    }
+
+    public ResultadoProgresoConstruccion AvanzarObra(
+        Guid obraId,
+        int incremento)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+            {
+                return ResultadoProgresoConstruccion.Fallido(
+                    "No hay una partida activa.");
+            }
+
+            ObraConstruccion? obra =
+                partidaActiva.JugadorHumano.ObrasConstruccion
+                    .FirstOrDefault(
+                        o => o.Id == obraId);
+
+            if (obra == null)
+            {
+                return ResultadoProgresoConstruccion.Fallido(
+                    "No existe la obra indicada.");
+            }
+
+            int progreso =
+                obra.Avanzar(
+                    incremento);
+
+            bool terminada =
+                obra.Terminada;
+
+            if (terminada)
+            {
+                partidaActiva.JugadorHumano
+                    .EliminarObraConstruccion(
+                        obra);
+
+                partidaActiva.JugadorHumano
+                    .AgregarEdificio(
+                        new CentroUrbano(
+                            obra.Coordenada));
+            }
+
+            return ResultadoProgresoConstruccion.Exitoso(
+                progreso,
+                terminada);
+        }
+    }
+
+    public bool CancelarObra(
+        Guid obraId)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+                return false;
+
+            ObraConstruccion? obra =
+                partidaActiva.JugadorHumano.ObrasConstruccion
+                    .FirstOrDefault(
+                        o => o.Id == obraId);
+
+            if (obra == null)
+                return false;
+
+            partidaActiva.JugadorHumano
+                .EliminarObraConstruccion(
+                    obra);
+
+            partidaActiva.JugadorHumano.Mapa
+                .ObtenerCasilla(
+                    obra.Coordenada.X,
+                    obra.Coordenada.Y)
+                ?.Liberar();
+
+            return true;
+        }
+    }
+
     public ResultadoAccion Construir(ConstruirRequest? request)
     {
         lock (sincronizacion)

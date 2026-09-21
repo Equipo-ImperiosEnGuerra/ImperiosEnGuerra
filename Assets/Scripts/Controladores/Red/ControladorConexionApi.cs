@@ -743,10 +743,13 @@ public bool PuedeIniciarAtaque =>
                     string.IsNullOrWhiteSpace(
                         request.downloadHandler.text))
                 {
-                    yield return new WaitForSecondsRealtime(
-                        intervaloConsulta);
+                    yield return ObtenerPartidaActiva(
+                        "Construcción en progreso...");
 
-                    tiempoTranscurrido += intervaloConsulta;
+                    yield return new WaitForSecondsRealtime(
+                        0.5f);
+
+                    tiempoTranscurrido += 0.5f;
                     continue;
                 }
 

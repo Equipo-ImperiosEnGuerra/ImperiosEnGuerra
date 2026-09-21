@@ -26,6 +26,7 @@ namespace ImperiosEnGuerra.Controladores.Red.Contratos
         public string tipo;
         public RecursosJugadorEstadoDto recursos;
         public EdificioEstadoDto[] edificios;
+        public ObraConstruccionEstadoDto[] obrasConstruccion;
         public UnidadEstadoDto[] unidades;
     }
 
@@ -50,6 +51,15 @@ namespace ImperiosEnGuerra.Controladores.Red.Contratos
     {
         public string tipo;
         public CoordenadaEstadoDto coordenada;
+    }
+
+    [Serializable]
+    public class ObraConstruccionEstadoDto
+    {
+        public string id;
+        public string tipo;
+        public CoordenadaEstadoDto coordenada;
+        public int progreso;
     }
 
     [Serializable]

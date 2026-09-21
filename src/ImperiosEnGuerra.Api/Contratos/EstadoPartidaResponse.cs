@@ -21,6 +21,7 @@ public sealed class JugadorEstadoResponse
     public required string Tipo { get; init; }
     public required RecursosJugadorEstadoResponse Recursos { get; init; }
     public required IReadOnlyList<EdificioEstadoResponse> Edificios { get; init; }
+    public required IReadOnlyList<ObraConstruccionEstadoResponse> ObrasConstruccion { get; init; }
     public required IReadOnlyList<UnidadEstadoResponse> Unidades { get; init; }
 }
 
@@ -42,6 +43,14 @@ public sealed class EdificioEstadoResponse
 {
     public required string Tipo { get; init; }
     public required CoordenadaEstadoResponse Coordenada { get; init; }
+}
+
+public sealed class ObraConstruccionEstadoResponse
+{
+    public required string Id { get; init; }
+    public required string Tipo { get; init; }
+    public required CoordenadaEstadoResponse Coordenada { get; init; }
+    public int Progreso { get; init; }
 }
 
 public sealed class UnidadEstadoResponse

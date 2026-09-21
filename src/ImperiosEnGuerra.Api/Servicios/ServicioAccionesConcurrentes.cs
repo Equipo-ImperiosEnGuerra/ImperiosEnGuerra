@@ -546,6 +546,8 @@ public sealed class ServicioAccionesConcurrentes
                 CostoRecursos costo = null;
                 bool costoReservado = false;
                 bool completada = false;
+                Guid obraId = Guid.Empty;
+                Guid unidadId = Guid.Empty;
                 Unidad? unidad = null;
 
                 try
@@ -556,43 +558,133 @@ public sealed class ServicioAccionesConcurrentes
                             out costo);
 
                     if (!reserva.Exito)
-                    {
                         return reserva;
-                    }
 
                     costoReservado = true;
 
-                    if (Guid.TryParse(
-                        copia?.AldeanoId,
-                        out Guid unidadId))
+                    ResultadoAccion inicioObra =
+                        estadoPartida.IniciarObra(
+                            copia,
+                            out obraId);
+
+                    if (!inicioObra.Exito)
+                        return inicioObra;
+
+                    if (!Guid.TryParse(
+                            copia?.AldeanoId,
+                            out unidadId))
                     {
-                        unidad =
-                            estadoPartida.ObtenerUnidad(
-                                unidadId);
+                        return ResultadoAccion.Fallido(
+                            "El ID del Aldeano debe tener formato Guid válido.");
                     }
 
-                    EsperarAntesDeAplicar(
-                        token,
-                        retardoConstruccion);
+                    unidad =
+                        estadoPartida.ObtenerUnidad(
+                            unidadId);
 
-                    ResultadoAccion resultado =
-                        estadoPartida.Construir(
-                            copia);
-
-                    if (resultado.Exito &&
-                        unidad != null)
+                    if (!(unidad is Aldeano aldeano))
                     {
-                        servicioOrdenes.Iniciar(
-                            unidad,
-                            TipoAccionJuego.Construir);
-
-                        completada = true;
+                        return ResultadoAccion.Fallido(
+                            "La unidad seleccionada no es un Aldeano.");
                     }
 
-                    return resultado;
+                    ResultadoAproximacionConstruccion plan =
+                        estadoPartida.PrepararAproximacionConstruccion(
+                            unidadId,
+                            obraId);
+
+                    if (!plan.Exito)
+                        return ResultadoAccion.Fallido(plan.Mensaje);
+
+                    TipoAccionJuego ordenInicial =
+                        plan.Pasos.Count > 0
+                            ? TipoAccionJuego.Mover
+                            : TipoAccionJuego.Construir;
+
+                    if (!estadoPartida.IntentarIniciarOrdenUnidad(
+                            unidadId,
+                            ordenInicial))
+                    {
+                        return ResultadoAccion.Fallido(
+                            "El Aldeano no está disponible.");
+                    }
+
+                    TimeSpan retardoPaso =
+                        CalcularRetardoPasoMovimiento(
+                            retardoMovimiento,
+                            aldeano.VelocidadMovimiento);
+
+                    ResultadoAccion movimiento =
+                        EjecutarPasosConstruccion(
+                            unidadId,
+                            plan.Pasos,
+                            retardoPaso,
+                            token);
+
+                    if (!movimiento.Exito)
+                        return movimiento;
+
+                    if (!estadoPartida.IntentarReemplazarOrdenUnidad(
+                            unidadId,
+                            TipoAccionJuego.Construir))
+                    {
+                        return ResultadoAccion.Fallido(
+                            "No se pudo iniciar la construcción.");
+                    }
+
+                    const int pasosProgreso = 10;
+                    TimeSpan retardoProgreso =
+                        DividirRetardo(
+                            retardoConstruccion,
+                            pasosProgreso);
+
+                    for (int i = 0;
+                         i < pasosProgreso;
+                         i++)
+                    {
+                        EsperarAntesDeAplicar(
+                            token,
+                            retardoProgreso);
+
+                        ResultadoProgresoConstruccion progreso =
+                            estadoPartida.AvanzarObra(
+                                obraId,
+                                10);
+
+                        if (!progreso.Exito)
+                        {
+                            return ResultadoAccion.Fallido(
+                                progreso.Mensaje);
+                        }
+
+                        Console.WriteLine(
+                            $"CONSTRUCCION_PROGRESO: {obraId} {progreso.Progreso}%");
+
+                        if (progreso.Terminada)
+                        {
+                            completada = true;
+                            break;
+                        }
+                    }
+
+                    if (!completada)
+                    {
+                        return ResultadoAccion.Fallido(
+                            "La construcción no alcanzó el 100%.");
+                    }
+
+                    return ResultadoAccion.Exitoso(
+                        "Construcción terminada correctamente.");
                 }
                 finally
                 {
+                    if (!completada &&
+                        obraId != Guid.Empty)
+                    {
+                        estadoPartida.CancelarObra(
+                            obraId);
+                    }
+
                     if (!completada &&
                         costoReservado)
                     {
@@ -602,8 +694,8 @@ public sealed class ServicioAccionesConcurrentes
 
                     if (unidad != null)
                     {
-                        servicioOrdenes.Completar(
-                            unidad);
+                        estadoPartida.CompletarOrdenUnidad(
+                            unidad.Id);
                     }
                 }
             });
@@ -870,6 +962,64 @@ public sealed class ServicioAccionesConcurrentes
 
         return ResultadoAccion.Exitoso(
             "Movimiento de recolección completado.");
+    }
+
+
+    private ResultadoAccion EjecutarPasosConstruccion(
+        Guid unidadId,
+        IReadOnlyList<Coordenada> pasosPlanificados,
+        TimeSpan retardoPaso,
+        CancellationToken token)
+    {
+        var pasos =
+            new Queue<Coordenada>(
+                pasosPlanificados);
+
+        while (pasos.Count > 0)
+        {
+            EsperarAntesDeAplicar(
+                token,
+                retardoPaso);
+
+            Coordenada siguiente =
+                pasos.Dequeue();
+
+            ResultadoAccion resultado =
+                estadoPartida.AvanzarMovimiento(
+                    unidadId,
+                    siguiente);
+
+            if (!resultado.Exito)
+                return resultado;
+
+            Console.WriteLine(
+                $"CONSTRUCCION_MOVIMIENTO: {unidadId} -> " +
+                $"({siguiente.X},{siguiente.Y})");
+        }
+
+        return ResultadoAccion.Exitoso(
+            "Aldeano posicionado junto a la obra.");
+    }
+
+    private static TimeSpan DividirRetardo(
+        TimeSpan total,
+        int partes)
+    {
+        if (partes <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(partes));
+        }
+
+        if (total <= TimeSpan.Zero)
+            return TimeSpan.Zero;
+
+        long ticks =
+            Math.Max(
+                1L,
+                total.Ticks / partes);
+
+        return TimeSpan.FromTicks(ticks);
     }
 
 

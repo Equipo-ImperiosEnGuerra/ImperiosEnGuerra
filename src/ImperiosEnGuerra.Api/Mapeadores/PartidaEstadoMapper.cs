@@ -50,6 +50,13 @@ public static class PartidaEstadoMapper
                 Tipo = edificio.GetType().Name,
                 Coordenada = ConvertirCoordenada(edificio.Coordenada)
             }).ToList(),
+            ObrasConstruccion = jugador.ObrasConstruccion.Select(obra => new ObraConstruccionEstadoResponse
+            {
+                Id = obra.Id.ToString("D"),
+                Tipo = obra.TipoEdificio,
+                Coordenada = ConvertirCoordenada(obra.Coordenada),
+                Progreso = obra.Progreso
+            }).ToList(),
             Unidades = jugador.Unidades.Select(unidad => new UnidadEstadoResponse
             {
                 Id = unidad.Id.ToString("D"),
