@@ -452,7 +452,14 @@ namespace ImperiosEnGuerra.Controladores
                 unidadIdPendiente = entidad.IdLogico;
                 accionPendiente = accion;
 
-                controladorSeleccion.IniciarCapturaDestino();
+                if (accion == "Recolectar")
+                {
+                    controladorSeleccion.IniciarCapturaRecurso();
+                }
+                else
+                {
+                    controladorSeleccion.IniciarCapturaDestino();
+                }
 
                 if (accion == "Mover")
                 {

@@ -523,7 +523,8 @@ public bool PuedeIniciarAtaque =>
                         "Recolección concurrente en curso...");
 
                 yield return EsperarResultadoRecoleccion(
-                    proceso.procesoId);
+                    proceso.procesoId,
+                    recoleccion.aldeanoId);
             }
             finally
             {
@@ -532,7 +533,8 @@ public bool PuedeIniciarAtaque =>
         }
 
         private IEnumerator EsperarResultadoRecoleccion(
-            string procesoId)
+            string procesoId,
+            string unidadId)
         {
             const float intervaloConsulta = 0.1f;
             // La recolección orgánica incluye desplazamiento y varios ciclos
@@ -561,6 +563,12 @@ public bool PuedeIniciarAtaque =>
                     string.IsNullOrWhiteSpace(
                         request.downloadHandler.text))
                 {
+                    // La recolección también contiene una fase de movimiento.
+                    // Consumimos snapshots intermedios para que Unity represente
+                    // cada paso en vez de saltar a la posición final.
+                    yield return ActualizarMovimientoEnCurso(
+                        unidadId);
+
                     yield return new WaitForSecondsRealtime(
                         intervaloConsulta);
 
