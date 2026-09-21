@@ -177,7 +177,8 @@ public sealed class EstadoPartidaService
     }
 
     public ResultadoAproximacionRecurso PrepararAproximacionRecurso(
-        RecolectarRequest? request)
+        RecolectarRequest? request,
+        bool permitirOrdenMovimientoActiva = false)
     {
         lock (sincronizacion)
         {
@@ -216,7 +217,68 @@ public sealed class EstadoPartidaService
             return new PlanificadorAproximacionRecurso()
                 .Preparar(
                     partidaActiva,
-                    solicitud);
+                    solicitud,
+                    permitirOrdenMovimientoActiva);
+        }
+    }
+
+    public ResultadoAproximacionDeposito PrepararAproximacionDeposito(
+        Guid aldeanoId,
+        bool permitirOrdenMovimientoActiva = false)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+            {
+                return ResultadoAproximacionDeposito.Fallido(
+                    "No hay una partida activa.");
+            }
+
+            return new PlanificadorAproximacionDeposito()
+                .Preparar(
+                    partidaActiva,
+                    aldeanoId,
+                    permitirOrdenMovimientoActiva);
+        }
+    }
+
+    public ResultadoDepositoRecoleccion DepositarCarga(
+        Guid aldeanoId,
+        Coordenada centroUrbano)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+            {
+                return ResultadoDepositoRecoleccion.Fallido(
+                    "No hay una partida activa.");
+            }
+
+            return new OperacionDepositoRecoleccion()
+                .Ejecutar(
+                    partidaActiva,
+                    aldeanoId,
+                    centroUrbano);
+        }
+    }
+
+    public bool RecursoDisponible(
+        Coordenada objetivo)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null ||
+                objetivo == null)
+            {
+                return false;
+            }
+
+            var recurso =
+                partidaActiva.JugadorHumano.Mapa
+                    .ObtenerRecursoEn(objetivo);
+
+            return recurso != null &&
+                   !recurso.Agotado;
         }
     }
 

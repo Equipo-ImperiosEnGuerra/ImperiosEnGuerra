@@ -41,34 +41,81 @@ namespace ImperiosEnGuerra.Modelo.Recoleccion
 
         public ResultadoAproximacionRecurso Preparar(
             Partida partida,
-            SolicitudRecoleccion solicitud)
+            SolicitudRecoleccion solicitud,
+            bool permitirOrdenMovimientoActiva = false)
         {
-            ResultadoAccion validacion =
-                new OperacionRecoleccion()
-                    .Ejecutar(
-                        partida,
-                        solicitud);
-
-            if (!validacion.Exito)
+            if (partida == null)
             {
                 return ResultadoAproximacionRecurso.Fallido(
-                    validacion.Mensaje);
+                    "No hay una partida activa.");
+            }
+
+            if (solicitud == null)
+            {
+                return ResultadoAproximacionRecurso.Fallido(
+                    "La solicitud de recolección es obligatoria.");
+            }
+
+            if (partida.JugadorMaquina.Unidades.Any(
+                    u => u.Id == solicitud.AldeanoId))
+            {
+                return ResultadoAproximacionRecurso.Fallido(
+                    "No se puede recolectar con una unidad de la máquina.");
             }
 
             Aldeano aldeano =
                 partida.JugadorHumano.Unidades
                     .OfType<Aldeano>()
-                    .First(
-                        u =>
-                            u.Id ==
-                            solicitud.AldeanoId);
+                    .FirstOrDefault(
+                        u => u.Id == solicitud.AldeanoId);
+
+            if (aldeano == null)
+            {
+                return ResultadoAproximacionRecurso.Fallido(
+                    "No existe un Aldeano humano con ese ID.");
+            }
+
+            if (!aldeano.Disponible &&
+                !(permitirOrdenMovimientoActiva &&
+                  aldeano.OrdenActiva == TipoAccionJuego.Mover))
+            {
+                return ResultadoAproximacionRecurso.Fallido(
+                    "El Aldeano no está disponible.");
+            }
+
+            if (solicitud.Objetivo == null)
+            {
+                return ResultadoAproximacionRecurso.Fallido(
+                    "El objetivo de recolección es obligatorio.");
+            }
 
             Mapa mapa =
                 partida.JugadorHumano.Mapa;
 
+            if (!mapa.EstaDentroDeLimites(
+                    solicitud.Objetivo))
+            {
+                return ResultadoAproximacionRecurso.Fallido(
+                    "El objetivo está fuera del mapa.");
+            }
+
             Recurso recurso =
                 mapa.ObtenerRecursoEn(
                     solicitud.Objetivo);
+
+            if (recurso == null)
+            {
+                return ResultadoAproximacionRecurso.Fallido(
+                    "No existe un recurso en la posición indicada.");
+            }
+
+            if (!Enum.IsDefined(
+                    typeof(TipoRecurso),
+                    recurso.Tipo))
+            {
+                return ResultadoAproximacionRecurso.Fallido(
+                    "El objetivo no contiene un tipo de recurso válido.");
+            }
 
             if (recurso.Agotado)
             {
@@ -100,7 +147,8 @@ namespace ImperiosEnGuerra.Modelo.Recoleccion
                         partida,
                         new SolicitudMovimiento(
                             aldeano.Id,
-                            candidato));
+                            candidato),
+                        permitirOrdenMovimientoActiva);
 
                 if (!plan.Exito)
                 {
