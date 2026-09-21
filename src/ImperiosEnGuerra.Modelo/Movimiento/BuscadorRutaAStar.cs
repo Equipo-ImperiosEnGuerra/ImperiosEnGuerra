@@ -20,6 +20,19 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
             Coordenada origen,
             Coordenada destino)
         {
+            return Buscar(
+                mapa,
+                origen,
+                destino,
+                Array.Empty<Coordenada>());
+        }
+
+        public ResultadoRuta Buscar(
+            Mapa mapa,
+            Coordenada origen,
+            Coordenada destino,
+            IEnumerable<Coordenada> bloqueosAdicionales)
+        {
             if (mapa == null)
             {
                 throw new ArgumentNullException(nameof(mapa));
@@ -35,11 +48,29 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
                 throw new ArgumentNullException(nameof(destino));
             }
 
+            var bloqueos =
+                new HashSet<(int X, int Y)>();
+
+            if (bloqueosAdicionales != null)
+            {
+                foreach (Coordenada bloqueo in bloqueosAdicionales)
+                {
+                    if (bloqueo != null)
+                    {
+                        bloqueos.Add(
+                            (bloqueo.X, bloqueo.Y));
+                    }
+                }
+            }
+
             if (!mapa.EstaDentroDeLimites(origen) ||
                 !mapa.EstaDentroDeLimites(destino))
             {
                 return ResultadoRuta.Imposible();
             }
+
+            bloqueos.Remove(
+                (origen.X, origen.Y));
 
             if (Coincide(origen, destino))
             {
@@ -47,7 +78,10 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
                     Array.Empty<Coordenada>());
             }
 
-            if (!EsTransitable(mapa, destino))
+            if (!EsTransitable(
+                mapa,
+                destino,
+                bloqueos))
             {
                 return ResultadoRuta.Imposible();
             }
@@ -135,7 +169,8 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
 
                     if (!EsTransitable(
                         mapa,
-                        coordenadaVecino))
+                        coordenadaVecino,
+                        bloqueos))
                     {
                         continue;
                     }
@@ -166,8 +201,15 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
 
         private static bool EsTransitable(
             Mapa mapa,
-            Coordenada coordenada)
+            Coordenada coordenada,
+            HashSet<(int X, int Y)> bloqueos)
         {
+            if (bloqueos.Contains(
+                (coordenada.X, coordenada.Y)))
+            {
+                return false;
+            }
+
             Casilla casilla =
                 mapa.ObtenerCasilla(
                     coordenada.X,
