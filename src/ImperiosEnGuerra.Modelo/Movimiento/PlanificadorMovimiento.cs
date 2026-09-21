@@ -30,7 +30,8 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
 
         public ResultadoPlanMovimiento Preparar(
             Partida partida,
-            SolicitudMovimiento solicitud)
+            SolicitudMovimiento solicitud,
+            bool permitirOrdenMovimientoActiva = false)
         {
             if (partida == null)
                 return ResultadoPlanMovimiento.Fallido(
@@ -56,9 +57,13 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
                 return ResultadoPlanMovimiento.Fallido(
                     "No existe una unidad humana con ese ID.");
 
-            if (!unidad.Disponible)
+            if (!unidad.Disponible &&
+                !(permitirOrdenMovimientoActiva &&
+                  unidad.OrdenActiva == TipoAccionJuego.Mover))
+            {
                 return ResultadoPlanMovimiento.Fallido(
                     "La unidad no está disponible.");
+            }
 
             Coordenada destino = solicitud.Destino;
             Mapa mapa = partida.JugadorHumano.Mapa;

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using ImperiosEnGuerra.Modelo.Unidades;
 using ImperiosEnGuerra.Modelo.Acciones;
@@ -6,6 +7,7 @@ using ImperiosEnGuerra.Api.Contratos;
 using ImperiosEnGuerra.Servicios.Concurrencia;
 using ImperiosEnGuerra.Modelo.Edificios;
 using ImperiosEnGuerra.Modelo.Map;
+using ImperiosEnGuerra.Modelo.Movimiento;
 
 namespace ImperiosEnGuerra.Api.Servicios;
 
@@ -156,51 +158,100 @@ public sealed class ServicioAccionesConcurrentes
             "MOVER",
             token =>
             {
-                Unidad? unidad = null;
-
-                if (Guid.TryParse(
-                    copia?.UnidadId,
-                    out Guid unidadId))
+                if (!Guid.TryParse(
+                        copia?.UnidadId,
+                        out Guid unidadId))
                 {
-                    unidad =
-                        estadoPartida.ObtenerUnidad(
-                            unidadId);
+                    return ResultadoAccion.Fallido(
+                        "El ID de la unidad debe tener formato Guid válido.");
+                }
+
+                ResultadoPlanMovimiento plan =
+                    estadoPartida.PrepararMovimientoProgresivo(
+                        copia);
+
+                if (!plan.Exito)
+                {
+                    return ResultadoAccion.Fallido(
+                        plan.Mensaje);
+                }
+
+                if (plan.Pasos.Count == 0)
+                {
+                    return ResultadoAccion.Exitoso(
+                        "Movimiento realizado.");
+                }
+
+                bool ordenIniciada =
+                    estadoPartida.IntentarIniciarOrdenUnidad(
+                        unidadId,
+                        TipoAccionJuego.Mover);
+
+                if (!ordenIniciada)
+                {
+                    return ResultadoAccion.Fallido(
+                        "La unidad no está disponible.");
                 }
 
                 try
                 {
-                    EsperarAntesDeAplicar(
-                        token,
-                        retardoMovimiento);
+                    var pasos =
+                        new Queue<Coordenada>(
+                            plan.Pasos);
 
-                    var resultado =
-                        estadoPartida.MoverUnidad(
-                            copia);
-
-                    if (resultado.Exito &&
-                        unidad != null)
+                    while (pasos.Count > 0)
                     {
-                        servicioOrdenes.Iniciar(
-                            unidad,
-                            TipoAccionJuego.Mover);
+                        EsperarAntesDeAplicar(
+                            token,
+                            retardoMovimiento);
+
+                        token.ThrowIfCancellationRequested();
+
+                        Coordenada siguiente =
+                            pasos.Dequeue();
+
+                        ResultadoAccion resultadoPaso =
+                            estadoPartida.AvanzarMovimiento(
+                                unidadId,
+                                siguiente);
+
+                        if (!resultadoPaso.Exito)
+                        {
+                            ResultadoPlanMovimiento
+                                nuevoPlan =
+                                    estadoPartida
+                                        .PrepararMovimientoProgresivo(
+                                            copia,
+                                            true);
+
+                            if (!nuevoPlan.Exito)
+                            {
+                                return ResultadoAccion.Fallido(
+                                    nuevoPlan.Mensaje);
+                            }
+
+                            pasos =
+                                new Queue<Coordenada>(
+                                    nuevoPlan.Pasos);
+
+                            continue;
+                        }
+
+                        Console.WriteLine(
+                            $"MOVIMIENTO_PASO: {unidadId} -> " +
+                            $"({siguiente.X},{siguiente.Y})");
                     }
 
-                    Console.WriteLine(
-                        $"MOVIMIENTO: {resultado.Mensaje}");
-
-                    return resultado;
+                    return ResultadoAccion.Exitoso(
+                        "Movimiento realizado.");
                 }
                 finally
                 {
-                    if (unidad != null)
-                    {
-                        servicioOrdenes.Completar(
-                            unidad);
-                    }
+                    estadoPartida.CompletarOrdenUnidad(
+                        unidadId);
                 }
             });
     }
-
 
     // ============================================================
     // RECOLECCIÓN
