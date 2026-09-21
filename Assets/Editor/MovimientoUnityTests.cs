@@ -108,6 +108,29 @@ public class MovimientoUnityTests
     }
 
     [Test]
+    public void UnidadConOrdenActiva_NoAceptaSegundaOrdenSimultanea()
+    {
+        unidad.ActualizarDatosLogicos(
+            1,
+            1,
+            "Moviendo",
+            "Mover");
+
+        Invocar(
+            acciones,
+            "PrepararAccion",
+            "Mover");
+
+        Assert.That(
+            seleccion.CapturandoDestino,
+            Is.False);
+
+        Assert.That(
+            mensaje.text,
+            Does.Contain("entidad humana apropiada"));
+    }
+
+    [Test]
     public void MovimientoEnCurso_NoBloqueaPrepararOtraOrden()
     {
         CampoAutomatico(
