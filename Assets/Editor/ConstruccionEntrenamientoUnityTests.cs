@@ -312,6 +312,52 @@ public class ConstruccionEntrenamientoUnityTests
     }
 
     [Test]
+    public void ConstruccionEnCurso_NoBloqueaOtraOrdenDeConstruccion()
+    {
+        CampoAutomatico(
+            conexion,
+            "ConstruccionEnCurso",
+            true);
+
+        Invocar(
+            seleccion,
+            "Seleccionar",
+            aldeano);
+
+        Invocar(
+            acciones,
+            "PrepararAccion",
+            "Construir");
+
+        Assert.That(
+            seleccion.CapturandoDestino,
+            Is.True);
+    }
+
+    [Test]
+    public void EntrenamientoEnCurso_NoBloqueaOtraOrdenDeCola()
+    {
+        CampoAutomatico(
+            conexion,
+            "EntrenamientoEnCurso",
+            true);
+
+        Invocar(
+            seleccion,
+            "Seleccionar",
+            centroUrbano);
+
+        Invocar(
+            acciones,
+            "PrepararAccion",
+            "Entrenar");
+
+        Assert.That(
+            selectorEntrenamiento.activeSelf,
+            Is.True);
+    }
+
+    [Test]
     public void CancelarConstruccion_LimpiaIntencion()
     {
         Invocar(
@@ -482,6 +528,19 @@ public class ConstruccionEntrenamientoUnityTests
         objeto.GetType()
             .GetField(
                 nombre,
+                BindingFlags.Instance |
+                BindingFlags.NonPublic)
+            .SetValue(objeto, valor);
+    }
+
+    private static void CampoAutomatico(
+        object objeto,
+        string nombre,
+        object valor)
+    {
+        objeto.GetType()
+            .GetField(
+                $"<{nombre}>k__BackingField",
                 BindingFlags.Instance |
                 BindingFlags.NonPublic)
             .SetValue(objeto, valor);
