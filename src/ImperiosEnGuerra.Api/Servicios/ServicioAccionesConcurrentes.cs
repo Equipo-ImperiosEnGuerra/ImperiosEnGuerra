@@ -564,7 +564,11 @@ public sealed class ServicioAccionesConcurrentes
             RecolectarRequest? request,
             CancellationToken token)
     {
-        const int maximoIntentos = 3;
+        // Una unidad móvil puede bloquear la única salida durante varios
+        // pasos lógicos. Dejamos una ventana acotada suficiente para que
+        // ese bloqueo transitorio se libere sin convertir el worker en
+        // una espera infinita.
+        const int maximoIntentos = 8;
 
         ResultadoAproximacionRecurso ultimoResultado =
             ResultadoAproximacionRecurso.Fallido(
