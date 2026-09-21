@@ -320,40 +320,148 @@ public sealed class ServicioAccionesConcurrentes
                         copia.Objetivo.X,
                         copia.Objetivo.Y);
 
-                ResultadoAproximacionRecurso planInicial =
-                    PrepararAproximacionRecursoConReintentos(
-                        copia,
-                        token);
-
-                if (!planInicial.Exito ||
-                    !planInicial.TipoRecurso.HasValue)
-                {
-                    return ResultadoAccion.Fallido(
-                        planInicial.Mensaje);
-                }
-
-                TipoAccionJuego ordenInicial =
-                    planInicial.Pasos.Count > 0
-                        ? TipoAccionJuego.Mover
-                        : TipoAccionJuego.Recolectar;
-
-                if (!estadoPartida.IntentarIniciarOrdenUnidad(
-                        unidadId,
-                        ordenInicial))
-                {
-                    return ResultadoAccion.Fallido(
-                        "El Aldeano no está disponible.");
-                }
-
                 TimeSpan retardoPaso =
                     CalcularRetardoPasoMovimiento(
                         retardoMovimiento,
                         aldeano.VelocidadMovimiento);
 
                 int totalDepositado = 0;
+                bool ordenIniciada = false;
+                ResultadoAproximacionRecurso planInicial;
 
                 try
                 {
+                    // Política de cancelación recuperable:
+                    // si el Aldeano conserva una carga de una orden anterior,
+                    // la deposita antes de intentar una nueva extracción.
+                    if (aldeano.CargaActual > 0)
+                    {
+                        ResultadoAproximacionDeposito cargaPendiente =
+                            PrepararAproximacionDepositoConReintentos(
+                                unidadId,
+                                token);
+
+                        if (!cargaPendiente.Exito)
+                        {
+                            return ResultadoAccion.Fallido(
+                                cargaPendiente.Mensaje);
+                        }
+
+                        TipoAccionJuego ordenCarga =
+                            cargaPendiente.Pasos.Count > 0
+                                ? TipoAccionJuego.Mover
+                                : TipoAccionJuego.Recolectar;
+
+                        if (!estadoPartida.IntentarIniciarOrdenUnidad(
+                                unidadId,
+                                ordenCarga))
+                        {
+                            return ResultadoAccion.Fallido(
+                                "El Aldeano no está disponible.");
+                        }
+
+                        ordenIniciada = true;
+
+                        ResultadoAccion regresoPendiente =
+                            EjecutarPasosRecoleccion(
+                                unidadId,
+                                cargaPendiente.Pasos,
+                                retardoPaso,
+                                token);
+
+                        if (!regresoPendiente.Exito)
+                            return regresoPendiente;
+
+                        if (!estadoPartida.IntentarReemplazarOrdenUnidad(
+                                unidadId,
+                                TipoAccionJuego.Recolectar))
+                        {
+                            return ResultadoAccion.Fallido(
+                                "No se pudo activar la fase de depósito pendiente.");
+                        }
+
+                        ResultadoDepositoRecoleccion depositoPendiente =
+                            estadoPartida.DepositarCarga(
+                                unidadId,
+                                cargaPendiente.CentroUrbano);
+
+                        if (!depositoPendiente.Exito)
+                        {
+                            return ResultadoAccion.Fallido(
+                                depositoPendiente.Mensaje);
+                        }
+
+                        totalDepositado +=
+                            depositoPendiente.CantidadDepositada;
+
+                        Console.WriteLine(
+                            $"RECOLECCION_DEPOSITO_PENDIENTE: {unidadId} " +
+                            $"+{depositoPendiente.CantidadDepositada} " +
+                            $"{depositoPendiente.TipoRecurso}");
+
+                        if (!estadoPartida.IntentarReemplazarOrdenUnidad(
+                                unidadId,
+                                TipoAccionJuego.Mover))
+                        {
+                            return ResultadoAccion.Fallido(
+                                "No se pudo iniciar el regreso al recurso.");
+                        }
+
+                        planInicial =
+                            PrepararAproximacionRecursoConReintentos(
+                                copia,
+                                token,
+                                true);
+
+                        if (!planInicial.Exito)
+                        {
+                            if (estadoPartida.RecursoExiste(objetivo) &&
+                                !estadoPartida.RecursoDisponible(objetivo))
+                            {
+                                return ResultadoAccion.Exitoso(
+                                    $"La carga pendiente fue depositada ({totalDepositado}). " +
+                                    "El nodo objetivo ya está agotado.");
+                            }
+
+                            return ResultadoAccion.Fallido(
+                                planInicial.Mensaje);
+                        }
+                    }
+                    else
+                    {
+                        planInicial =
+                            PrepararAproximacionRecursoConReintentos(
+                                copia,
+                                token);
+
+                        if (!planInicial.Exito)
+                        {
+                            return ResultadoAccion.Fallido(
+                                planInicial.Mensaje);
+                        }
+
+                        TipoAccionJuego ordenInicial =
+                            planInicial.Pasos.Count > 0
+                                ? TipoAccionJuego.Mover
+                                : TipoAccionJuego.Recolectar;
+
+                        if (!estadoPartida.IntentarIniciarOrdenUnidad(
+                                unidadId,
+                                ordenInicial))
+                        {
+                            return ResultadoAccion.Fallido(
+                                "El Aldeano no está disponible.");
+                        }
+
+                        ordenIniciada = true;
+                    }
+
+                    if (!planInicial.TipoRecurso.HasValue)
+                    {
+                        return ResultadoAccion.Fallido(
+                            "No se pudo determinar el tipo de recurso objetivo.");
+                    }
+
                     ResultadoAccion movimientoInicial =
                         EjecutarPasosRecoleccion(
                             unidadId,
@@ -362,9 +470,10 @@ public sealed class ServicioAccionesConcurrentes
                             token);
 
                     if (!movimientoInicial.Exito)
-                    {
                         return movimientoInicial;
-                    }
+
+                    TipoRecurso tipoObjetivo =
+                        planInicial.TipoRecurso.Value;
 
                     while (true)
                     {
@@ -380,7 +489,7 @@ public sealed class ServicioAccionesConcurrentes
 
                         int tasa =
                             configuracionRecoleccion.ObtenerTasa(
-                                planInicial.TipoRecurso.Value);
+                                tipoObjetivo);
 
                         bool recursoAgotado = false;
 
@@ -446,9 +555,7 @@ public sealed class ServicioAccionesConcurrentes
                                     token);
 
                             if (!regreso.Exito)
-                            {
                                 return regreso;
-                            }
 
                             if (!estadoPartida.IntentarReemplazarOrdenUnidad(
                                     unidadId,
@@ -482,7 +589,8 @@ public sealed class ServicioAccionesConcurrentes
                                 objetivo))
                         {
                             return ResultadoAccion.Exitoso(
-                                $"Recolección completada. Se depositaron {totalDepositado} de {planInicial.TipoRecurso.Value} y el nodo quedó agotado.");
+                                $"Recolección completada. Se depositaron {totalDepositado} " +
+                                $"de {tipoObjetivo} y el nodo quedó agotado.");
                         }
 
                         if (!estadoPartida.IntentarReemplazarOrdenUnidad(
@@ -505,7 +613,8 @@ public sealed class ServicioAccionesConcurrentes
                                     objetivo))
                             {
                                 return ResultadoAccion.Exitoso(
-                                    $"Recolección completada. Se depositaron {totalDepositado} de {planInicial.TipoRecurso.Value}.");
+                                    $"Recolección completada. Se depositaron " +
+                                    $"{totalDepositado} de {tipoObjetivo}.");
                             }
 
                             return ResultadoAccion.Fallido(
@@ -520,15 +629,16 @@ public sealed class ServicioAccionesConcurrentes
                                 token);
 
                         if (!regresoRecurso.Exito)
-                        {
                             return regresoRecurso;
-                        }
                     }
                 }
                 finally
                 {
-                    estadoPartida.CompletarOrdenUnidad(
-                        unidadId);
+                    if (ordenIniciada)
+                    {
+                        estadoPartida.CompletarOrdenUnidad(
+                            unidadId);
+                    }
                 }
             });
     }
