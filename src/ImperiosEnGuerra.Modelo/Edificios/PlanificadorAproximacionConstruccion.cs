@@ -16,8 +16,6 @@ namespace ImperiosEnGuerra.Modelo.Edificios
     /// </summary>
     public sealed class PlanificadorAproximacionConstruccion
     {
-        private const int HolguraRutaPreferida = 2;
-
         private static readonly (int X, int Y)[] Direcciones =
         {
             (1, 0),
@@ -135,10 +133,6 @@ namespace ImperiosEnGuerra.Modelo.Edificios
                     true);
             }
 
-            int minimo =
-                candidatos.Min(
-                    c => c.Plan.Pasos.Count);
-
             int inicio =
                 PreferenciaCasillaInteraccion
                     .ObtenerIndiceInicial(
@@ -158,9 +152,7 @@ namespace ImperiosEnGuerra.Modelo.Edificios
                     candidatos
                         .Where(
                             c =>
-                                c.Indice == indice &&
-                                c.Plan.Pasos.Count <=
-                                minimo + HolguraRutaPreferida)
+                                c.Indice == indice)
                         .OrderBy(
                             c => c.Plan.Pasos.Count)
                         .FirstOrDefault();
