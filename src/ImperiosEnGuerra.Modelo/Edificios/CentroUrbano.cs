@@ -1,20 +1,49 @@
+using System;
 using ImperiosEnGuerra.Modelo.Map;
 
 namespace ImperiosEnGuerra.Modelo.Edificios
 {
-    /// <summary>
-    /// Especializa un edificio como Centro Urbano, conservando la posición definida por la clase base.
-    /// </summary>
     public class CentroUrbano : Edificio
     {
-        /// <summary>
-        /// Crea un Centro Urbano delegando la inicialización de su posición en Edificio.
-        /// </summary>
-        /// <param name="coordenada">Posición lógica del Centro Urbano.</param>
-        /// <exception cref="System.ArgumentNullException">La coordenada es nula.</exception>
+        private bool entrenando;
+        private string? tipoUnidadEntrenando;
+
+
+        public bool EstaEntrenando => entrenando;
+
+
+        public string? TipoUnidadEntrenando =>
+            tipoUnidadEntrenando;
+
+
         public CentroUrbano(Coordenada coordenada)
             : base(coordenada)
         {
+            entrenando = false;
+            tipoUnidadEntrenando = null;
+        }
+
+
+        public bool IniciarEntrenamiento(string tipoUnidad)
+        {
+            if (entrenando)
+                return false;
+
+            if (string.IsNullOrWhiteSpace(tipoUnidad))
+                return false;
+
+
+            entrenando = true;
+            tipoUnidadEntrenando = tipoUnidad;
+
+            return true;
+        }
+
+
+        public void CompletarEntrenamiento()
+        {
+            entrenando = false;
+            tipoUnidadEntrenando = null;
         }
     }
 }

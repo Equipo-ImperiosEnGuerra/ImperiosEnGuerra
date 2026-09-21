@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Options;
+using ImperiosEnGuerra.Api.Configuracion;
 using ImperiosEnGuerra.Api.Servicios;
 using ImperiosEnGuerra.Api.Contratos;
 using ImperiosEnGuerra.Api.Mapeadores;
@@ -16,32 +18,9 @@ builder.Services.AddSingleton(
             "DatosPartida")));
 builder.Services.AddSingleton<EstadoPartidaService>();
 builder.Services.AddSingleton<GestorProcesosConcurrentes>();
-builder.Services.AddSingleton(sp =>
-{
-    int movimientoSegundos =
-        builder.Configuration.GetValue<int>(
-            "Concurrencia:MovimientoSegundos");
+builder.Services.AddSingleton<ServicioOrdenesUnidad>();
+builder.Services.AddSingleton<ServicioAccionesConcurrentes>();
 
-    int recoleccionSegundos =
-        builder.Configuration.GetValue<int>(
-            "Concurrencia:RecoleccionSegundos");
-
-    int construccionSegundos =
-        builder.Configuration.GetValue<int>(
-            "Concurrencia:ConstruccionSegundos");
-
-    int entrenamientoSegundos =
-        builder.Configuration.GetValue<int>(
-            "Concurrencia:EntrenamientoSegundos");
-
-    return new ServicioAccionesConcurrentes(
-        sp.GetRequiredService<EstadoPartidaService>(),
-        sp.GetRequiredService<GestorProcesosConcurrentes>(),
-        TimeSpan.FromSeconds(movimientoSegundos),
-        TimeSpan.FromSeconds(recoleccionSegundos),
-        TimeSpan.FromSeconds(construccionSegundos),
-        TimeSpan.FromSeconds(entrenamientoSegundos));
-});
 
 var app = builder.Build();
 
@@ -377,15 +356,23 @@ app.MapPost(
 .WithName("Entrenar");
 
 app.MapPost(
-    "/api/partida/atacar",
-    (AtacarRequest? request, EstadoPartidaService estadoPartida) =>
+    "/api/partida/atacar-concurrente",
+    (
+        AtacarRequest? request,
+        ServicioAccionesConcurrentes accionesConcurrentes) =>
 {
-    var resultado = estadoPartida.Atacar(request);
+    ProcesoConcurrente proceso =
+        accionesConcurrentes.IniciarAtaque(request);
 
-    return resultado.Exito
-        ? Results.Ok(resultado)
-        : Results.BadRequest(resultado);
+    return Results.Accepted(
+        $"/api/procesos/{proceso.Id}",
+        new
+        {
+            procesoId = proceso.Id,
+            nombre = proceso.Nombre,
+            estado = "iniciado"
+        });
 })
-.WithName("Atacar");
+.WithName("IniciarAtaqueConcurrente");
 
 app.Run();

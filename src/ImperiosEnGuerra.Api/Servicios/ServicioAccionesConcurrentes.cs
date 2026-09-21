@@ -1,5 +1,9 @@
+using ImperiosEnGuerra.Modelo.Unidades;
+using ImperiosEnGuerra.Modelo.Acciones;
 using ImperiosEnGuerra.Api.Contratos;
 using ImperiosEnGuerra.Servicios.Concurrencia;
+using ImperiosEnGuerra.Modelo.Edificios;
+using ImperiosEnGuerra.Modelo.Map;
 
 namespace ImperiosEnGuerra.Api.Servicios;
 
@@ -7,32 +11,17 @@ public sealed class ServicioAccionesConcurrentes
 {
     private readonly EstadoPartidaService estadoPartida;
     private readonly GestorProcesosConcurrentes gestorProcesos;
+    private readonly ServicioOrdenesUnidad servicioOrdenes;
     private readonly TimeSpan retardoMovimiento;
     private readonly TimeSpan retardoRecoleccion;
     private readonly TimeSpan retardoConstruccion;
     private readonly TimeSpan retardoEntrenamiento;
+    private readonly TimeSpan retardoAtaque;
 
     public ServicioAccionesConcurrentes(
         EstadoPartidaService estadoPartida,
         GestorProcesosConcurrentes gestorProcesos,
-        TimeSpan retardoDemostracion)
-        : this(
-            estadoPartida,
-            gestorProcesos,
-            retardoDemostracion,
-            retardoDemostracion,
-            retardoDemostracion,
-            retardoDemostracion)
-    {
-    }
-
-    public ServicioAccionesConcurrentes(
-        EstadoPartidaService estadoPartida,
-        GestorProcesosConcurrentes gestorProcesos,
-        TimeSpan retardoMovimiento,
-        TimeSpan retardoRecoleccion,
-        TimeSpan retardoConstruccion,
-        TimeSpan retardoEntrenamiento)
+        ServicioOrdenesUnidad servicioOrdenes)
     {
         this.estadoPartida =
             estadoPartida ?? throw new ArgumentNullException(nameof(estadoPartida));
@@ -40,17 +29,16 @@ public sealed class ServicioAccionesConcurrentes
         this.gestorProcesos =
             gestorProcesos ?? throw new ArgumentNullException(nameof(gestorProcesos));
 
-        ValidarRetardo(retardoMovimiento, nameof(retardoMovimiento));
-        ValidarRetardo(retardoRecoleccion, nameof(retardoRecoleccion));
-        ValidarRetardo(retardoConstruccion, nameof(retardoConstruccion));
-        ValidarRetardo(retardoEntrenamiento, nameof(retardoEntrenamiento));
+        this.servicioOrdenes =
+            servicioOrdenes ?? throw new ArgumentNullException(nameof(servicioOrdenes));
 
-        this.retardoMovimiento = retardoMovimiento;
-        this.retardoRecoleccion = retardoRecoleccion;
-        this.retardoConstruccion = retardoConstruccion;
-        this.retardoEntrenamiento = retardoEntrenamiento;
+        // Configuración temporal mientras usamos los valores del prototipo
+        retardoMovimiento = TimeSpan.FromSeconds(1);
+        retardoRecoleccion = TimeSpan.FromSeconds(2);
+        retardoConstruccion = TimeSpan.FromSeconds(7);
+        retardoEntrenamiento = TimeSpan.FromSeconds(5);
+        retardoAtaque = TimeSpan.FromSeconds(1);
     }
-
     public ProcesoConcurrente IniciarMovimiento(
         MoverUnidadRequest? request)
     {
@@ -60,10 +48,40 @@ public sealed class ServicioAccionesConcurrentes
             "MOVER",
             token =>
             {
+            Unidad? unidad = null;
+
+            if (Guid.TryParse(copia?.UnidadId, out Guid unidadId))
+            {
+                unidad = estadoPartida.ObtenerUnidad(unidadId);
+            }
+
+            try
+            {
                 EsperarAntesDeAplicar(token, retardoMovimiento);
-                return estadoPartida.MoverUnidad(copia);
-            });
-    }
+
+                var resultado = estadoPartida.MoverUnidad(copia);
+
+                if (resultado.Exito && unidad != null)
+                {
+                    servicioOrdenes.Iniciar(
+                        unidad,
+                        TipoAccionJuego.Mover);
+                }
+
+                Console.WriteLine(
+                    $"MOVIMIENTO: {resultado.Mensaje}");
+
+                return resultado;
+            }
+            finally
+            {
+                if (unidad != null)
+                {
+                    servicioOrdenes.Completar(unidad);
+                }
+            }
+        });
+}
 
     public ProcesoConcurrente IniciarRecoleccion(
         RecolectarRequest? request)
@@ -74,8 +92,35 @@ public sealed class ServicioAccionesConcurrentes
             "RECOLECTAR",
             token =>
             {
-                EsperarAntesDeAplicar(token, retardoRecoleccion);
-                return estadoPartida.IniciarRecoleccion(copia);
+                Unidad? unidad = null;
+
+                if (Guid.TryParse(copia?.AldeanoId, out Guid unidadId))
+                {
+                    unidad = estadoPartida.ObtenerUnidad(unidadId);
+                }
+
+                try
+                {
+                    EsperarAntesDeAplicar(token, retardoRecoleccion);
+
+                    var resultado = estadoPartida.IniciarRecoleccion(copia);
+
+                    if (resultado.Exito && unidad != null)
+                    {
+                        servicioOrdenes.Iniciar(
+                            unidad,
+                            TipoAccionJuego.Recolectar);
+                    }
+
+                    return resultado;
+                }
+                finally
+                {
+                    if (unidad != null)
+                    {
+                        servicioOrdenes.Completar(unidad);
+                    }
+                }
             });
     }
 
@@ -88,8 +133,35 @@ public sealed class ServicioAccionesConcurrentes
             "CONSTRUIR",
             token =>
             {
-                EsperarAntesDeAplicar(token, retardoConstruccion);
-                return estadoPartida.Construir(copia);
+                Unidad? unidad = null;
+
+                if (Guid.TryParse(copia?.AldeanoId, out Guid unidadId))
+                {
+                    unidad = estadoPartida.ObtenerUnidad(unidadId);
+                }
+
+                try
+                {
+                    EsperarAntesDeAplicar(token, retardoConstruccion);
+
+                    var resultado = estadoPartida.Construir(copia);
+
+                    if (resultado.Exito && unidad != null)
+                    {
+                        servicioOrdenes.Iniciar(
+                            unidad,
+                            TipoAccionJuego.Construir);
+                    }
+
+                    return resultado;
+                }
+                finally
+                {
+                    if (unidad != null)
+                    {
+                        servicioOrdenes.Completar(unidad);
+                    }
+                }
             });
     }
 
@@ -102,11 +174,56 @@ public sealed class ServicioAccionesConcurrentes
             "ENTRENAR",
             token =>
             {
-                EsperarAntesDeAplicar(token, retardoEntrenamiento);
-                return estadoPartida.Entrenar(copia);
+                CentroUrbano? centro = null;
+
+                if (copia?.EdificioOrigen != null)
+                {
+                    centro = estadoPartida.ObtenerCentroUrbano(
+                        new Coordenada(
+                            copia.EdificioOrigen.X,
+                            copia.EdificioOrigen.Y));
+                }
+
+                try
+                {
+                    if (centro != null)
+                    {
+                        if (!centro.IniciarEntrenamiento(
+                            copia?.TipoUnidad ?? string.Empty))
+                        {
+                            return ResultadoAccion.Fallido(
+                                "El Centro Urbano ya está entrenando.");
+                        }
+                    }
+
+                    EsperarAntesDeAplicar(token, retardoEntrenamiento);
+
+                    return estadoPartida.Entrenar(copia);
+                }
+                finally
+                {
+                    if (centro != null)
+                    {
+                        centro.CompletarEntrenamiento();
+                    }
+                }
             });
     }
 
+    public ProcesoConcurrente IniciarAtaque(
+        AtacarRequest? request)
+    {
+        AtacarRequest? copia = Copiar(request);
+
+        return gestorProcesos.Iniciar(
+            "ATACAR",
+            token =>
+            {
+                EsperarAntesDeAplicar(token, retardoAtaque);
+
+                return estadoPartida.Atacar(copia);
+            });
+    }
     public bool Cancelar(Guid procesoId)
     {
         return gestorProcesos.Cancelar(procesoId);
@@ -236,6 +353,19 @@ public sealed class ServicioAccionesConcurrentes
                     X = request.Destino.X,
                     Y = request.Destino.Y
                 }
+        };
+    }
+
+    private static AtacarRequest? Copiar(
+        AtacarRequest? request)
+    {
+        if (request == null)
+            return null;
+
+        return new AtacarRequest
+        {
+            AtacanteId = request.AtacanteId,
+            ObjetivoId = request.ObjetivoId
         };
     }
 }
