@@ -26,8 +26,18 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     plan.Mensaje);
             }
 
+            Jugador propietario =
+                partida.BuscarJugadorPorUnidad(
+                    solicitud.UnidadId);
+
+            if (propietario == null)
+            {
+                return ResultadoAccion.Fallido(
+                    "No existe una unidad con ese ID.");
+            }
+
             Unidad unidad =
-                partida.JugadorHumano.Unidades
+                propietario.Unidades
                     .First(
                         u =>
                             u.Id ==

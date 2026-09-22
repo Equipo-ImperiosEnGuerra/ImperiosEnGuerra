@@ -115,8 +115,12 @@ public sealed class EstadoPartidaService
             if (partidaActiva == null)
                 return false;
 
+            Jugador? propietario =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    unidadId);
+
             Unidad? unidad =
-                partidaActiva.JugadorHumano.Unidades
+                propietario?.Unidades
                     .FirstOrDefault(
                         u => u.Id == unidadId);
 
@@ -134,8 +138,12 @@ public sealed class EstadoPartidaService
             if (partidaActiva == null)
                 return false;
 
+            Jugador? propietario =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    unidadId);
+
             Unidad? unidad =
-                partidaActiva.JugadorHumano.Unidades
+                propietario?.Unidades
                     .FirstOrDefault(
                         u => u.Id == unidadId);
 
@@ -152,8 +160,12 @@ public sealed class EstadoPartidaService
             if (partidaActiva == null)
                 return;
 
+            Jugador? propietario =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    unidadId);
+
             Unidad? unidad =
-                partidaActiva.JugadorHumano.Unidades
+                propietario?.Unidades
                     .FirstOrDefault(
                         u => u.Id == unidadId);
 
@@ -1104,7 +1116,11 @@ public sealed class EstadoPartidaService
             if (partidaActiva == null)
                 return null;
 
-            return partidaActiva.JugadorHumano.Unidades
+            Jugador? propietario =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    id);
+
+            return propietario?.Unidades
                 .FirstOrDefault(u => u.Id == id);
         }
     }

@@ -41,21 +41,18 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
                 return ResultadoPlanMovimiento.Fallido(
                     "La solicitud de movimiento es obligatoria.");
 
-            if (partida.JugadorMaquina.Unidades.Any(
-                u => u.Id == solicitud.UnidadId))
-            {
+            Jugador propietario =
+                partida.BuscarJugadorPorUnidad(
+                    solicitud.UnidadId);
+
+            if (propietario == null)
                 return ResultadoPlanMovimiento.Fallido(
-                    "No se puede mover una unidad de la máquina.");
-            }
+                    "No existe una unidad con ese ID.");
 
             Unidad unidad =
-                partida.JugadorHumano.Unidades
-                    .FirstOrDefault(
+                propietario.Unidades
+                    .First(
                         u => u.Id == solicitud.UnidadId);
-
-            if (unidad == null)
-                return ResultadoPlanMovimiento.Fallido(
-                    "No existe una unidad humana con ese ID.");
 
             if (!unidad.Disponible &&
                 !(permitirOrdenMovimientoActiva &&
@@ -66,7 +63,7 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
             }
 
             Coordenada destino = solicitud.Destino;
-            Mapa mapa = partida.JugadorHumano.Mapa;
+            Mapa mapa = propietario.Mapa;
 
             if (destino == null)
                 return ResultadoPlanMovimiento.Fallido(
