@@ -1569,40 +1569,74 @@ public bool PuedeIniciarAtaque =>
                 centroMaquina =
                     new CoordenadaDto(8, 8),
 
+                // Dos nodos por tipo alrededor de cada mitad del mapa.
+                // Se dejan corredores y varias casillas adyacentes libres para
+                // evitar que un recurso quede encerrado por el Centro Urbano
+                // u otros recursos físicos.
                 recursosHumano = new[]
                 {
                     new RecursoInicialDto(
                         "Oro",
-                        1,
-                        2),
+                        3,
+                        1),
+
+                    new RecursoInicialDto(
+                        "Oro",
+                        4,
+                        3),
 
                     new RecursoInicialDto(
                         "Madera",
-                        2,
+                        1,
+                        4),
+
+                    new RecursoInicialDto(
+                        "Madera",
+                        3,
+                        5),
+
+                    new RecursoInicialDto(
+                        "Comida",
+                        4,
                         1),
 
                     new RecursoInicialDto(
                         "Comida",
-                        2,
-                        2)
+                        1,
+                        5)
                 },
 
                 recursosMaquina = new[]
                 {
                     new RecursoInicialDto(
                         "Oro",
-                        8,
-                        7),
+                        6,
+                        8),
+
+                    new RecursoInicialDto(
+                        "Oro",
+                        5,
+                        6),
 
                     new RecursoInicialDto(
                         "Madera",
-                        7,
+                        8,
+                        5),
+
+                    new RecursoInicialDto(
+                        "Madera",
+                        6,
+                        4),
+
+                    new RecursoInicialDto(
+                        "Comida",
+                        5,
                         8),
 
                     new RecursoInicialDto(
                         "Comida",
-                        7,
-                        7)
+                        8,
+                        4)
                 }
             };
         }

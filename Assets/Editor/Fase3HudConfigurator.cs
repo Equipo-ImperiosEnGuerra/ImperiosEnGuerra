@@ -96,11 +96,11 @@ public static class Fase3HudConfigurator
         recursos.alignment = TextAnchor.MiddleCenter;
 
         RectTransform panel = Rect(raiz.transform, "PanelContextual", Vector2.zero,
-            Vector2.zero, Vector2.zero, new Vector2(16, 16), new Vector2(396, 226));
+            Vector2.zero, Vector2.zero, new Vector2(12, 12), new Vector2(324, 182));
         Fondo(panel);
         Text descripcion = Texto(panel, "Seleccion", "Sin selección",
-            new Vector2(16, -77), new Vector2(-16, -12));
-        Text mensaje = Texto(panel, "Mensaje", "", new Vector2(16, -125), new Vector2(-16, -85));
+            new Vector2(12, -64), new Vector2(-12, -8));
+        Text mensaje = Texto(panel, "Mensaje", "", new Vector2(12, -106), new Vector2(-12, -68));
         mensaje.fontSize = 17;
         mensaje.resizeTextMaxSize = 17;
 
@@ -112,10 +112,9 @@ public static class Fase3HudConfigurator
         for (int i = 0; i < acciones.Length; i++)
         {
             string accion = acciones[i];
-            // Cinco botones de 64x42: margen 16 y separación 7 dentro de los 380 px.
-            float x = 16 + i * 71;
+            float x = 12 + i * 58;
             RectTransform rect = Rect(panel, accion, Vector2.zero, Vector2.zero,
-                Vector2.zero, new Vector2(x, 16), new Vector2(x + 64, 58));
+                Vector2.zero, new Vector2(x, 12), new Vector2(x + 54, 48));
             Image imagen = Componente<Image>(rect.gameObject);
             imagen.enabled = true;
             imagen.color = new Color(0.18f, 0.28f, 0.38f, 1);
@@ -123,9 +122,9 @@ public static class Fase3HudConfigurator
             boton.enabled = true;
             boton.targetGraphic = imagen;
             Text etiqueta = Texto(rect, "Texto", accion, new Vector2(3, -38), new Vector2(-3, -4));
-            etiqueta.fontSize = 14;
-            etiqueta.resizeTextMinSize = 10;
-            etiqueta.resizeTextMaxSize = 14;
+            etiqueta.fontSize = 12;
+            etiqueta.resizeTextMinSize = 8;
+            etiqueta.resizeTextMaxSize = 12;
             etiqueta.alignment = TextAnchor.MiddleCenter;
             serializado.FindProperty(char.ToLowerInvariant(accion[0]) + accion.Substring(1))
                 .objectReferenceValue = boton;
@@ -138,8 +137,8 @@ public static class Fase3HudConfigurator
             Vector2.zero,
             Vector2.zero,
             Vector2.zero,
-            new Vector2(16, 64),
-            new Vector2(380, 110));
+            new Vector2(12, 52),
+            new Vector2(300, 98));
 
         string[] tiposUnidad =
         {
@@ -161,7 +160,7 @@ public static class Fase3HudConfigurator
 
         for (int i = 0; i < tiposUnidad.Length; i++)
         {
-            float x = i * 72;
+            float x = i * 56;
 
             RectTransform rectTipo = Rect(
                 selectorEntrenamiento,
@@ -170,7 +169,7 @@ public static class Fase3HudConfigurator
                 Vector2.zero,
                 Vector2.zero,
                 new Vector2(x, 2),
-                new Vector2(x + 68, 44));
+                new Vector2(x + 54, 42));
 
             Image imagenTipo =
                 Componente<Image>(rectTipo.gameObject);
@@ -192,9 +191,9 @@ public static class Fase3HudConfigurator
                 new Vector2(2, -38),
                 new Vector2(-2, -4));
 
-            etiquetaTipo.fontSize = 12;
+            etiquetaTipo.fontSize = 11;
             etiquetaTipo.resizeTextMinSize = 8;
-            etiquetaTipo.resizeTextMaxSize = 12;
+            etiquetaTipo.resizeTextMaxSize = 11;
             etiquetaTipo.alignment =
                 TextAnchor.MiddleCenter;
 

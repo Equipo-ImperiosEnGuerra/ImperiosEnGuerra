@@ -25,6 +25,187 @@ namespace ImperiosEnGuerra.Vistas
         public event Action<string> AccionSolicitada;
         public event Action<string> TipoUnidadSolicitado;
 
+        private void Awake()
+        {
+            AplicarLayoutCompacto();
+        }
+
+        private void AplicarLayoutCompacto()
+        {
+            RectTransform panel =
+                transform.Find("PanelContextual")
+                    as RectTransform;
+
+            if (panel == null)
+                return;
+
+            ConfigurarRect(
+                panel,
+                Vector2.zero,
+                Vector2.zero,
+                Vector2.zero,
+                new Vector2(12f, 12f),
+                new Vector2(324f, 182f));
+
+            ConfigurarRectHijo(
+                panel,
+                "Seleccion",
+                new Vector2(0f, 1f),
+                new Vector2(1f, 1f),
+                new Vector2(0.5f, 1f),
+                new Vector2(12f, -64f),
+                new Vector2(-12f, -8f));
+
+            ConfigurarRectHijo(
+                panel,
+                "Mensaje",
+                new Vector2(0f, 1f),
+                new Vector2(1f, 1f),
+                new Vector2(0.5f, 1f),
+                new Vector2(12f, -106f),
+                new Vector2(-12f, -68f));
+
+            string[] acciones =
+            {
+                "Mover",
+                "Recolectar",
+                "Construir",
+                "Entrenar",
+                "Atacar"
+            };
+
+            for (int i = 0; i < acciones.Length; i++)
+            {
+                float x =
+                    12f + i * 58f;
+
+                RectTransform boton =
+                    panel.Find(
+                        acciones[i])
+                    as RectTransform;
+
+                if (boton == null)
+                    continue;
+
+                ConfigurarRect(
+                    boton,
+                    Vector2.zero,
+                    Vector2.zero,
+                    Vector2.zero,
+                    new Vector2(x, 12f),
+                    new Vector2(x + 54f, 48f));
+
+                Text etiqueta =
+                    boton.GetComponentInChildren<Text>(
+                        true);
+
+                if (etiqueta != null)
+                {
+                    etiqueta.fontSize = 12;
+                    etiqueta.resizeTextMinSize = 8;
+                    etiqueta.resizeTextMaxSize = 12;
+                }
+            }
+
+            RectTransform selector =
+                panel.Find(
+                    "SelectorEntrenamiento")
+                as RectTransform;
+
+            if (selector != null)
+            {
+                ConfigurarRect(
+                    selector,
+                    Vector2.zero,
+                    Vector2.zero,
+                    Vector2.zero,
+                    new Vector2(12f, 52f),
+                    new Vector2(300f, 98f));
+
+                string[] tipos =
+                {
+                    "Aldeano",
+                    "Guerrero",
+                    "Lancero",
+                    "Arquero",
+                    "Monje"
+                };
+
+                for (int i = 0; i < tipos.Length; i++)
+                {
+                    RectTransform botonTipo =
+                        selector.Find(
+                            tipos[i])
+                        as RectTransform;
+
+                    if (botonTipo == null)
+                        continue;
+
+                    float x =
+                        i * 56f;
+
+                    ConfigurarRect(
+                        botonTipo,
+                        Vector2.zero,
+                        Vector2.zero,
+                        Vector2.zero,
+                        new Vector2(x, 2f),
+                        new Vector2(x + 54f, 42f));
+
+                    Text etiqueta =
+                        botonTipo.GetComponentInChildren<Text>(
+                            true);
+
+                    if (etiqueta != null)
+                    {
+                        etiqueta.fontSize = 11;
+                        etiqueta.resizeTextMinSize = 8;
+                        etiqueta.resizeTextMaxSize = 11;
+                    }
+                }
+            }
+        }
+
+        private static void ConfigurarRectHijo(
+            RectTransform padre,
+            string nombre,
+            Vector2 anchorMin,
+            Vector2 anchorMax,
+            Vector2 pivote,
+            Vector2 offsetMin,
+            Vector2 offsetMax)
+        {
+            RectTransform rect =
+                padre.Find(nombre)
+                    as RectTransform;
+
+            if (rect == null)
+                return;
+
+            ConfigurarRect(
+                rect,
+                anchorMin,
+                anchorMax,
+                pivote,
+                offsetMin,
+                offsetMax);
+        }
+
+        private static void ConfigurarRect(
+            RectTransform rect,
+            Vector2 anchorMin,
+            Vector2 anchorMax,
+            Vector2 pivote,
+            Vector2 offsetMin,
+            Vector2 offsetMax)
+        {
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.pivot = pivote;
+            rect.offsetMin = offsetMin;
+            rect.offsetMax = offsetMax;
+        }
+
         private void OnEnable()
         {
             if (mover != null) mover.onClick.AddListener(SolicitarMover);
