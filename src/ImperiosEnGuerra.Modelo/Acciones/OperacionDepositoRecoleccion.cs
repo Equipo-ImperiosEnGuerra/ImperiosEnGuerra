@@ -25,16 +25,21 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     "No hay una partida activa.");
             }
 
+            Jugador propietario =
+                partida.BuscarJugadorPorUnidad(
+                    aldeanoId);
+
             Aldeano aldeano =
-                partida.JugadorHumano.Unidades
+                propietario?.Unidades
                     .OfType<Aldeano>()
                     .FirstOrDefault(
                         u => u.Id == aldeanoId);
 
-            if (aldeano == null)
+            if (propietario == null ||
+                aldeano == null)
             {
                 return ResultadoDepositoRecoleccion.Fallido(
-                    "No existe un Aldeano humano con ese ID.");
+                    "No existe un Aldeano con ese ID.");
             }
 
             if (centroUrbano == null)
@@ -44,7 +49,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
             }
 
             CentroUrbano centro =
-                partida.JugadorHumano.Edificios
+                propietario.Edificios
                     .OfType<CentroUrbano>()
                     .FirstOrDefault(
                         e =>
@@ -54,7 +59,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
             if (centro == null)
             {
                 return ResultadoDepositoRecoleccion.Fallido(
-                    "No existe un Centro Urbano humano en la posición indicada.");
+                    "No existe un Centro Urbano propio en la posición indicada.");
             }
 
             int distancia =
@@ -90,7 +95,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     "No fue posible obtener una carga válida para depositar.");
             }
 
-            partida.JugadorHumano.Recursos.Agregar(
+            propietario.Recursos.Agregar(
                 tipo.Value,
                 cantidad);
 

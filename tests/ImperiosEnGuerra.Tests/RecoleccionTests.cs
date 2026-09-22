@@ -90,19 +90,49 @@ public class RecoleccionTests
     }
 
     [Test]
-    public void AldeanoMaquina_Falla()
+    public void AldeanoMaquinaYRecursoValido_PreparaRecoleccion()
     {
-        var enemigo = new Aldeano(new Coordenada(2, 2));
-        partida.JugadorMaquina.AgregarUnidad(enemigo);
+        var mapaMaquina = new Mapa(6, 6);
 
-        ResultadoAccion resultado = operacion.Ejecutar(
-            partida,
-            new SolicitudRecoleccion(
-                enemigo.Id,
+        var maquina =
+            new Jugador(
+                "Máquina",
+                TipoJugador.Maquina,
+                mapaMaquina,
+                new RecursosJugador());
+
+        var aldeanoMaquina =
+            new Aldeano(
+                new Coordenada(1, 1));
+
+        maquina.AgregarUnidad(
+            aldeanoMaquina);
+
+        mapaMaquina.ColocarRecurso(
+            new Recurso(
+                TipoRecurso.Oro,
                 new Coordenada(4, 5)));
 
-        Assert.That(resultado.Exito, Is.False);
-        Assert.That(resultado.Mensaje, Does.Contain("máquina"));
+        partida =
+            new Partida(
+                partida.JugadorHumano,
+                maquina);
+
+        ResultadoAccion resultado =
+            operacion.Ejecutar(
+                partida,
+                new SolicitudRecoleccion(
+                    aldeanoMaquina.Id,
+                    new Coordenada(4, 5)));
+
+        Assert.That(
+            resultado.Exito,
+            Is.True,
+            resultado.Mensaje);
+
+        Assert.That(
+            resultado.Mensaje,
+            Does.Contain("Oro"));
     }
 
     [Test]
