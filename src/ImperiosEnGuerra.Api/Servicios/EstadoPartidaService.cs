@@ -361,14 +361,16 @@ public sealed class EstadoPartidaService
     }
 
     public DecisionMaquina PrepararDecisionMaquina(
-        IReadOnlyCollection<Guid>? unidadesExcluidas = null)
+        IReadOnlyCollection<Guid>? unidadesExcluidas = null,
+        IReadOnlyCollection<Coordenada>? centrosExcluidos = null)
     {
         lock (sincronizacion)
         {
             return new PlanificadorDecisionMaquina()
                 .Preparar(
                     partidaActiva,
-                    unidadesExcluidas);
+                    unidadesExcluidas,
+                    centrosExcluidos);
         }
     }
 

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using ImperiosEnGuerra.Api.Contratos;
 using ImperiosEnGuerra.Modelo.IA;
+using ImperiosEnGuerra.Modelo.Map;
 using ImperiosEnGuerra.Servicios.Concurrencia;
 
 namespace ImperiosEnGuerra.Api.Servicios;
@@ -12,6 +13,8 @@ public sealed class ServicioJugadorMaquina : IDisposable
     private readonly TimeSpan intervaloDecision;
     private readonly object sincronizacion = new();
     private readonly HashSet<Guid> unidadesAsignadas = new();
+    private readonly HashSet<string> centrosAsignados =
+        new HashSet<string>();
 
     private CancellationTokenSource? cancelacion;
     private bool dispuesto;
@@ -85,7 +88,8 @@ public sealed class ServicioJugadorMaquina : IDisposable
                 nueva;
 
             _ = Task.Run(
-                () => EjecutarCicloAsync(nueva));
+                () => EjecutarCicloAsync(
+                    nueva));
 
             return true;
         }
@@ -97,7 +101,8 @@ public sealed class ServicioJugadorMaquina : IDisposable
 
         lock (sincronizacion)
         {
-            actual = cancelacion;
+            actual =
+                cancelacion;
         }
 
         if (actual == null)
@@ -111,20 +116,109 @@ public sealed class ServicioJugadorMaquina : IDisposable
     {
         ThrowSiDispuesto();
 
-        Guid[] excluidas;
+        Guid[] unidadesExcluidas;
+        Coordenada[] centrosExcluidos;
 
         lock (sincronizacion)
         {
-            excluidas =
+            unidadesExcluidas =
                 unidadesAsignadas.ToArray();
+
+            centrosExcluidos =
+                centrosAsignados
+                    .Select(
+                        ParsearCentro)
+                    .Where(
+                        c => c != null)
+                    .ToArray();
         }
 
         DecisionMaquina decision =
             estadoPartida.PrepararDecisionMaquina(
-                excluidas);
+                unidadesExcluidas,
+                centrosExcluidos);
 
-        if (decision.Tipo != TipoDecisionMaquina.Recolectar ||
-            decision.Objetivo == null)
+        switch (decision.Tipo)
+        {
+            case TipoDecisionMaquina.Recolectar:
+                return EjecutarConUnidadAsignada(
+                    decision.UnidadId,
+                    () =>
+                        acciones.IniciarRecoleccion(
+                            new RecolectarRequest
+                            {
+                                AldeanoId =
+                                    decision.UnidadId
+                                        .ToString("D"),
+
+                                Objetivo =
+                                    new CoordenadaRequest
+                                    {
+                                        X =
+                                            decision.Objetivo.X,
+
+                                        Y =
+                                            decision.Objetivo.Y
+                                    }
+                            }));
+
+            case TipoDecisionMaquina.Construir:
+                return EjecutarConUnidadAsignada(
+                    decision.UnidadId,
+                    () =>
+                        acciones.IniciarConstruccion(
+                            new ConstruirRequest
+                            {
+                                AldeanoId =
+                                    decision.UnidadId
+                                        .ToString("D"),
+
+                                TipoEdificio =
+                                    decision.TipoEdificio,
+
+                                Destino =
+                                    new CoordenadaRequest
+                                    {
+                                        X =
+                                            decision.Objetivo.X,
+
+                                        Y =
+                                            decision.Objetivo.Y
+                                    }
+                            }));
+
+            case TipoDecisionMaquina.Entrenar:
+                return EjecutarConCentroAsignado(
+                    decision.EdificioOrigen,
+                    () =>
+                        acciones.IniciarEntrenamiento(
+                            new EntrenarRequest
+                            {
+                                EdificioOrigen =
+                                    new CoordenadaRequest
+                                    {
+                                        X =
+                                            decision.EdificioOrigen.X,
+
+                                        Y =
+                                            decision.EdificioOrigen.Y
+                                    },
+
+                                TipoUnidad =
+                                    decision.TipoUnidad
+                            }));
+
+            default:
+                return null;
+        }
+    }
+
+    private ProcesoConcurrente? EjecutarConUnidadAsignada(
+        Guid unidadId,
+        Func<ProcesoConcurrente> iniciar)
+    {
+        if (unidadId == Guid.Empty ||
+            iniciar == null)
         {
             return null;
         }
@@ -132,7 +226,7 @@ public sealed class ServicioJugadorMaquina : IDisposable
         lock (sincronizacion)
         {
             if (!unidadesAsignadas.Add(
-                    decision.UnidadId))
+                    unidadId))
             {
                 return null;
             }
@@ -141,32 +235,21 @@ public sealed class ServicioJugadorMaquina : IDisposable
         try
         {
             ProcesoConcurrente proceso =
-                acciones.IniciarRecoleccion(
-                    new RecolectarRequest
-                    {
-                        AldeanoId =
-                            decision.UnidadId.ToString("D"),
+                iniciar();
 
-                        Objetivo =
-                            new CoordenadaRequest
-                            {
-                                X = decision.Objetivo.X,
-                                Y = decision.Objetivo.Y
-                            }
-                    });
-
-            _ = proceso.Finalizacion.ContinueWith(
-                _ =>
-                {
-                    lock (sincronizacion)
+            _ = proceso.Finalizacion
+                .ContinueWith(
+                    _ =>
                     {
-                        unidadesAsignadas.Remove(
-                            decision.UnidadId);
-                    }
-                },
-                CancellationToken.None,
-                TaskContinuationOptions.ExecuteSynchronously,
-                TaskScheduler.Default);
+                        lock (sincronizacion)
+                        {
+                            unidadesAsignadas.Remove(
+                                unidadId);
+                        }
+                    },
+                    CancellationToken.None,
+                    TaskContinuationOptions.ExecuteSynchronously,
+                    TaskScheduler.Default);
 
             return proceso;
         }
@@ -175,7 +258,63 @@ public sealed class ServicioJugadorMaquina : IDisposable
             lock (sincronizacion)
             {
                 unidadesAsignadas.Remove(
-                    decision.UnidadId);
+                    unidadId);
+            }
+
+            throw;
+        }
+    }
+
+    private ProcesoConcurrente? EjecutarConCentroAsignado(
+        Coordenada centro,
+        Func<ProcesoConcurrente> iniciar)
+    {
+        if (centro == null ||
+            iniciar == null)
+        {
+            return null;
+        }
+
+        string clave =
+            ClaveCentro(
+                centro);
+
+        lock (sincronizacion)
+        {
+            if (!centrosAsignados.Add(
+                    clave))
+            {
+                return null;
+            }
+        }
+
+        try
+        {
+            ProcesoConcurrente proceso =
+                iniciar();
+
+            _ = proceso.Finalizacion
+                .ContinueWith(
+                    _ =>
+                    {
+                        lock (sincronizacion)
+                        {
+                            centrosAsignados.Remove(
+                                clave);
+                        }
+                    },
+                    CancellationToken.None,
+                    TaskContinuationOptions.ExecuteSynchronously,
+                    TaskScheduler.Default);
+
+            return proceso;
+        }
+        catch
+        {
+            lock (sincronizacion)
+            {
+                centrosAsignados.Remove(
+                    clave);
             }
 
             throw;
@@ -215,11 +354,41 @@ public sealed class ServicioJugadorMaquina : IDisposable
         }
     }
 
+    private static string ClaveCentro(
+        Coordenada centro)
+    {
+        return $"{centro.X}:{centro.Y}";
+    }
+
+    private static Coordenada? ParsearCentro(
+        string clave)
+    {
+        string[] partes =
+            clave.Split(':');
+
+        if (partes.Length != 2 ||
+            !int.TryParse(
+                partes[0],
+                out int x) ||
+            !int.TryParse(
+                partes[1],
+                out int y))
+        {
+            return null;
+        }
+
+        return new Coordenada(
+            x,
+            y);
+    }
+
     private void ThrowSiDispuesto()
     {
         if (dispuesto)
+        {
             throw new ObjectDisposedException(
                 nameof(ServicioJugadorMaquina));
+        }
     }
 
     public void Dispose()
@@ -232,7 +401,8 @@ public sealed class ServicioJugadorMaquina : IDisposable
                 return;
 
             dispuesto = true;
-            actual = cancelacion;
+            actual =
+                cancelacion;
         }
 
         actual?.Cancel();
