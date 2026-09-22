@@ -28,6 +28,8 @@ namespace ImperiosEnGuerra.Vistas
 
         public event Action<string> AccionSolicitada;
         public event Action<string> TipoUnidadSolicitado;
+        public event Action VolverMenuSolicitado;
+        public event Action SalirSolicitado;
 
         private void Awake()
         {
@@ -541,13 +543,27 @@ namespace ImperiosEnGuerra.Vistas
             detalleResultadoFinal.alignment =
                 TextAnchor.MiddleCenter;
 
+            Button volverMenu =
+                CrearBotonResultado(
+                    pantallaResultadoFinal.transform,
+                    "VolverMenu",
+                    "VOLVER AL MENÚ",
+                    new Vector2(-115f, -125f));
+
             Button salir =
-                CrearBotonSalir(
-                    pantallaResultadoFinal.transform);
+                CrearBotonResultado(
+                    pantallaResultadoFinal.transform,
+                    "Salir",
+                    "SALIR",
+                    new Vector2(115f, -125f));
+
+            volverMenu.onClick.RemoveAllListeners();
+            volverMenu.onClick.AddListener(
+                () => VolverMenuSolicitado?.Invoke());
 
             salir.onClick.RemoveAllListeners();
             salir.onClick.AddListener(
-                SalirDelJuego);
+                () => SalirSolicitado?.Invoke());
 
             pantallaResultadoFinal.SetActive(false);
         }
@@ -618,16 +634,19 @@ namespace ImperiosEnGuerra.Vistas
             return texto;
         }
 
-        private static Button CrearBotonSalir(
-            Transform padre)
+        private static Button CrearBotonResultado(
+            Transform padre,
+            string nombre,
+            string textoBoton,
+            Vector2 posicion)
         {
             Transform existente =
-                padre.Find("Salir");
+                padre.Find(nombre);
 
             GameObject objeto =
                 existente == null
                     ? new GameObject(
-                        "Salir",
+                        nombre,
                         typeof(RectTransform),
                         typeof(Image),
                         typeof(Button))
@@ -657,13 +676,11 @@ namespace ImperiosEnGuerra.Vistas
                     0.5f);
 
             rect.anchoredPosition =
-                new Vector2(
-                    0f,
-                    -125f);
+                posicion;
 
             rect.sizeDelta =
                 new Vector2(
-                    190f,
+                    210f,
                     54f);
 
             Image imagen =
@@ -685,27 +702,17 @@ namespace ImperiosEnGuerra.Vistas
                 CrearTextoResultado(
                     objeto.transform,
                     "Texto",
-                    "SALIR",
-                    22,
+                    textoBoton,
+                    19,
                     Vector2.zero,
                     new Vector2(
-                        180f,
+                        200f,
                         48f));
 
             etiqueta.alignment =
                 TextAnchor.MiddleCenter;
 
             return boton;
-        }
-
-        private void SalirDelJuego()
-        {
-#if UNITY_EDITOR
-            UnityEditor.EditorApplication.isPlaying =
-                false;
-#else
-            Application.Quit();
-#endif
         }
 
         public void MostrarMensaje(string texto, bool error = false)
