@@ -286,7 +286,9 @@ namespace ImperiosEnGuerra.Controladores
                 if (vistaHud != null)
                 {
                     vistaHud.MostrarMensaje(
-                        "La conexión con la API no está disponible.",
+                        conexionApi == null
+                            ? "La conexión con la API no está disponible."
+                            : conexionApi.MensajeAccionNoDisponible,
                         true);
                 }
 
@@ -370,7 +372,9 @@ namespace ImperiosEnGuerra.Controladores
                 if (vistaHud != null)
                 {
                     vistaHud.MostrarMensaje(
-                        "La conexión con la API no está disponible.",
+                        conexionApi == null
+                            ? "La conexión con la API no está disponible."
+                            : conexionApi.MensajeAccionNoDisponible,
                         true);
                 }
 
@@ -490,7 +494,9 @@ namespace ImperiosEnGuerra.Controladores
                 if (!PuedeIniciarAccion(accion))
                 {
                     vistaHud.MostrarMensaje(
-                        "La conexión con la API no está disponible.",
+                        conexionApi == null
+                            ? "La conexión con la API no está disponible."
+                            : conexionApi.MensajeAccionNoDisponible,
                         true);
 
                     return;
@@ -521,7 +527,9 @@ namespace ImperiosEnGuerra.Controladores
                 if (!PuedeIniciarAccion(accion))
                 {
                     vistaHud.MostrarMensaje(
-                        "La conexión con la API no está disponible.",
+                        conexionApi == null
+                            ? "La conexión con la API no está disponible."
+                            : conexionApi.MensajeAccionNoDisponible,
                         true);
 
                     return;
@@ -555,7 +563,9 @@ namespace ImperiosEnGuerra.Controladores
                 if (!PuedeIniciarAccion(accion))
                 {
                     vistaHud.MostrarMensaje(
-                        "La conexión con la API no está disponible.",
+                        conexionApi == null
+                            ? "La conexión con la API no está disponible."
+                            : conexionApi.MensajeAccionNoDisponible,
                         true);
 
                     return;

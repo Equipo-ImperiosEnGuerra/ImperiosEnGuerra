@@ -26,6 +26,25 @@ namespace ImperiosEnGuerra.Controladores.Red
     public bool EntrenamientoEnCurso { get; private set; }
     public bool AtaqueEnCurso { get; private set; }
     public bool PartidaFinalizada { get; private set; }
+    public bool ApiDisponible { get; private set; }
+
+    public string MensajeAccionNoDisponible
+    {
+        get
+        {
+            if (PartidaFinalizada)
+            {
+                return "La partida ya finalizó. Sal de Play y vuelve a entrar para iniciar una partida nueva.";
+            }
+
+            if (!ApiDisponible)
+            {
+                return "La conexión con la API no está disponible.";
+            }
+
+            return "La acción no está disponible en este momento.";
+        }
+    }
 
     private int movimientosActivos;
     private int recoleccionesActivas;
@@ -42,29 +61,34 @@ public bool AccionEnCurso =>
 
 public bool PuedeIniciarMovimiento =>
     isActiveAndEnabled &&
+    ApiDisponible &&
     !PartidaFinalizada;
 
 public bool PuedeIniciarRecoleccion =>
     isActiveAndEnabled &&
+    ApiDisponible &&
     !PartidaFinalizada;
 
 public bool PuedeIniciarConstruccion =>
     isActiveAndEnabled &&
+    ApiDisponible &&
     !PartidaFinalizada;
 
 public bool PuedeIniciarEntrenamiento =>
     isActiveAndEnabled &&
+    ApiDisponible &&
     !PartidaFinalizada;
 
 public bool PuedeIniciarAtaque =>
     isActiveAndEnabled &&
+    ApiDisponible &&
     !PartidaFinalizada;
 
         public void MoverUnidad(string unidadId, int x, int y)
         {
             if (!PuedeIniciarMovimiento)
             {
-                MostrarError("La conexión con la API no está disponible.");
+                MostrarError(MensajeAccionNoDisponible);
                 return;
             }
 
@@ -79,7 +103,7 @@ public bool PuedeIniciarAtaque =>
         {
             if (!PuedeIniciarRecoleccion)
             {
-                MostrarError("La conexión con la API no está disponible.");
+                MostrarError(MensajeAccionNoDisponible);
                 return;
             }
 
@@ -123,7 +147,7 @@ public bool PuedeIniciarAtaque =>
             if (!PuedeIniciarEntrenamiento)
             {
                 MostrarError(
-                    "La conexión con la API no está disponible.");
+                    MensajeAccionNoDisponible);
                 return;
             }
 
@@ -152,7 +176,7 @@ public bool PuedeIniciarAtaque =>
             if (!PuedeIniciarAtaque)
             {
                 MostrarError(
-                    "La conexión con la API no está disponible.");
+                    MensajeAccionNoDisponible);
                 return;
             }
 
@@ -180,6 +204,7 @@ public bool PuedeIniciarAtaque =>
             ConstruccionEnCurso = false;
             EntrenamientoEnCurso = false;
             AtaqueEnCurso = false;
+            ApiDisponible = false;
         }
 
         private IEnumerator EnviarMovimiento(MoverUnidadDto movimiento)
@@ -1475,6 +1500,8 @@ public bool PuedeIniciarAtaque =>
 
         private IEnumerator ComprobarConexion()
         {
+            ApiDisponible = false;
+
             string url =
                 $"{urlBaseApi}/api/estado";
 
@@ -1490,6 +1517,8 @@ public bool PuedeIniciarAtaque =>
 
                 yield break;
             }
+
+            ApiDisponible = true;
 
             Debug.Log(
                 $"API conectada correctamente: " +
@@ -1540,6 +1569,9 @@ public bool PuedeIniciarAtaque =>
 
                 yield break;
             }
+
+            PartidaFinalizada = false;
+            ApiDisponible = true;
 
             Debug.Log(
                 $"Partida iniciada correctamente: " +
