@@ -46,7 +46,8 @@ namespace ImperiosEnGuerra.Controladores
 
             GameObject objetoVista =
                 new GameObject(
-                    "MenuInicial");
+                    "MenuInicial",
+                    typeof(RectTransform));
 
             vistaMenu =
                 objetoVista.AddComponent<VistaMenuInicial>();
