@@ -370,6 +370,7 @@ public sealed class EstadoPartidaService
     }
 
     public ResultadoAccion ReservarCostoConstruccion(
+        Guid aldeanoId,
         string tipoEdificio,
         out CostoRecursos costo)
     {
@@ -392,7 +393,17 @@ public sealed class EstadoPartidaService
                     "El tipo de edificio no tiene un costo configurado.");
             }
 
-            if (!partidaActiva.JugadorHumano.Recursos
+            Jugador? propietario =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    aldeanoId);
+
+            if (propietario == null)
+            {
+                return ResultadoAccion.Fallido(
+                    "No existe una unidad propietaria para reservar el costo.");
+            }
+
+            if (!propietario.Recursos
                 .IntentarGastar(costo))
             {
                 return ResultadoAccion.Fallido(
@@ -427,7 +438,7 @@ public sealed class EstadoPartidaService
                     "El tipo de unidad no tiene un costo configurado.");
             }
 
-            if (!partidaActiva.JugadorHumano.Recursos
+            if (!propietario.Recursos
                 .IntentarGastar(costo))
             {
                 return ResultadoAccion.Fallido(
@@ -449,6 +460,24 @@ public sealed class EstadoPartidaService
         {
             partidaActiva?.JugadorHumano
                 .Recursos.Reintegrar(costo);
+        }
+    }
+
+    public void ReembolsarCosto(
+        Guid unidadId,
+        CostoRecursos costo)
+    {
+        if (costo == null)
+            return;
+
+        lock (sincronizacion)
+        {
+            Jugador? propietario =
+                partidaActiva?.BuscarJugadorPorUnidad(
+                    unidadId);
+
+            propietario?.Recursos
+                .Reintegrar(costo);
         }
     }
 
@@ -480,16 +509,21 @@ public sealed class EstadoPartidaService
                     "El ID del Aldeano debe tener formato Guid válido.");
             }
 
+            Jugador? propietario =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    aldeanoId);
+
             Aldeano? aldeano =
-                partidaActiva.JugadorHumano.Unidades
+                propietario?.Unidades
                     .OfType<Aldeano>()
                     .FirstOrDefault(
                         u => u.Id == aldeanoId);
 
-            if (aldeano == null)
+            if (propietario == null ||
+                aldeano == null)
             {
                 return ResultadoAccion.Fallido(
-                    "No existe un Aldeano humano con ese ID.");
+                    "No existe un Aldeano con ese ID.");
             }
 
             if (!aldeano.Disponible)
@@ -518,7 +552,7 @@ public sealed class EstadoPartidaService
                     request.Destino);
 
             Mapa mapa =
-                partidaActiva.JugadorHumano.Mapa;
+                propietario.Mapa;
 
             if (!mapa.EstaDentroDeLimites(destino))
             {
@@ -550,7 +584,7 @@ public sealed class EstadoPartidaService
                     nameof(CentroUrbano),
                     destino);
 
-            partidaActiva.JugadorHumano
+            propietario
                 .AgregarObraConstruccion(
                     obra);
 
@@ -575,12 +609,17 @@ public sealed class EstadoPartidaService
                     "No hay una partida activa.");
             }
 
+            Jugador? propietario =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    aldeanoId);
+
             ObraConstruccion? obra =
-                partidaActiva.JugadorHumano.ObrasConstruccion
+                propietario?.ObrasConstruccion
                     .FirstOrDefault(
                         o => o.Id == obraId);
 
-            if (obra == null)
+            if (propietario == null ||
+                obra == null)
             {
                 return ResultadoAproximacionConstruccion.Fallido(
                     "No existe la obra indicada.");
@@ -607,12 +646,13 @@ public sealed class EstadoPartidaService
                     "No hay una partida activa.");
             }
 
-            ObraConstruccion? obra =
-                partidaActiva.JugadorHumano.ObrasConstruccion
-                    .FirstOrDefault(
-                        o => o.Id == obraId);
+            Jugador? propietario =
+                BuscarJugadorPorObra(
+                    obraId,
+                    out ObraConstruccion? obra);
 
-            if (obra == null)
+            if (propietario == null ||
+                obra == null)
             {
                 return ResultadoProgresoConstruccion.Fallido(
                     "No existe la obra indicada.");
@@ -627,11 +667,11 @@ public sealed class EstadoPartidaService
 
             if (terminada)
             {
-                partidaActiva.JugadorHumano
+                propietario
                     .EliminarObraConstruccion(
                         obra);
 
-                partidaActiva.JugadorHumano
+                propietario
                     .AgregarEdificio(
                         new CentroUrbano(
                             obra.Coordenada));
@@ -651,19 +691,20 @@ public sealed class EstadoPartidaService
             if (partidaActiva == null)
                 return false;
 
-            ObraConstruccion? obra =
-                partidaActiva.JugadorHumano.ObrasConstruccion
-                    .FirstOrDefault(
-                        o => o.Id == obraId);
+            Jugador? propietario =
+                BuscarJugadorPorObra(
+                    obraId,
+                    out ObraConstruccion? obra);
 
-            if (obra == null)
+            if (propietario == null ||
+                obra == null)
                 return false;
 
-            partidaActiva.JugadorHumano
+            propietario
                 .EliminarObraConstruccion(
                     obra);
 
-            partidaActiva.JugadorHumano.Mapa
+            propietario.Mapa
                 .ObtenerCasilla(
                     obra.Coordenada.X,
                     obra.Coordenada.Y)
@@ -697,6 +738,18 @@ public sealed class EstadoPartidaService
                     "CONSTRUIR",
                     ResultadoAccion.Fallido("La posición de construcción es obligatoria."));
 
+            Jugador? propietario =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    aldeanoId);
+
+            if (propietario == null)
+            {
+                return RegistrarResultado(
+                    "CONSTRUIR",
+                    ResultadoAccion.Fallido(
+                        "No existe una unidad con ese ID."));
+            }
+
             var solicitud = new SolicitudConstruccion(
                 aldeanoId,
                 request.TipoEdificio ?? string.Empty,
@@ -729,7 +782,7 @@ public sealed class EstadoPartidaService
 
             if (!resultado.Exito)
             {
-                partidaActiva.JugadorHumano.Recursos
+                propietario.Recursos
                     .Reintegrar(costo);
             }
 
@@ -737,6 +790,28 @@ public sealed class EstadoPartidaService
                 "CONSTRUIR",
                 resultado);
         }
+    }
+
+    private Jugador? BuscarJugadorPorObra(
+        Guid obraId,
+        out ObraConstruccion? obra)
+    {
+        obra =
+            partidaActiva?.JugadorHumano.ObrasConstruccion
+                .FirstOrDefault(
+                    o => o.Id == obraId);
+
+        if (obra != null)
+            return partidaActiva!.JugadorHumano;
+
+        obra =
+            partidaActiva?.JugadorMaquina.ObrasConstruccion
+                .FirstOrDefault(
+                    o => o.Id == obraId);
+
+        return obra != null
+            ? partidaActiva!.JugadorMaquina
+            : null;
     }
 
     public ResultadoAccion EncolarEntrenamiento(

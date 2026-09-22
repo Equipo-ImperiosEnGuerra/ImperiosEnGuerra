@@ -52,16 +52,21 @@ namespace ImperiosEnGuerra.Modelo.Edificios
                     "No hay una partida activa.");
             }
 
+            Jugador propietario =
+                partida.BuscarJugadorPorUnidad(
+                    aldeanoId);
+
             Aldeano aldeano =
-                partida.JugadorHumano.Unidades
+                propietario?.Unidades
                     .OfType<Aldeano>()
                     .FirstOrDefault(
                         u => u.Id == aldeanoId);
 
-            if (aldeano == null)
+            if (propietario == null ||
+                aldeano == null)
             {
                 return ResultadoAproximacionConstruccion.Fallido(
-                    "No existe un Aldeano humano con ese ID.");
+                    "No existe un Aldeano con ese ID.");
             }
 
             if (!aldeano.Disponible &&
@@ -88,7 +93,7 @@ namespace ImperiosEnGuerra.Modelo.Edificios
             }
 
             Mapa mapa =
-                partida.JugadorHumano.Mapa;
+                propietario.Mapa;
 
             var candidatos =
                 new List<(int Indice, Coordenada Punto, ResultadoPlanMovimiento Plan)>();

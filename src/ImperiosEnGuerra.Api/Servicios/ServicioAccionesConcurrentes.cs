@@ -689,8 +689,17 @@ public sealed class ServicioAccionesConcurrentes
 
                 try
                 {
+                    if (!Guid.TryParse(
+                            copia?.AldeanoId,
+                            out unidadId))
+                    {
+                        return ResultadoAccion.Fallido(
+                            "El ID del Aldeano debe tener formato Guid válido.");
+                    }
+
                     ResultadoAccion reserva =
                         estadoPartida.ReservarCostoConstruccion(
+                            unidadId,
                             copia?.TipoEdificio,
                             out costo);
 
@@ -706,14 +715,6 @@ public sealed class ServicioAccionesConcurrentes
 
                     if (!inicioObra.Exito)
                         return inicioObra;
-
-                    if (!Guid.TryParse(
-                            copia?.AldeanoId,
-                            out unidadId))
-                    {
-                        return ResultadoAccion.Fallido(
-                            "El ID del Aldeano debe tener formato Guid válido.");
-                    }
 
                     unidad =
                         estadoPartida.ObtenerUnidad(
@@ -827,6 +828,7 @@ public sealed class ServicioAccionesConcurrentes
                         costoReservado)
                     {
                         estadoPartida.ReembolsarCosto(
+                            unidadId,
                             costo);
                     }
 
