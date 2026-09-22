@@ -257,7 +257,17 @@ namespace ImperiosEnGuerra.Vistas
                         edificio.coordenada.y);
 
                 if (existente != null)
+                {
+                    existente.ActualizarDatosLogicos(
+                        existente.X,
+                        existente.Y,
+                        existente.EstadoLogico,
+                        existente.OrdenActiva,
+                        edificio.vidaActual,
+                        edificio.vidaMaxima);
+
                     continue;
+                }
 
                 GameObject objeto =
                     CrearSprite(

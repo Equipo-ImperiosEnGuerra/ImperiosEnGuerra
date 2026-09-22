@@ -95,10 +95,16 @@ namespace ImperiosEnGuerra.Vistas
             Y = y;
             EstadoLogico = estadoLogico ?? string.Empty;
             OrdenActiva = ordenActiva ?? string.Empty;
-            VidaActual = vidaActual;
-            VidaMaxima = vidaMaxima;
-            Danio = danio;
-            Alcance = alcance;
+
+            // Las actualizaciones incrementales históricas de movimiento no
+            // incluyen stats de combate. En ese caso se conserva la vida.
+            if (vidaMaxima > 0)
+            {
+                VidaActual = vidaActual;
+                VidaMaxima = vidaMaxima;
+                Danio = danio;
+                Alcance = alcance;
+            }
         }
 
         public void MostrarSeleccion()
