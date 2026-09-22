@@ -58,23 +58,21 @@ namespace ImperiosEnGuerra.Modelo.Recoleccion
                     "La solicitud de recolección es obligatoria.");
             }
 
-            if (partida.JugadorMaquina.Unidades.Any(
-                    u => u.Id == solicitud.AldeanoId))
-            {
-                return ResultadoAproximacionRecurso.Fallido(
-                    "No se puede recolectar con una unidad de la máquina.");
-            }
+            Jugador propietario =
+                partida.BuscarJugadorPorUnidad(
+                    solicitud.AldeanoId);
 
             Aldeano aldeano =
-                partida.JugadorHumano.Unidades
+                propietario?.Unidades
                     .OfType<Aldeano>()
                     .FirstOrDefault(
                         u => u.Id == solicitud.AldeanoId);
 
-            if (aldeano == null)
+            if (propietario == null ||
+                aldeano == null)
             {
                 return ResultadoAproximacionRecurso.Fallido(
-                    "No existe un Aldeano humano con ese ID.");
+                    "No existe un Aldeano con ese ID.");
             }
 
             if (!aldeano.Disponible &&
@@ -92,7 +90,7 @@ namespace ImperiosEnGuerra.Modelo.Recoleccion
             }
 
             Mapa mapa =
-                partida.JugadorHumano.Mapa;
+                propietario.Mapa;
 
             if (!mapa.EstaDentroDeLimites(
                     solicitud.Objetivo))

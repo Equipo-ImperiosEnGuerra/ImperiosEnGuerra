@@ -52,16 +52,21 @@ namespace ImperiosEnGuerra.Modelo.Recoleccion
                     "No hay una partida activa.");
             }
 
+            Jugador propietario =
+                partida.BuscarJugadorPorUnidad(
+                    aldeanoId);
+
             Aldeano aldeano =
-                partida.JugadorHumano.Unidades
+                propietario?.Unidades
                     .OfType<Aldeano>()
                     .FirstOrDefault(
                         u => u.Id == aldeanoId);
 
-            if (aldeano == null)
+            if (propietario == null ||
+                aldeano == null)
             {
                 return ResultadoAproximacionDeposito.Fallido(
-                    "No existe un Aldeano humano con ese ID.");
+                    "No existe un Aldeano con ese ID.");
             }
 
             if (!aldeano.Disponible &&
@@ -73,14 +78,14 @@ namespace ImperiosEnGuerra.Modelo.Recoleccion
             }
 
             CentroUrbano[] centros =
-                partida.JugadorHumano.Edificios
+                propietario.Edificios
                     .OfType<CentroUrbano>()
                     .ToArray();
 
             if (centros.Length == 0)
             {
                 return ResultadoAproximacionDeposito.Fallido(
-                    "No existe un Centro Urbano humano para depositar.");
+                    "No existe un Centro Urbano propio para depositar.");
             }
 
             foreach (CentroUrbano centro in centros)
@@ -97,7 +102,7 @@ namespace ImperiosEnGuerra.Modelo.Recoleccion
             }
 
             Mapa mapa =
-                partida.JugadorHumano.Mapa;
+                propietario.Mapa;
 
             var candidatos =
                 new List<(int Indice, Coordenada Centro, Coordenada Punto, ResultadoPlanMovimiento Plan)>();

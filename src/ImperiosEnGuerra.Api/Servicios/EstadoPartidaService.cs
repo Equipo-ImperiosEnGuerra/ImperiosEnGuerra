@@ -10,6 +10,7 @@ using ImperiosEnGuerra.Modelo.Map;
 using ImperiosEnGuerra.Modelo.Movimiento;
 using ImperiosEnGuerra.Modelo.Recoleccion;
 using ImperiosEnGuerra.Modelo.Recursos;
+using ImperiosEnGuerra.Modelo.IA;
 using System.Linq; // para usar FirstOrDefault()
 
 namespace ImperiosEnGuerra.Api.Servicios;
@@ -115,8 +116,12 @@ public sealed class EstadoPartidaService
             if (partidaActiva == null)
                 return false;
 
+            Jugador? propietario =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    unidadId);
+
             Unidad? unidad =
-                partidaActiva.JugadorHumano.Unidades
+                propietario?.Unidades
                     .FirstOrDefault(
                         u => u.Id == unidadId);
 
@@ -134,8 +139,12 @@ public sealed class EstadoPartidaService
             if (partidaActiva == null)
                 return false;
 
+            Jugador? propietario =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    unidadId);
+
             Unidad? unidad =
-                partidaActiva.JugadorHumano.Unidades
+                propietario?.Unidades
                     .FirstOrDefault(
                         u => u.Id == unidadId);
 
@@ -152,8 +161,12 @@ public sealed class EstadoPartidaService
             if (partidaActiva == null)
                 return;
 
+            Jugador? propietario =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    unidadId);
+
             Unidad? unidad =
-                partidaActiva.JugadorHumano.Unidades
+                propietario?.Unidades
                     .FirstOrDefault(
                         u => u.Id == unidadId);
 
@@ -281,6 +294,27 @@ public sealed class EstadoPartidaService
         }
     }
 
+    public bool RecursoExiste(
+        Guid unidadId,
+        Coordenada objetivo)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null ||
+                objetivo == null)
+            {
+                return false;
+            }
+
+            Jugador? propietario =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    unidadId);
+
+            return propietario?.Mapa
+                .ObtenerRecursoEn(objetivo) != null;
+        }
+    }
+
     public bool RecursoDisponible(
         Coordenada objetivo)
     {
@@ -292,12 +326,51 @@ public sealed class EstadoPartidaService
                 return false;
             }
 
-            var recurso =
+            Recurso? recurso =
                 partidaActiva.JugadorHumano.Mapa
                     .ObtenerRecursoEn(objetivo);
 
             return recurso != null &&
                    !recurso.Agotado;
+        }
+    }
+
+    public bool RecursoDisponible(
+        Guid unidadId,
+        Coordenada objetivo)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null ||
+                objetivo == null)
+            {
+                return false;
+            }
+
+            Jugador? propietario =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    unidadId);
+
+            Recurso? recurso =
+                propietario?.Mapa
+                    .ObtenerRecursoEn(objetivo);
+
+            return recurso != null &&
+                   !recurso.Agotado;
+        }
+    }
+
+    public DecisionMaquina PrepararDecisionMaquina(
+        IReadOnlyCollection<Guid>? unidadesExcluidas = null,
+        IReadOnlyCollection<Coordenada>? centrosExcluidos = null)
+    {
+        lock (sincronizacion)
+        {
+            return new PlanificadorDecisionMaquina()
+                .Preparar(
+                    partidaActiva,
+                    unidadesExcluidas,
+                    centrosExcluidos);
         }
     }
 
@@ -358,6 +431,7 @@ public sealed class EstadoPartidaService
     }
 
     public ResultadoAccion ReservarCostoConstruccion(
+        Guid aldeanoId,
         string tipoEdificio,
         out CostoRecursos costo)
     {
@@ -380,7 +454,17 @@ public sealed class EstadoPartidaService
                     "El tipo de edificio no tiene un costo configurado.");
             }
 
-            if (!partidaActiva.JugadorHumano.Recursos
+            Jugador? propietario =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    aldeanoId);
+
+            if (propietario == null)
+            {
+                return ResultadoAccion.Fallido(
+                    "No existe una unidad propietaria para reservar el costo.");
+            }
+
+            if (!propietario.Recursos
                 .IntentarGastar(costo))
             {
                 return ResultadoAccion.Fallido(
@@ -427,6 +511,92 @@ public sealed class EstadoPartidaService
         }
     }
 
+    public ResultadoAccion ReservarCostoEntrenamiento(
+        EntrenarRequest? request,
+        out CostoRecursos costo,
+        out TipoJugador propietarioTipo)
+    {
+        lock (sincronizacion)
+        {
+            costo = null;
+            propietarioTipo = TipoJugador.Humano;
+
+            if (partidaActiva == null)
+            {
+                return ResultadoAccion.Fallido(
+                    "No hay una partida activa.");
+            }
+
+            if (request == null)
+            {
+                return ResultadoAccion.Fallido(
+                    "La solicitud de entrenamiento es obligatoria.");
+            }
+
+            if (request.EdificioOrigen == null)
+            {
+                return ResultadoAccion.Fallido(
+                    "El edificio de origen es obligatorio.");
+            }
+
+            if (!configuracionEconomia
+                .IntentarObtenerCostoUnidad(
+                    request.TipoUnidad,
+                    out costo))
+            {
+                return ResultadoAccion.Fallido(
+                    "El tipo de unidad no tiene un costo configurado.");
+            }
+
+            Coordenada origen =
+                PartidaRequestMapper.ConvertirCoordenada(
+                    request.EdificioOrigen);
+
+            Jugador? propietario =
+                BuscarPropietarioCentro(
+                    origen,
+                    null,
+                    out _);
+
+            if (propietario == null)
+            {
+                return ResultadoAccion.Fallido(
+                    "No existe un Centro Urbano propietario único en la posición indicada.");
+            }
+
+            if (!propietario.Recursos
+                .IntentarGastar(costo))
+            {
+                return ResultadoAccion.Fallido(
+                    $"Recursos insuficientes. Costo: {costo}.");
+            }
+
+            propietarioTipo =
+                propietario.Tipo;
+
+            return ResultadoAccion.Exitoso(
+                $"Costo reservado: {costo}.");
+        }
+    }
+
+    public void ReembolsarCosto(
+        TipoJugador propietarioTipo,
+        CostoRecursos costo)
+    {
+        if (costo == null)
+            return;
+
+        lock (sincronizacion)
+        {
+            partidaActiva?
+                .ObtenerJugador(
+                    propietarioTipo)?
+                .Recursos
+                .Reintegrar(
+                    costo);
+        }
+    }
+
     public void ReembolsarCosto(
         CostoRecursos costo)
     {
@@ -437,6 +607,24 @@ public sealed class EstadoPartidaService
         {
             partidaActiva?.JugadorHumano
                 .Recursos.Reintegrar(costo);
+        }
+    }
+
+    public void ReembolsarCosto(
+        Guid unidadId,
+        CostoRecursos costo)
+    {
+        if (costo == null)
+            return;
+
+        lock (sincronizacion)
+        {
+            Jugador? propietario =
+                partidaActiva?.BuscarJugadorPorUnidad(
+                    unidadId);
+
+            propietario?.Recursos
+                .Reintegrar(costo);
         }
     }
 
@@ -468,16 +656,21 @@ public sealed class EstadoPartidaService
                     "El ID del Aldeano debe tener formato Guid válido.");
             }
 
+            Jugador? propietario =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    aldeanoId);
+
             Aldeano? aldeano =
-                partidaActiva.JugadorHumano.Unidades
+                propietario?.Unidades
                     .OfType<Aldeano>()
                     .FirstOrDefault(
                         u => u.Id == aldeanoId);
 
-            if (aldeano == null)
+            if (propietario == null ||
+                aldeano == null)
             {
                 return ResultadoAccion.Fallido(
-                    "No existe un Aldeano humano con ese ID.");
+                    "No existe un Aldeano con ese ID.");
             }
 
             if (!aldeano.Disponible)
@@ -506,7 +699,7 @@ public sealed class EstadoPartidaService
                     request.Destino);
 
             Mapa mapa =
-                partidaActiva.JugadorHumano.Mapa;
+                propietario.Mapa;
 
             if (!mapa.EstaDentroDeLimites(destino))
             {
@@ -538,7 +731,7 @@ public sealed class EstadoPartidaService
                     nameof(CentroUrbano),
                     destino);
 
-            partidaActiva.JugadorHumano
+            propietario
                 .AgregarObraConstruccion(
                     obra);
 
@@ -563,12 +756,17 @@ public sealed class EstadoPartidaService
                     "No hay una partida activa.");
             }
 
+            Jugador? propietario =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    aldeanoId);
+
             ObraConstruccion? obra =
-                partidaActiva.JugadorHumano.ObrasConstruccion
+                propietario?.ObrasConstruccion
                     .FirstOrDefault(
                         o => o.Id == obraId);
 
-            if (obra == null)
+            if (propietario == null ||
+                obra == null)
             {
                 return ResultadoAproximacionConstruccion.Fallido(
                     "No existe la obra indicada.");
@@ -595,12 +793,13 @@ public sealed class EstadoPartidaService
                     "No hay una partida activa.");
             }
 
-            ObraConstruccion? obra =
-                partidaActiva.JugadorHumano.ObrasConstruccion
-                    .FirstOrDefault(
-                        o => o.Id == obraId);
+            Jugador? propietario =
+                BuscarJugadorPorObra(
+                    obraId,
+                    out ObraConstruccion? obra);
 
-            if (obra == null)
+            if (propietario == null ||
+                obra == null)
             {
                 return ResultadoProgresoConstruccion.Fallido(
                     "No existe la obra indicada.");
@@ -615,11 +814,11 @@ public sealed class EstadoPartidaService
 
             if (terminada)
             {
-                partidaActiva.JugadorHumano
+                propietario
                     .EliminarObraConstruccion(
                         obra);
 
-                partidaActiva.JugadorHumano
+                propietario
                     .AgregarEdificio(
                         new CentroUrbano(
                             obra.Coordenada));
@@ -639,19 +838,20 @@ public sealed class EstadoPartidaService
             if (partidaActiva == null)
                 return false;
 
-            ObraConstruccion? obra =
-                partidaActiva.JugadorHumano.ObrasConstruccion
-                    .FirstOrDefault(
-                        o => o.Id == obraId);
+            Jugador? propietario =
+                BuscarJugadorPorObra(
+                    obraId,
+                    out ObraConstruccion? obra);
 
-            if (obra == null)
+            if (propietario == null ||
+                obra == null)
                 return false;
 
-            partidaActiva.JugadorHumano
+            propietario
                 .EliminarObraConstruccion(
                     obra);
 
-            partidaActiva.JugadorHumano.Mapa
+            propietario.Mapa
                 .ObtenerCasilla(
                     obra.Coordenada.X,
                     obra.Coordenada.Y)
@@ -685,6 +885,18 @@ public sealed class EstadoPartidaService
                     "CONSTRUIR",
                     ResultadoAccion.Fallido("La posición de construcción es obligatoria."));
 
+            Jugador? propietario =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    aldeanoId);
+
+            if (propietario == null)
+            {
+                return RegistrarResultado(
+                    "CONSTRUIR",
+                    ResultadoAccion.Fallido(
+                        "No existe una unidad con ese ID."));
+            }
+
             var solicitud = new SolicitudConstruccion(
                 aldeanoId,
                 request.TipoEdificio ?? string.Empty,
@@ -700,7 +912,7 @@ public sealed class EstadoPartidaService
                         "El tipo de edificio no tiene un costo configurado."));
             }
 
-            if (!partidaActiva.JugadorHumano.Recursos
+            if (!propietario.Recursos
                 .IntentarGastar(costo))
             {
                 return RegistrarResultado(
@@ -717,7 +929,7 @@ public sealed class EstadoPartidaService
 
             if (!resultado.Exito)
             {
-                partidaActiva.JugadorHumano.Recursos
+                propietario.Recursos
                     .Reintegrar(costo);
             }
 
@@ -727,8 +939,56 @@ public sealed class EstadoPartidaService
         }
     }
 
+    private Jugador? BuscarJugadorPorObra(
+        Guid obraId,
+        out ObraConstruccion? obra)
+    {
+        obra =
+            partidaActiva?.JugadorHumano.ObrasConstruccion
+                .FirstOrDefault(
+                    o => o.Id == obraId);
+
+        if (obra != null)
+            return partidaActiva!.JugadorHumano;
+
+        obra =
+            partidaActiva?.JugadorMaquina.ObrasConstruccion
+                .FirstOrDefault(
+                    o => o.Id == obraId);
+
+        return obra != null
+            ? partidaActiva!.JugadorMaquina
+            : null;
+    }
+
     public ResultadoAccion EncolarEntrenamiento(
         EntrenarRequest? request,
+        out Guid entrenamientoId,
+        out Coordenada centroUrbano)
+    {
+        return EncolarEntrenamientoInterno(
+            request,
+            null,
+            out entrenamientoId,
+            out centroUrbano);
+    }
+
+    public ResultadoAccion EncolarEntrenamiento(
+        EntrenarRequest? request,
+        TipoJugador propietarioTipo,
+        out Guid entrenamientoId,
+        out Coordenada centroUrbano)
+    {
+        return EncolarEntrenamientoInterno(
+            request,
+            propietarioTipo,
+            out entrenamientoId,
+            out centroUrbano);
+    }
+
+    private ResultadoAccion EncolarEntrenamientoInterno(
+        EntrenarRequest? request,
+        TipoJugador? propietarioTipo,
         out Guid entrenamientoId,
         out Coordenada centroUrbano)
     {
@@ -755,7 +1015,8 @@ public sealed class EstadoPartidaService
                     "El edificio de origen es obligatorio.");
             }
 
-            if (!configuracionEconomia.IntentarObtenerCostoUnidad(
+            if (!configuracionEconomia
+                .IntentarObtenerCostoUnidad(
                     request.TipoUnidad,
                     out _))
             {
@@ -767,18 +1028,17 @@ public sealed class EstadoPartidaService
                 PartidaRequestMapper.ConvertirCoordenada(
                     request.EdificioOrigen);
 
-            CentroUrbano? centro =
-                partidaActiva.JugadorHumano.Edificios
-                    .OfType<CentroUrbano>()
-                    .FirstOrDefault(
-                        e =>
-                            e.Coordenada.X == origen.X &&
-                            e.Coordenada.Y == origen.Y);
+            Jugador? propietario =
+                BuscarPropietarioCentro(
+                    origen,
+                    propietarioTipo,
+                    out CentroUrbano? centro);
 
-            if (centro == null)
+            if (propietario == null ||
+                centro == null)
             {
                 return ResultadoAccion.Fallido(
-                    "No existe un Centro Urbano humano en la posición indicada.");
+                    "No existe un Centro Urbano del propietario indicado en la posición.");
             }
 
             Coordenada reunion =
@@ -809,9 +1069,28 @@ public sealed class EstadoPartidaService
     {
         lock (sincronizacion)
         {
-            CentroUrbano? centro =
-                BuscarCentroHumano(
-                    centroUrbano);
+            BuscarPropietarioCentro(
+                centroUrbano,
+                null,
+                out CentroUrbano? centro);
+
+            return centro != null &&
+                   centro.EsPrimero(
+                       entrenamientoId);
+        }
+    }
+
+    public bool EsTurnoEntrenamiento(
+        Coordenada centroUrbano,
+        Guid entrenamientoId,
+        TipoJugador propietarioTipo)
+    {
+        lock (sincronizacion)
+        {
+            BuscarPropietarioCentro(
+                centroUrbano,
+                propietarioTipo,
+                out CentroUrbano? centro);
 
             return centro != null &&
                    centro.EsPrimero(
@@ -826,9 +1105,32 @@ public sealed class EstadoPartidaService
     {
         lock (sincronizacion)
         {
-            CentroUrbano? centro =
-                BuscarCentroHumano(
-                    centroUrbano);
+            BuscarPropietarioCentro(
+                centroUrbano,
+                null,
+                out CentroUrbano? centro);
+
+            return centro == null
+                ? ResultadoProgresoEntrenamiento.Fallido(
+                    "No existe el Centro Urbano indicado.")
+                : centro.AvanzarEntrenamiento(
+                    entrenamientoId,
+                    incremento);
+        }
+    }
+
+    public ResultadoProgresoEntrenamiento AvanzarEntrenamiento(
+        Coordenada centroUrbano,
+        Guid entrenamientoId,
+        int incremento,
+        TipoJugador propietarioTipo)
+    {
+        lock (sincronizacion)
+        {
+            BuscarPropietarioCentro(
+                centroUrbano,
+                propietarioTipo,
+                out CentroUrbano? centro);
 
             return centro == null
                 ? ResultadoProgresoEntrenamiento.Fallido(
@@ -846,94 +1148,131 @@ public sealed class EstadoPartidaService
     {
         lock (sincronizacion)
         {
-            if (partidaActiva == null)
-            {
-                return ResultadoSpawnEntrenamiento.Fallido(
-                    "No hay una partida activa.");
-            }
+            Jugador? propietario =
+                BuscarPropietarioCentro(
+                    centroUrbano,
+                    null,
+                    out CentroUrbano? centro);
 
-            CentroUrbano? centro =
-                BuscarCentroHumano(
-                    centroUrbano);
-
-            if (centro == null ||
-                !centro.EsPrimero(
-                    entrenamientoId))
-            {
-                return ResultadoSpawnEntrenamiento.Fallido(
-                    "La orden no está al frente de la cola.");
-            }
-
-            EntrenamientoPendiente? pendiente =
-                centro.ColaEntrenamiento
-                    .FirstOrDefault();
-
-            if (pendiente == null ||
-                pendiente.Id != entrenamientoId ||
-                pendiente.Progreso < 100)
-            {
-                return ResultadoSpawnEntrenamiento.Fallido(
-                    "El entrenamiento todavía no está completo.");
-            }
-
-            Coordenada spawn =
-                new BuscadorCasillaSpawn()
-                    .Buscar(
-                        partidaActiva,
-                        centro.Coordenada);
-
-            if (spawn == null)
-            {
-                return ResultadoSpawnEntrenamiento.Fallido(
-                    "No existe una casilla libre cercana para crear la unidad.");
-            }
-
-            Unidad unidad =
-                FabricaUnidades.Crear(
-                    tipoUnidad,
-                    spawn);
-
-            if (unidad == null)
-            {
-                return ResultadoSpawnEntrenamiento.Fallido(
-                    "El tipo de unidad indicado no está permitido.");
-            }
-
-            Casilla? casilla =
-                partidaActiva.JugadorHumano.Mapa
-                    .ObtenerCasilla(
-                        spawn.X,
-                        spawn.Y);
-
-            if (casilla == null ||
-                !casilla.Ocupar())
-            {
-                return ResultadoSpawnEntrenamiento.Fallido(
-                    "La casilla de aparición dejó de estar disponible.");
-            }
-
-            partidaActiva.JugadorHumano
-                .AgregarUnidad(
-                    unidad);
-
-            if (!centro.CompletarEntrenamiento(
-                    entrenamientoId))
-            {
-                partidaActiva.JugadorHumano
-                    .EliminarUnidad(
-                        unidad);
-
-                casilla.Liberar();
-
-                return ResultadoSpawnEntrenamiento.Fallido(
-                    "No se pudo retirar la orden completada de la cola.");
-            }
-
-            return ResultadoSpawnEntrenamiento.Exitoso(
-                unidad.Id,
-                spawn,
+            return CompletarEntrenamientoConSpawnInterno(
+                propietario,
+                centro,
+                entrenamientoId,
                 tipoUnidad);
         }
+    }
+
+    public ResultadoSpawnEntrenamiento CompletarEntrenamientoConSpawn(
+        Coordenada centroUrbano,
+        Guid entrenamientoId,
+        string tipoUnidad,
+        TipoJugador propietarioTipo)
+    {
+        lock (sincronizacion)
+        {
+            Jugador? propietario =
+                BuscarPropietarioCentro(
+                    centroUrbano,
+                    propietarioTipo,
+                    out CentroUrbano? centro);
+
+            return CompletarEntrenamientoConSpawnInterno(
+                propietario,
+                centro,
+                entrenamientoId,
+                tipoUnidad);
+        }
+    }
+
+    private ResultadoSpawnEntrenamiento CompletarEntrenamientoConSpawnInterno(
+        Jugador? propietario,
+        CentroUrbano? centro,
+        Guid entrenamientoId,
+        string tipoUnidad)
+    {
+        if (partidaActiva == null)
+        {
+            return ResultadoSpawnEntrenamiento.Fallido(
+                "No hay una partida activa.");
+        }
+
+        if (propietario == null ||
+            centro == null ||
+            !centro.EsPrimero(
+                entrenamientoId))
+        {
+            return ResultadoSpawnEntrenamiento.Fallido(
+                "La orden no está al frente de la cola.");
+        }
+
+        EntrenamientoPendiente? pendiente =
+            centro.ColaEntrenamiento
+                .FirstOrDefault();
+
+        if (pendiente == null ||
+            pendiente.Id != entrenamientoId ||
+            pendiente.Progreso < 100)
+        {
+            return ResultadoSpawnEntrenamiento.Fallido(
+                "El entrenamiento todavía no está completo.");
+        }
+
+        Coordenada spawn =
+            new BuscadorCasillaSpawn()
+                .Buscar(
+                    partidaActiva,
+                    propietario.Tipo,
+                    centro.Coordenada);
+
+        if (spawn == null)
+        {
+            return ResultadoSpawnEntrenamiento.Fallido(
+                "No existe una casilla libre cercana para crear la unidad.");
+        }
+
+        Unidad unidad =
+            FabricaUnidades.Crear(
+                tipoUnidad,
+                spawn);
+
+        if (unidad == null)
+        {
+            return ResultadoSpawnEntrenamiento.Fallido(
+                "El tipo de unidad indicado no está permitido.");
+        }
+
+        Casilla? casilla =
+            propietario.Mapa
+                .ObtenerCasilla(
+                    spawn.X,
+                    spawn.Y);
+
+        if (casilla == null ||
+            !casilla.Ocupar())
+        {
+            return ResultadoSpawnEntrenamiento.Fallido(
+                "La casilla de aparición dejó de estar disponible.");
+        }
+
+        propietario.AgregarUnidad(
+            unidad);
+
+        if (!centro.CompletarEntrenamiento(
+                entrenamientoId))
+        {
+            propietario.EliminarUnidad(
+                unidad);
+
+            casilla.Liberar();
+
+            return ResultadoSpawnEntrenamiento.Fallido(
+                "No se pudo retirar la orden completada de la cola.");
+        }
+
+        return ResultadoSpawnEntrenamiento.Exitoso(
+            unidad.Id,
+            spawn,
+            tipoUnidad);
     }
 
     public bool CancelarEntrenamientoCola(
@@ -942,9 +1281,10 @@ public sealed class EstadoPartidaService
     {
         lock (sincronizacion)
         {
-            CentroUrbano? centro =
-                BuscarCentroHumano(
-                    centroUrbano);
+            BuscarPropietarioCentro(
+                centroUrbano,
+                null,
+                out CentroUrbano? centro);
 
             return centro != null &&
                    centro.CancelarEntrenamiento(
@@ -952,24 +1292,62 @@ public sealed class EstadoPartidaService
         }
     }
 
-    private CentroUrbano? BuscarCentroHumano(
-        Coordenada coordenada)
+    public bool CancelarEntrenamientoCola(
+        Coordenada centroUrbano,
+        Guid entrenamientoId,
+        TipoJugador propietarioTipo)
     {
+        lock (sincronizacion)
+        {
+            BuscarPropietarioCentro(
+                centroUrbano,
+                propietarioTipo,
+                out CentroUrbano? centro);
+
+            return centro != null &&
+                   centro.CancelarEntrenamiento(
+                       entrenamientoId);
+        }
+    }
+
+    private Jugador? BuscarPropietarioCentro(
+        Coordenada coordenada,
+        TipoJugador? propietarioTipo,
+        out CentroUrbano? centro)
+    {
+        centro = null;
+
         if (partidaActiva == null ||
             coordenada == null)
         {
             return null;
         }
 
-        return partidaActiva.JugadorHumano.Edificios
-            .OfType<CentroUrbano>()
-            .FirstOrDefault(
-                e =>
-                    e.Coordenada.X == coordenada.X &&
-                    e.Coordenada.Y == coordenada.Y);
+        Jugador? propietario =
+            propietarioTipo.HasValue
+                ? partidaActiva.ObtenerJugador(
+                    propietarioTipo.Value)
+                : partidaActiva.BuscarJugadorPorEdificio(
+                    coordenada);
+
+        if (propietario == null)
+            return null;
+
+        centro =
+            propietario.Edificios
+                .OfType<CentroUrbano>()
+                .FirstOrDefault(
+                    e =>
+                        e.Coordenada.X == coordenada.X &&
+                        e.Coordenada.Y == coordenada.Y);
+
+        return centro == null
+            ? null
+            : propietario;
     }
 
-    public ResultadoAccion Entrenar(EntrenarRequest? request)
+    public ResultadoAccion Entrenar(
+        EntrenarRequest? request)
     {
         lock (sincronizacion)
         {
@@ -993,12 +1371,33 @@ public sealed class EstadoPartidaService
                     "ENTRENAR",
                     ResultadoAccion.Fallido("La posición de aparición es obligatoria."));
 
-            var solicitud = new SolicitudEntrenamiento(
-                PartidaRequestMapper.ConvertirCoordenada(request.EdificioOrigen),
-                request.TipoUnidad ?? string.Empty,
-                PartidaRequestMapper.ConvertirCoordenada(request.Destino));
+            Coordenada origen =
+                PartidaRequestMapper.ConvertirCoordenada(
+                    request.EdificioOrigen);
 
-            if (!configuracionEconomia.IntentarObtenerCostoUnidad(
+            Jugador? propietario =
+                BuscarPropietarioCentro(
+                    origen,
+                    null,
+                    out _);
+
+            if (propietario == null)
+            {
+                return RegistrarResultado(
+                    "ENTRENAR",
+                    ResultadoAccion.Fallido(
+                        "No existe un Centro Urbano propietario único en la posición indicada."));
+            }
+
+            var solicitud =
+                new SolicitudEntrenamiento(
+                    origen,
+                    request.TipoUnidad ?? string.Empty,
+                    PartidaRequestMapper.ConvertirCoordenada(
+                        request.Destino));
+
+            if (!configuracionEconomia
+                .IntentarObtenerCostoUnidad(
                     request.TipoUnidad,
                     out CostoRecursos costo))
             {
@@ -1008,8 +1407,9 @@ public sealed class EstadoPartidaService
                         "El tipo de unidad no tiene un costo configurado."));
             }
 
-            if (!partidaActiva.JugadorHumano.Recursos
-                .IntentarGastar(costo))
+            if (!propietario.Recursos
+                .IntentarGastar(
+                    costo))
             {
                 return RegistrarResultado(
                     "ENTRENAR",
@@ -1021,12 +1421,14 @@ public sealed class EstadoPartidaService
                 new OperacionEntrenamiento()
                     .Ejecutar(
                         partidaActiva,
-                        solicitud);
+                        solicitud,
+                        propietario.Tipo);
 
             if (!resultado.Exito)
             {
-                partidaActiva.JugadorHumano.Recursos
-                    .Reintegrar(costo);
+                propietario.Recursos
+                    .Reintegrar(
+                        costo);
             }
 
             return RegistrarResultado(
@@ -1104,7 +1506,11 @@ public sealed class EstadoPartidaService
             if (partidaActiva == null)
                 return null;
 
-            return partidaActiva.JugadorHumano.Unidades
+            Jugador? propietario =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    id);
+
+            return propietario?.Unidades
                 .FirstOrDefault(u => u.Id == id);
         }
     }

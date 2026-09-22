@@ -1,4 +1,6 @@
 using System;
+using System.Linq;
+using ImperiosEnGuerra.Modelo.Map;
 
 namespace ImperiosEnGuerra.Modelo.Core
 {
@@ -7,52 +9,125 @@ namespace ImperiosEnGuerra.Modelo.Core
     /// </summary>
     public class Partida
     {
-        /// <summary>
-        /// Participante de tipo humano.
-        /// </summary>
         public Jugador JugadorHumano { get; }
-        /// <summary>
-        /// Participante de tipo máquina.
-        /// </summary>
         public Jugador JugadorMaquina { get; }
 
-        /// <summary>
-        /// Asocia los dos participantes después de comprobar sus tipos.
-        /// </summary>
-        /// <param name="jugadorHumano">Participante que debe ser de tipo Humano.</param>
-        /// <param name="jugadorMaquina">Participante que debe ser de tipo Maquina.</param>
-        /// <exception cref="ArgumentNullException">Alguno de los participantes es nulo.</exception>
-        /// <exception cref="ArgumentException">Alguno de los participantes no tiene el tipo requerido para su posición.</exception>
         public Partida(
             Jugador jugadorHumano,
             Jugador jugadorMaquina)
         {
             if (jugadorHumano == null)
-            {
                 throw new ArgumentNullException(nameof(jugadorHumano));
-            }
 
             if (jugadorMaquina == null)
-            {
                 throw new ArgumentNullException(nameof(jugadorMaquina));
-            }
 
             if (jugadorHumano.Tipo != TipoJugador.Humano)
-            {
                 throw new ArgumentException(
                     "El primer jugador debe ser de tipo Humano.",
                     nameof(jugadorHumano));
-            }
 
             if (jugadorMaquina.Tipo != TipoJugador.Maquina)
-            {
                 throw new ArgumentException(
                     "El segundo jugador debe ser de tipo Maquina.",
                     nameof(jugadorMaquina));
-            }
 
             JugadorHumano = jugadorHumano;
             JugadorMaquina = jugadorMaquina;
+        }
+
+        public Jugador ObtenerJugador(
+            TipoJugador tipo)
+        {
+            return tipo == TipoJugador.Humano
+                ? JugadorHumano
+                : tipo == TipoJugador.Maquina
+                    ? JugadorMaquina
+                    : null;
+        }
+
+        /// <summary>
+        /// Localiza al propietario de una unidad sin asumir si es Humano o Máquina.
+        /// </summary>
+        public Jugador BuscarJugadorPorUnidad(
+            Guid unidadId)
+        {
+            if (JugadorHumano.Unidades.Any(
+                    u => u.Id == unidadId))
+            {
+                return JugadorHumano;
+            }
+
+            if (JugadorMaquina.Unidades.Any(
+                    u => u.Id == unidadId))
+            {
+                return JugadorMaquina;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Localiza al propietario único de un edificio por su coordenada.
+        /// Devuelve null si no existe o si la coordenada resulta ambigua.
+        /// </summary>
+        public Jugador BuscarJugadorPorEdificio(
+            Coordenada coordenada)
+        {
+            if (coordenada == null)
+                return null;
+
+            bool humano =
+                JugadorHumano.Edificios.Any(
+                    e => Coincide(
+                        e.Coordenada,
+                        coordenada));
+
+            bool maquina =
+                JugadorMaquina.Edificios.Any(
+                    e => Coincide(
+                        e.Coordenada,
+                        coordenada));
+
+            if (humano == maquina)
+                return null;
+
+            return humano
+                ? JugadorHumano
+                : JugadorMaquina;
+        }
+
+        /// <summary>
+        /// Devuelve el oponente del jugador recibido.
+        /// </summary>
+        public Jugador ObtenerOponente(
+            Jugador jugador)
+        {
+            if (ReferenceEquals(
+                    jugador,
+                    JugadorHumano))
+            {
+                return JugadorMaquina;
+            }
+
+            if (ReferenceEquals(
+                    jugador,
+                    JugadorMaquina))
+            {
+                return JugadorHumano;
+            }
+
+            return null;
+        }
+
+        private static bool Coincide(
+            Coordenada primera,
+            Coordenada segunda)
+        {
+            return primera != null &&
+                   segunda != null &&
+                   primera.X == segunda.X &&
+                   primera.Y == segunda.Y;
         }
     }
 }

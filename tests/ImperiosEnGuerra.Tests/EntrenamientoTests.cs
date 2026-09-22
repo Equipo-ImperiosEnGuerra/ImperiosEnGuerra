@@ -53,6 +53,10 @@ public class EntrenamientoTests
         partida.JugadorHumano.Recursos.Agregar(TipoRecurso.Madera, 100);
         partida.JugadorHumano.Recursos.Agregar(TipoRecurso.Comida, 100);
 
+        partida.JugadorMaquina.Recursos.Agregar(TipoRecurso.Oro, 100);
+        partida.JugadorMaquina.Recursos.Agregar(TipoRecurso.Madera, 100);
+        partida.JugadorMaquina.Recursos.Agregar(TipoRecurso.Comida, 100);
+
         operacion = new OperacionEntrenamiento();
     }
 
@@ -89,7 +93,7 @@ public class EntrenamientoTests
     }
 
     [Test]
-    public void EdificioMaquina_Falla()
+    public void EdificioMaquina_EntrenamientoValido_CreaUnidadPropia()
     {
         ResultadoAccion resultado =
             operacion.Ejecutar(
@@ -99,10 +103,18 @@ public class EntrenamientoTests
                     "Guerrero",
                     new Coordenada(2, 2)));
 
-        Assert.That(resultado.Exito, Is.False);
         Assert.That(
-            resultado.Mensaje,
-            Does.Contain("máquina"));
+            resultado.Exito,
+            Is.True,
+            resultado.Mensaje);
+
+        Assert.That(
+            partida.JugadorMaquina.Unidades.Count,
+            Is.EqualTo(1));
+
+        Assert.That(
+            partida.JugadorMaquina.Unidades[0],
+            Is.TypeOf<Guerrero>());
     }
 
     [Test]
@@ -119,7 +131,7 @@ public class EntrenamientoTests
         Assert.That(resultado.Exito, Is.False);
         Assert.That(
             resultado.Mensaje,
-            Does.Contain("edificio humano"));
+            Does.Contain("edificio"));
     }
 
     [Test]
@@ -208,6 +220,78 @@ public class EntrenamientoTests
         Assert.That(
             partida.JugadorHumano.Unidades[^1],
             Is.TypeOf<Arquero>());
+    }
+
+    [Test]
+    public void Servicio_EntrenamientoMaquina_UsaRecursosYJugadorPropios()
+    {
+        var servicio =
+            new EstadoPartidaService();
+
+        servicio.EstablecerPartida(
+            partida);
+
+        int comidaHumanoAntes =
+            partida.JugadorHumano.Recursos
+                .ObtenerCantidad(
+                    TipoRecurso.Comida);
+
+        int comidaMaquinaAntes =
+            partida.JugadorMaquina.Recursos
+                .ObtenerCantidad(
+                    TipoRecurso.Comida);
+
+        var request =
+            new EntrenarRequest
+            {
+                EdificioOrigen =
+                    new CoordenadaRequest
+                    {
+                        X = 4,
+                        Y = 4
+                    },
+
+                TipoUnidad =
+                    "Guerrero",
+
+                Destino =
+                    new CoordenadaRequest
+                    {
+                        X = 3,
+                        Y = 3
+                    }
+            };
+
+        ResultadoAccion resultado =
+            servicio.Entrenar(
+                request);
+
+        Assert.That(
+            resultado.Exito,
+            Is.True,
+            resultado.Mensaje);
+
+        Assert.That(
+            partida.JugadorMaquina.Unidades.Count,
+            Is.EqualTo(1));
+
+        Assert.That(
+            partida.JugadorHumano.Unidades,
+            Is.Empty);
+
+        Assert.That(
+            partida.JugadorHumano.Recursos
+                .ObtenerCantidad(
+                    TipoRecurso.Comida),
+            Is.EqualTo(
+                comidaHumanoAntes));
+
+        Assert.That(
+            partida.JugadorMaquina.Recursos
+                .ObtenerCantidad(
+                    TipoRecurso.Comida),
+            Is.LessThan(
+                comidaMaquinaAntes));
     }
 
     [Test]

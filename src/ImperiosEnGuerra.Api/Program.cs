@@ -1,3 +1,4 @@
+using System.Net.WebSockets;
 using Microsoft.Extensions.Options;
 using ImperiosEnGuerra.Api.Configuracion;
 using ImperiosEnGuerra.Api.Servicios;
@@ -20,9 +21,14 @@ builder.Services.AddSingleton<EstadoPartidaService>();
 builder.Services.AddSingleton<GestorProcesosConcurrentes>();
 builder.Services.AddSingleton<ServicioOrdenesUnidad>();
 builder.Services.AddSingleton<ServicioAccionesConcurrentes>();
+builder.Services.AddSingleton<ServicioJugadorMaquina>();
+builder.Services.AddSingleton<DespachadorMensajesRed>();
+builder.Services.AddSingleton<ServicioRedPartida>();
 
 
 var app = builder.Build();
+
+app.UseWebSockets();
 
 if (app.Environment.IsDevelopment())
 {
@@ -59,10 +65,12 @@ app.MapPost(
         IniciarPartidaRequest request,
         EstadoPartidaService estadoPartida,
         ServicioAccionesConcurrentes accionesConcurrentes,
+        ServicioJugadorMaquina jugadorMaquina,
         ServicioArchivos servicioArchivos) =>
 {
     try
     {
+        jugadorMaquina.Detener();
         accionesConcurrentes.CancelarTodos();
 
         Mapa mapa = new Mapa(
@@ -101,6 +109,7 @@ app.MapPost(
             partida);
 
         estadoPartida.EstablecerPartida(partida);
+        jugadorMaquina.Iniciar();
 
         return Results.Ok(new
         {
@@ -392,5 +401,110 @@ app.MapPost(
         });
 })
 .WithName("IniciarAtaqueConcurrente");
+
+
+app.MapGet(
+    "/api/maquina/estado",
+    (ServicioJugadorMaquina jugadorMaquina) =>
+{
+    return Results.Ok(new
+    {
+        activo = jugadorMaquina.Activo,
+        unidadesAsignadas = jugadorMaquina.UnidadesAsignadas
+    });
+})
+.WithName("ObtenerEstadoJugadorMaquina");
+
+app.MapPost(
+    "/api/maquina/iniciar",
+    (ServicioJugadorMaquina jugadorMaquina) =>
+{
+    return Results.Ok(new
+    {
+        iniciado = jugadorMaquina.Iniciar(),
+        activo = jugadorMaquina.Activo
+    });
+})
+.WithName("IniciarJugadorMaquina");
+
+app.MapPost(
+    "/api/maquina/detener",
+    (ServicioJugadorMaquina jugadorMaquina) =>
+{
+    return Results.Ok(new
+    {
+        cancelacionSolicitada = jugadorMaquina.Detener()
+    });
+})
+.WithName("DetenerJugadorMaquina");
+
+app.MapPost(
+    "/api/maquina/paso",
+    (ServicioJugadorMaquina jugadorMaquina) =>
+{
+    ProcesoConcurrente? proceso =
+        jugadorMaquina.EjecutarPaso();
+
+    return proceso == null
+        ? Results.Ok(new
+        {
+            estado = "sin_accion"
+        })
+        : Results.Accepted(
+            $"/api/procesos/{proceso.Id}",
+            new
+            {
+                procesoId = proceso.Id,
+                nombre = proceso.Nombre,
+                estado = "iniciado"
+            });
+})
+.WithName("EjecutarPasoJugadorMaquina");
+
+
+app.MapGet(
+    "/api/red/estado",
+    (ServicioRedPartida red) =>
+{
+    return Results.Ok(new
+    {
+        transporte = "WebSocket",
+        endpoint = "/ws/partida",
+        clientesConectados = red.ClientesConectados
+    });
+})
+.WithName("ObtenerEstadoRed");
+
+app.Map(
+    "/ws/partida",
+    async context =>
+{
+    if (!context.WebSockets.IsWebSocketRequest)
+    {
+        context.Response.StatusCode =
+            StatusCodes.Status400BadRequest;
+
+        await context.Response.WriteAsJsonAsync(
+            new
+            {
+                error =
+                    "Este endpoint requiere una conexión WebSocket."
+            });
+
+        return;
+    }
+
+    ServicioRedPartida red =
+        context.RequestServices
+            .GetRequiredService<ServicioRedPartida>();
+
+    using WebSocket socket =
+        await context.WebSockets
+            .AcceptWebSocketAsync();
+
+    await red.AtenderClienteAsync(
+        socket,
+        context.RequestAborted);
+});
 
 app.Run();

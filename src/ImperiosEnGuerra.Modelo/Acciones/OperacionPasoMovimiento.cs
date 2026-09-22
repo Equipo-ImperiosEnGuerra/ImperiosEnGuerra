@@ -20,21 +20,18 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                 return ResultadoAccion.Fallido(
                     "No hay una partida activa.");
 
-            if (partida.JugadorMaquina.Unidades.Any(
-                u => u.Id == unidadId))
-            {
+            Jugador propietario =
+                partida.BuscarJugadorPorUnidad(
+                    unidadId);
+
+            if (propietario == null)
                 return ResultadoAccion.Fallido(
-                    "No se puede mover una unidad de la máquina.");
-            }
+                    "No existe una unidad con ese ID.");
 
             Unidad unidad =
-                partida.JugadorHumano.Unidades
-                    .FirstOrDefault(
+                propietario.Unidades
+                    .First(
                         u => u.Id == unidadId);
-
-            if (unidad == null)
-                return ResultadoAccion.Fallido(
-                    "No existe una unidad humana con ese ID.");
 
             if (unidad.OrdenActiva != TipoAccionJuego.Mover)
             {
@@ -47,7 +44,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     "El siguiente paso es obligatorio.");
 
             Mapa mapa =
-                partida.JugadorHumano.Mapa;
+                propietario.Mapa;
 
             if (!mapa.EstaDentroDeLimites(
                 siguiente))

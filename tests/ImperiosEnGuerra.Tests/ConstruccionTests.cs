@@ -107,13 +107,28 @@ public class ConstruccionTests
     }
 
     [Test]
-    public void AldeanoMaquina_Falla()
+    public void AldeanoMaquina_ConstruccionValida_CreaEdificioPropio()
     {
+        var mapaMaquina =
+            new Mapa(6, 6);
+
+        var maquina =
+            new Jugador(
+                "Máquina",
+                TipoJugador.Maquina,
+                mapaMaquina,
+                new RecursosJugador());
+
         var aldeanoMaquina =
             new Aldeano(new Coordenada(2, 2));
 
-        partida.JugadorMaquina
-            .AgregarUnidad(aldeanoMaquina);
+        maquina.AgregarUnidad(
+            aldeanoMaquina);
+
+        partida =
+            new Partida(
+                partida.JugadorHumano,
+                maquina);
 
         ResultadoAccion resultado =
             operacion.Ejecutar(
@@ -123,8 +138,22 @@ public class ConstruccionTests
                     "CentroUrbano",
                     new Coordenada(3, 3)));
 
-        Assert.That(resultado.Exito, Is.False);
-        Assert.That(resultado.Mensaje, Does.Contain("máquina"));
+        Assert.That(
+            resultado.Exito,
+            Is.True,
+            resultado.Mensaje);
+
+        Assert.That(
+            partida.JugadorMaquina.Edificios.Count,
+            Is.EqualTo(1));
+
+        Assert.That(
+            partida.JugadorHumano.Edificios,
+            Is.Empty);
+
+        Assert.That(
+            mapaMaquina.ObtenerCasilla(3, 3).EstaOcupada,
+            Is.True);
     }
 
     [Test]

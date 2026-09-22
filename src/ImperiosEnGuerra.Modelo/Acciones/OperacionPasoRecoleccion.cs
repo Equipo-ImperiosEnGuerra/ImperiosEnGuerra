@@ -32,16 +32,21 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     "La tasa de recolección debe ser positiva.");
             }
 
+            Jugador propietario =
+                partida.BuscarJugadorPorUnidad(
+                    aldeanoId);
+
             Aldeano aldeano =
-                partida.JugadorHumano.Unidades
+                propietario?.Unidades
                     .OfType<Aldeano>()
                     .FirstOrDefault(
                         u => u.Id == aldeanoId);
 
-            if (aldeano == null)
+            if (propietario == null ||
+                aldeano == null)
             {
                 return ResultadoPasoRecoleccion.Fallido(
-                    "No existe un Aldeano humano con ese ID.");
+                    "No existe un Aldeano con ese ID.");
             }
 
             if (aldeano.OrdenActiva !=
@@ -58,7 +63,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
             }
 
             Mapa mapa =
-                partida.JugadorHumano.Mapa;
+                propietario.Mapa;
 
             if (!mapa.EstaDentroDeLimites(
                 objetivo))

@@ -7,7 +7,7 @@ namespace ImperiosEnGuerra.Modelo.Edificios
 {
     /// <summary>
     /// Busca la casilla libre más cercana al edificio, evitando recursos,
-    /// edificios y unidades de ambos jugadores.
+    /// edificios y unidades que comparten el mismo mapa.
     /// </summary>
     public sealed class BuscadorCasillaSpawn
     {
@@ -17,11 +17,42 @@ namespace ImperiosEnGuerra.Modelo.Edificios
         {
             if (partida == null)
                 throw new ArgumentNullException(nameof(partida));
+
             if (edificio == null)
                 throw new ArgumentNullException(nameof(edificio));
 
+            Jugador propietario =
+                partida.BuscarJugadorPorEdificio(
+                    edificio);
+
+            return propietario == null
+                ? null
+                : Buscar(
+                    partida,
+                    propietario.Tipo,
+                    edificio);
+        }
+
+        public Coordenada Buscar(
+            Partida partida,
+            TipoJugador propietarioTipo,
+            Coordenada edificio)
+        {
+            if (partida == null)
+                throw new ArgumentNullException(nameof(partida));
+
+            if (edificio == null)
+                throw new ArgumentNullException(nameof(edificio));
+
+            Jugador propietario =
+                partida.ObtenerJugador(
+                    propietarioTipo);
+
+            if (propietario == null)
+                return null;
+
             Mapa mapa =
-                partida.JugadorHumano.Mapa;
+                propietario.Mapa;
 
             for (int distancia = 1;
                  distancia <= mapa.Ancho + mapa.Alto;
@@ -44,8 +75,11 @@ namespace ImperiosEnGuerra.Modelo.Edificios
                                 edificio.X + dx,
                                 edificio.Y + dy * signo);
 
-                        if (!mapa.EstaDentroDeLimites(candidato))
+                        if (!mapa.EstaDentroDeLimites(
+                                candidato))
+                        {
                             continue;
+                        }
 
                         Casilla casilla =
                             mapa.ObtenerCasilla(
@@ -54,23 +88,22 @@ namespace ImperiosEnGuerra.Modelo.Edificios
 
                         if (casilla == null ||
                             !casilla.EsTransitable ||
-                            !mapa.PuedeColocar(candidato))
+                            !mapa.PuedeColocar(
+                                candidato))
                         {
                             continue;
                         }
 
                         bool entidad =
-                            partida.JugadorHumano.Unidades.Any(
-                                u => Coincide(u.Coordenada, candidato))
+                            TieneEntidadEnMapa(
+                                partida.JugadorHumano,
+                                mapa,
+                                candidato)
                             ||
-                            partida.JugadorMaquina.Unidades.Any(
-                                u => Coincide(u.Coordenada, candidato))
-                            ||
-                            partida.JugadorHumano.Edificios.Any(
-                                e => Coincide(e.Coordenada, candidato))
-                            ||
-                            partida.JugadorMaquina.Edificios.Any(
-                                e => Coincide(e.Coordenada, candidato));
+                            TieneEntidadEnMapa(
+                                partida.JugadorMaquina,
+                                mapa,
+                                candidato);
 
                         if (!entidad)
                             return candidato;
@@ -79,6 +112,29 @@ namespace ImperiosEnGuerra.Modelo.Edificios
             }
 
             return null;
+        }
+
+        private static bool TieneEntidadEnMapa(
+            Jugador jugador,
+            Mapa mapa,
+            Coordenada candidato)
+        {
+            if (!ReferenceEquals(
+                    jugador.Mapa,
+                    mapa))
+            {
+                return false;
+            }
+
+            return jugador.Unidades.Any(
+                       u => Coincide(
+                           u.Coordenada,
+                           candidato))
+                   ||
+                   jugador.Edificios.Any(
+                       e => Coincide(
+                           e.Coordenada,
+                           candidato));
         }
 
         private static bool Coincide(
