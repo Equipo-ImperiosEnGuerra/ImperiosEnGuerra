@@ -39,7 +39,7 @@ public sealed class ServicioAccionesConcurrentes
     // Recolección:     1 segundo
     // Construcción:    7 segundos
     // Entrenamiento:   5 segundos
-    // Ataque:          1 segundo
+    // Ataque:          4 segundos
     //
     public ServicioAccionesConcurrentes(
         EstadoPartidaService estadoPartida,
@@ -53,7 +53,7 @@ public sealed class ServicioAccionesConcurrentes
             TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(7),
             TimeSpan.FromSeconds(5),
-            TimeSpan.FromSeconds(1))
+            TimeSpan.FromSeconds(4))
     {
     }
 

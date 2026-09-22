@@ -555,6 +555,109 @@ public class JugadorMaquinaTests
                 centro.Id));
     }
 
+    [Test]
+    public async Task EjecutarPaso_NoIniciaDosCombatesDeMaquinaEnParalelo()
+    {
+        var mapa =
+            new Mapa(10, 10);
+
+        var humano =
+            new Jugador(
+                "Humano",
+                TipoJugador.Humano,
+                mapa,
+                new RecursosJugador());
+
+        var maquina =
+            new Jugador(
+                "CPU",
+                TipoJugador.Maquina,
+                mapa,
+                new RecursosJugador());
+
+        var maquinaUno =
+            new Guerrero(
+                new Coordenada(1, 1));
+
+        var maquinaDos =
+            new Guerrero(
+                new Coordenada(1, 3));
+
+        var humanoUno =
+            new Guerrero(
+                new Coordenada(2, 1));
+
+        var humanoDos =
+            new Guerrero(
+                new Coordenada(2, 3));
+
+        maquina.AgregarUnidad(
+            maquinaUno);
+
+        maquina.AgregarUnidad(
+            maquinaDos);
+
+        humano.AgregarUnidad(
+            humanoUno);
+
+        humano.AgregarUnidad(
+            humanoDos);
+
+        Partida partida =
+            new Partida(
+                humano,
+                maquina);
+
+        var estado =
+            new EstadoPartidaService();
+
+        estado.EstablecerPartida(
+            partida);
+
+        using var gestor =
+            new GestorProcesosConcurrentes();
+
+        var acciones =
+            new ServicioAccionesConcurrentes(
+                estado,
+                gestor,
+                TimeSpan.FromMilliseconds(100));
+
+        using var ia =
+            new ServicioJugadorMaquina(
+                estado,
+                acciones,
+                TimeSpan.FromMilliseconds(10));
+
+        ProcesoConcurrente? primero =
+            ia.EjecutarPaso();
+
+        Assert.That(
+            primero,
+            Is.Not.Null);
+
+        ProcesoConcurrente? segundo =
+            ia.EjecutarPaso();
+
+        Assert.That(
+            segundo,
+            Is.Null,
+            "La Máquina debe conservar un único frente de combate mientras el primero siga activo.");
+
+        await primero!.Finalizacion;
+
+        Assert.That(
+            acciones.IntentarObtenerResultado(
+                primero.Id,
+                out ResultadoProcesoConcurrente resultado),
+            Is.True);
+
+        Assert.That(
+            resultado.Resultado?.Exito,
+            Is.True,
+            resultado.Resultado?.Mensaje);
+    }
+
     private static Partida CrearPartidaCombate(
         out Guerrero maquina,
         out Guerrero humano)
