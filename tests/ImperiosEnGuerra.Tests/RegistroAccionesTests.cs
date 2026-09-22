@@ -180,7 +180,9 @@ public class RegistroAccionesTests
 
         aldeano = new Aldeano(new Coordenada(1, 1));
         guerrero = new Guerrero(new Coordenada(2, 1));
-        enemigo = new Lancero(new Coordenada(8, 8));
+        // El ataque real exige adyacencia. Tras mover al Guerrero a (3,3),
+        // el enemigo queda a una casilla ortogonal en (4,3).
+        enemigo = new Lancero(new Coordenada(4, 3));
 
         humano.AgregarUnidad(aldeano);
         humano.AgregarUnidad(guerrero);

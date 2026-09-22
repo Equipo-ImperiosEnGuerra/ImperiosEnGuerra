@@ -213,12 +213,14 @@ public class TodasOperacionesConcurrentesTests
             new Aldeano(new Coordenada(0,2));
 
 
+        // Mantener el combate en una zona independiente evita que esta
+        // prueba de convivencia dependa de rutas de recolección/construcción.
         guerrero =
-            new Guerrero(new Coordenada(1,2));
+            new Guerrero(new Coordenada(4,4));
 
 
         enemigo =
-            new Lancero(new Coordenada(4,4));
+            new Lancero(new Coordenada(5,4));
 
 
         humano.AgregarUnidad(aldeanoMovimiento);
