@@ -1420,35 +1420,62 @@ public bool PuedeIniciarAtaque =>
         public string DescribirCostoUnidad(
             string tipoUnidad)
         {
+            return DescribirCosto(
+                ObtenerCostoUnidad(
+                    tipoUnidad));
+        }
+
+        public string DescribirCostoUnidadCompacto(
+            string tipoUnidad)
+        {
+            CostoEstadoDto costo =
+                ObtenerCostoUnidad(
+                    tipoUnidad);
+
+            if (costo == null)
+                return string.Empty;
+
+            var partes =
+                new System.Collections.Generic.List<string>();
+
+            if (costo.oro > 0)
+                partes.Add($"O{costo.oro}");
+
+            if (costo.madera > 0)
+                partes.Add($"M{costo.madera}");
+
+            if (costo.comida > 0)
+                partes.Add($"C{costo.comida}");
+
+            return partes.Count == 0
+                ? "Gratis"
+                : string.Join(" ", partes);
+        }
+
+        private CostoEstadoDto ObtenerCostoUnidad(
+            string tipoUnidad)
+        {
             if (economiaActual == null ||
                 string.IsNullOrWhiteSpace(tipoUnidad))
             {
-                return string.Empty;
+                return null;
             }
-
-            CostoEstadoDto costo = null;
 
             switch (tipoUnidad)
             {
                 case "Aldeano":
-                    costo = economiaActual.aldeano;
-                    break;
+                    return economiaActual.aldeano;
                 case "Guerrero":
-                    costo = economiaActual.guerrero;
-                    break;
+                    return economiaActual.guerrero;
                 case "Lancero":
-                    costo = economiaActual.lancero;
-                    break;
+                    return economiaActual.lancero;
                 case "Arquero":
-                    costo = economiaActual.arquero;
-                    break;
+                    return economiaActual.arquero;
                 case "Monje":
-                    costo = economiaActual.monje;
-                    break;
+                    return economiaActual.monje;
+                default:
+                    return null;
             }
-
-            return DescribirCosto(
-                costo);
         }
 
         private static string DescribirCosto(
@@ -1757,7 +1784,12 @@ public bool PuedeIniciarAtaque =>
                     new RecursoInicialDto(
                         "Comida",
                         1,
-                        5)
+                        5),
+
+                    new RecursoInicialDto(
+                        "Comida",
+                        2,
+                        7)
                 },
 
                 recursosMaquina = new[]
@@ -1790,7 +1822,12 @@ public bool PuedeIniciarAtaque =>
                     new RecursoInicialDto(
                         "Comida",
                         8,
-                        4)
+                        4),
+
+                    new RecursoInicialDto(
+                        "Comida",
+                        7,
+                        2)
                 }
             };
         }

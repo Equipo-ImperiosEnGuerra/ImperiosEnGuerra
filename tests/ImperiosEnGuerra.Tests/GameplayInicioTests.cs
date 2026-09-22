@@ -46,7 +46,7 @@ public class GameplayInicioTests
 
         Assert.That(
             mapa.Recursos.Count,
-            Is.EqualTo(12));
+            Is.EqualTo(14));
 
         foreach (Recurso recurso in mapa.Recursos)
         {
@@ -73,7 +73,8 @@ public class GameplayInicioTests
             new Recurso(TipoRecurso.Madera, new Coordenada(1, 4)),
             new Recurso(TipoRecurso.Madera, new Coordenada(3, 5)),
             new Recurso(TipoRecurso.Comida, new Coordenada(4, 1)),
-            new Recurso(TipoRecurso.Comida, new Coordenada(1, 5))
+            new Recurso(TipoRecurso.Comida, new Coordenada(1, 5)),
+            new Recurso(TipoRecurso.Comida, new Coordenada(2, 7))
         };
     }
 
@@ -86,7 +87,8 @@ public class GameplayInicioTests
             new Recurso(TipoRecurso.Madera, new Coordenada(8, 5)),
             new Recurso(TipoRecurso.Madera, new Coordenada(6, 4)),
             new Recurso(TipoRecurso.Comida, new Coordenada(5, 8)),
-            new Recurso(TipoRecurso.Comida, new Coordenada(8, 4))
+            new Recurso(TipoRecurso.Comida, new Coordenada(8, 4)),
+            new Recurso(TipoRecurso.Comida, new Coordenada(7, 2))
         };
     }
 }

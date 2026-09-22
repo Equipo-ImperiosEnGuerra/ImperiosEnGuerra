@@ -327,6 +327,64 @@ namespace ImperiosEnGuerra.Vistas
             seleccion.text = texto;
         }
 
+        public void ConfigurarCostosEntrenamiento(
+            string aldeano,
+            string guerrero,
+            string lancero,
+            string arquero,
+            string monje)
+        {
+            ConfigurarEtiquetaEntrenamiento(
+                entrenarAldeano,
+                "Aldeano",
+                aldeano);
+
+            ConfigurarEtiquetaEntrenamiento(
+                entrenarGuerrero,
+                "Guerrero",
+                guerrero);
+
+            ConfigurarEtiquetaEntrenamiento(
+                entrenarLancero,
+                "Lancero",
+                lancero);
+
+            ConfigurarEtiquetaEntrenamiento(
+                entrenarArquero,
+                "Arquero",
+                arquero);
+
+            ConfigurarEtiquetaEntrenamiento(
+                entrenarMonje,
+                "Monje",
+                monje);
+        }
+
+        private static void ConfigurarEtiquetaEntrenamiento(
+            Button boton,
+            string tipo,
+            string costo)
+        {
+            if (boton == null)
+                return;
+
+            Text etiqueta =
+                boton.GetComponentInChildren<Text>(
+                    true);
+
+            if (etiqueta == null)
+                return;
+
+            etiqueta.text =
+                string.IsNullOrWhiteSpace(costo)
+                    ? tipo
+                    : $"{tipo}\n{costo}";
+
+            etiqueta.fontSize = 10;
+            etiqueta.resizeTextMinSize = 7;
+            etiqueta.resizeTextMaxSize = 10;
+        }
+
         public void MostrarSelectorEntrenamiento(bool mostrar)
         {
             if (selectorEntrenamiento != null)

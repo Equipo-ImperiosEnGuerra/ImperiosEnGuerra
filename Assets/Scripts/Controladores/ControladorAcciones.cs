@@ -520,6 +520,16 @@ namespace ImperiosEnGuerra.Controladores
                 edificioPendiente = entidad;
                 accionPendiente = accion;
 
+                if (conexionApi != null)
+                {
+                    vistaHud.ConfigurarCostosEntrenamiento(
+                        conexionApi.DescribirCostoUnidadCompacto("Aldeano"),
+                        conexionApi.DescribirCostoUnidadCompacto("Guerrero"),
+                        conexionApi.DescribirCostoUnidadCompacto("Lancero"),
+                        conexionApi.DescribirCostoUnidadCompacto("Arquero"),
+                        conexionApi.DescribirCostoUnidadCompacto("Monje"));
+                }
+
                 vistaHud.MostrarSelectorEntrenamiento(true);
 
                 vistaHud.MostrarMensaje(
