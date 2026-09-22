@@ -62,16 +62,23 @@ public class AtaqueTests
     }
 
     [Test]
-    public void AtacanteMaquina_NoEsControlable()
+    public void AtacanteMaquina_PuedePrepararAtaqueContraHumano()
     {
-        ResultadoAccion resultado = operacion.Ejecutar(
-            partida,
-            new SolicitudAtaque(
-                objetivo.Id,
-                atacante.Id));
+        ResultadoAccion resultado =
+            operacion.Ejecutar(
+                partida,
+                new SolicitudAtaque(
+                    objetivo.Id,
+                    atacante.Id));
 
-        Assert.That(resultado.Exito, Is.False);
-        Assert.That(resultado.Mensaje, Does.Contain("máquina"));
+        Assert.That(
+            resultado.Exito,
+            Is.True,
+            resultado.Mensaje);
+
+        Assert.That(
+            resultado.Mensaje,
+            Does.Contain("pendiente"));
     }
 
     [Test]
@@ -120,7 +127,7 @@ public class AtaqueTests
         Assert.That(resultado.Exito, Is.False);
         Assert.That(
             resultado.Mensaje,
-            Is.EqualTo("El objetivo pertenece al jugador humano."));
+            Is.EqualTo("El objetivo pertenece al mismo jugador que el atacante."));
     }
 
     [Test]
@@ -163,6 +170,33 @@ public class AtaqueTests
 
         Assert.That(resultado.Exito, Is.True);
         Assert.That(servicio.ObtenerEstado(), Is.Not.Null);
+    }
+
+    [Test]
+    public void Servicio_AtaqueMaquinaValido()
+    {
+        var servicio =
+            CrearServicio();
+
+        ResultadoAccion resultado =
+            servicio.Atacar(
+                new AtacarRequest
+                {
+                    AtacanteId =
+                        objetivo.Id.ToString("D"),
+
+                    ObjetivoId =
+                        atacante.Id.ToString("D")
+                });
+
+        Assert.That(
+            resultado.Exito,
+            Is.True,
+            resultado.Mensaje);
+
+        Assert.That(
+            resultado.Mensaje,
+            Does.Contain("pendiente"));
     }
 
     [Test]

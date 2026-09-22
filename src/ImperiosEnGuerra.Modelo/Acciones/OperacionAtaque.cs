@@ -5,7 +5,8 @@ using ImperiosEnGuerra.Modelo.Unidades;
 namespace ImperiosEnGuerra.Modelo.Acciones
 {
     /// <summary>
-    /// Valida la intención base de ataque sin aplicar daño mientras no existan estadísticas definidas.
+    /// Valida la intención base de ataque para cualquiera de los dos jugadores.
+    /// No aplica daño mientras las estadísticas de combate sigan pendientes.
     /// </summary>
     public sealed class OperacionAtaque
     {
@@ -14,54 +15,78 @@ namespace ImperiosEnGuerra.Modelo.Acciones
             SolicitudAtaque solicitud)
         {
             if (partida == null)
-                return ResultadoAccion.Fallido("No hay una partida activa.");
+                return ResultadoAccion.Fallido(
+                    "No hay una partida activa.");
 
             if (solicitud == null)
-                return ResultadoAccion.Fallido("La solicitud de ataque es obligatoria.");
-
-            var atacanteMaquina = partida.JugadorMaquina.Unidades
-                .FirstOrDefault(unidad => unidad.Id == solicitud.AtacanteId);
-
-            if (atacanteMaquina != null)
                 return ResultadoAccion.Fallido(
-                    "La unidad atacante pertenece a la máquina y no puede controlarse.");
+                    "La solicitud de ataque es obligatoria.");
 
-            var atacante = partida.JugadorHumano.Unidades
-                .FirstOrDefault(unidad => unidad.Id == solicitud.AtacanteId);
+            Jugador propietario =
+                partida.BuscarJugadorPorUnidad(
+                    solicitud.AtacanteId);
 
-            if (atacante == null)
+            if (propietario == null)
+            {
                 return ResultadoAccion.Fallido(
-                    "No existe la unidad atacante humana indicada.");
+                    "No existe la unidad atacante indicada.");
+            }
+
+            Unidad atacante =
+                propietario.Unidades
+                    .First(
+                        unidad =>
+                            unidad.Id ==
+                            solicitud.AtacanteId);
 
             if (!atacante.Disponible)
+            {
                 return ResultadoAccion.Fallido(
                     "La unidad atacante no está disponible.");
+            }
 
-            if (!EsUnidadMilitar(atacante))
+            if (!EsUnidadMilitar(
+                    atacante))
+            {
                 return ResultadoAccion.Fallido(
                     "La unidad atacante no es una unidad militar permitida.");
+            }
 
-            var objetivoPropio = partida.JugadorHumano.Unidades
-                .FirstOrDefault(unidad => unidad.Id == solicitud.ObjetivoId);
-
-            if (objetivoPropio != null)
+            if (propietario.Unidades.Any(
+                    unidad =>
+                        unidad.Id ==
+                        solicitud.ObjetivoId))
+            {
                 return ResultadoAccion.Fallido(
-                    "El objetivo pertenece al jugador humano.");
+                    "El objetivo pertenece al mismo jugador que el atacante.");
+            }
 
-            var objetivo = partida.JugadorMaquina.Unidades
-                .FirstOrDefault(unidad => unidad.Id == solicitud.ObjetivoId);
+            Jugador oponente =
+                partida.ObtenerOponente(
+                    propietario);
+
+            Unidad objetivo =
+                oponente?.Unidades
+                    .FirstOrDefault(
+                        unidad =>
+                            unidad.Id ==
+                            solicitud.ObjetivoId);
 
             if (objetivo == null)
+            {
                 return ResultadoAccion.Fallido(
                     "No existe la unidad enemiga objetivo indicada.");
+            }
 
             return ResultadoAccion.Exitoso(
                 "Ataque preparado correctamente. El daño queda pendiente hasta definir estadísticas de combate.");
         }
 
-        private static bool EsUnidadMilitar(Unidad unidad)
+        private static bool EsUnidadMilitar(
+            Unidad unidad)
         {
-            return unidad is Soldado || unidad is Monje;
+            return unidad is Soldado ||
+                   unidad is Monje;
         }
     }
 }

@@ -54,6 +54,72 @@ public class AtaqueConcurrenteTests
 
 
     [Test]
+    public async Task AtaqueConcurrenteMaquina_EjecutaConMismasValidaciones()
+    {
+        Partida partida =
+            CrearPartida(
+                out Guerrero humano,
+                out Lancero maquina);
+
+        var estado =
+            new EstadoPartidaService();
+
+        estado.EstablecerPartida(
+            partida);
+
+        using var gestor =
+            new GestorProcesosConcurrentes();
+
+        var servicio =
+            new ServicioAccionesConcurrentes(
+                estado,
+                gestor,
+                TimeSpan.Zero);
+
+        ProcesoConcurrente proceso =
+            servicio.IniciarAtaque(
+                new AtacarRequest
+                {
+                    AtacanteId =
+                        maquina.Id.ToString(),
+
+                    ObjetivoId =
+                        humano.Id.ToString()
+                });
+
+        await proceso.Finalizacion;
+
+        Assert.That(
+            servicio.IntentarObtenerResultado(
+                proceso.Id,
+                out ResultadoProcesoConcurrente resultado),
+            Is.True);
+
+        Assert.That(
+            resultado.Estado,
+            Is.EqualTo(
+                EstadoProcesoConcurrente.Completado));
+
+        Assert.That(
+            resultado.Resultado?.Exito,
+            Is.True,
+            resultado.Resultado?.Mensaje);
+
+        Assert.That(
+            resultado.Resultado?.Mensaje,
+            Does.Contain("pendiente"));
+
+        Assert.That(
+            humano.Coordenada.X,
+            Is.EqualTo(1));
+
+        Assert.That(
+            humano.Coordenada.Y,
+            Is.EqualTo(1));
+    }
+
+
+    [Test]
     public async Task CancelarAtaque_AntesDeAplicar_NoModificaModelo()
     {
         Partida partida = CrearPartida(
