@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using ImperiosEnGuerra.Api.Contratos;
 using ImperiosEnGuerra.Api.Servicios;
@@ -235,6 +236,14 @@ public class VictoriaFinalTests
                             Y = 5
                         }
                 });
+
+        Assert.That(
+            SpinWait.SpinUntil(
+                () => aldeano.OrdenActiva ==
+                      TipoAccionJuego.Mover,
+                TimeSpan.FromSeconds(1)),
+            Is.True,
+            "El worker de movimiento debe haber iniciado su orden antes de probar la cancelación global.");
 
         Assert.That(
             estado.Atacar(

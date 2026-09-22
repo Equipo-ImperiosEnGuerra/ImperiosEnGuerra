@@ -200,9 +200,13 @@ public sealed class ServicioAccionesConcurrentes
 
                 if (!plan.Exito)
                 {
+                    token.ThrowIfCancellationRequested();
+
                     return ResultadoAccion.Fallido(
                         plan.Mensaje);
                 }
+
+                token.ThrowIfCancellationRequested();
 
                 if (plan.Pasos.Count == 0)
                 {
@@ -217,6 +221,8 @@ public sealed class ServicioAccionesConcurrentes
 
                 if (!ordenIniciada)
                 {
+                    token.ThrowIfCancellationRequested();
+
                     return ResultadoAccion.Fallido(
                         "La unidad no está disponible.");
                 }
