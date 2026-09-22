@@ -79,6 +79,447 @@ namespace ImperiosEnGuerra.Vistas
             AjustarCamara(estado.mapa);
         }
 
+        /// <summary>
+        /// Aplica un snapshot sin destruir la escena generada. Esto conserva
+        /// la selección y permite que varias órdenes concurrentes actualicen
+        /// unidades/obras sin interrumpir al jugador.
+        /// </summary>
+        public void Sincronizar(EstadoPartidaDto estado)
+        {
+            if (estado == null || estado.mapa == null)
+            {
+                Debug.LogError(
+                    "No se puede sincronizar una partida sin estado o mapa.",
+                    this);
+                return;
+            }
+
+            if (contenidoGenerado == null ||
+                anchoVisual != estado.mapa.ancho ||
+                altoVisual != estado.mapa.alto)
+            {
+                Renderizar(estado);
+                return;
+            }
+
+            Transform recursos =
+                contenidoGenerado.transform.Find("Recursos");
+            Transform edificios =
+                contenidoGenerado.transform.Find("Edificios");
+            Transform unidades =
+                contenidoGenerado.transform.Find("Unidades");
+
+            if (recursos == null ||
+                edificios == null ||
+                unidades == null)
+            {
+                Renderizar(estado);
+                return;
+            }
+
+            SincronizarRecursos(
+                estado.mapa.recursos);
+
+            LimpiarObrasVisuales(
+                edificios);
+
+            SincronizarJugador(
+                estado.jugadorHumano,
+                true,
+                edificios,
+                unidades);
+
+            SincronizarJugador(
+                estado.jugadorMaquina,
+                false,
+                edificios,
+                unidades);
+        }
+
+        private void SincronizarRecursos(
+            RecursoEstadoDto[] recursos)
+        {
+            EntidadSeleccionableVista[] entidades =
+                GetComponentsInChildren<EntidadSeleccionableVista>(
+                    true);
+
+            foreach (EntidadSeleccionableVista entidad in entidades)
+            {
+                if (entidad == null ||
+                    entidad.Categoria != CategoriaEntidadVisual.Recurso)
+                {
+                    continue;
+                }
+
+                RecursoEstadoDto recurso =
+                    BuscarRecurso(
+                        recursos,
+                        entidad.TipoLogico,
+                        entidad.X,
+                        entidad.Y);
+
+                bool visible =
+                    recurso != null &&
+                    recurso.cantidadRestante > 0;
+
+                if (entidad.gameObject.activeSelf != visible)
+                {
+                    entidad.gameObject.SetActive(
+                        visible);
+                }
+            }
+        }
+
+        private static RecursoEstadoDto BuscarRecurso(
+            RecursoEstadoDto[] recursos,
+            string tipo,
+            int x,
+            int y)
+        {
+            if (recursos == null)
+                return null;
+
+            foreach (RecursoEstadoDto recurso in recursos)
+            {
+                if (recurso != null &&
+                    recurso.coordenada != null &&
+                    recurso.tipo == tipo &&
+                    recurso.coordenada.x == x &&
+                    recurso.coordenada.y == y)
+                {
+                    return recurso;
+                }
+            }
+
+            return null;
+        }
+
+        private void SincronizarJugador(
+            JugadorEstadoDto jugador,
+            bool humano,
+            Transform edificios,
+            Transform unidades)
+        {
+            if (jugador == null)
+                return;
+
+            string propietario =
+                humano
+                    ? "Humano"
+                    : "Maquina";
+
+            SincronizarEdificios(
+                jugador.edificios,
+                humano,
+                propietario,
+                edificios);
+
+            SincronizarObras(
+                jugador.obrasConstruccion,
+                humano,
+                propietario,
+                edificios);
+
+            SincronizarUnidades(
+                jugador.unidades,
+                humano,
+                propietario,
+                unidades);
+        }
+
+        private void SincronizarEdificios(
+            EdificioEstadoDto[] datos,
+            bool humano,
+            string propietario,
+            Transform contenedor)
+        {
+            if (datos == null)
+                return;
+
+            foreach (EdificioEstadoDto edificio in datos)
+            {
+                if (edificio == null ||
+                    edificio.coordenada == null ||
+                    edificio.tipo != "CentroUrbano")
+                {
+                    continue;
+                }
+
+                EntidadSeleccionableVista existente =
+                    BuscarEntidad(
+                        CategoriaEntidadVisual.Edificio,
+                        string.Empty,
+                        edificio.tipo,
+                        propietario,
+                        edificio.coordenada.x,
+                        edificio.coordenada.y);
+
+                if (existente != null)
+                    continue;
+
+                GameObject objeto =
+                    CrearSprite(
+                        $"Edificio_{propietario}_{edificio.tipo}_{edificio.coordenada.x}_{edificio.coordenada.y}",
+                        humano
+                            ? centroHumano
+                            : centroMaquina,
+                        edificio.coordenada.x,
+                        edificio.coordenada.y,
+                        20,
+                        contenedor,
+                        Vector3.one * escalaEdificios);
+
+                ConfigurarSeleccionable(
+                    objeto,
+                    CategoriaEntidadVisual.Edificio,
+                    edificio.tipo,
+                    propietario,
+                    edificio.coordenada);
+            }
+        }
+
+        private void SincronizarObras(
+            ObraConstruccionEstadoDto[] obras,
+            bool humano,
+            string propietario,
+            Transform contenedor)
+        {
+            if (obras == null)
+                return;
+
+            foreach (ObraConstruccionEstadoDto obra in obras)
+            {
+                if (obra == null ||
+                    obra.coordenada == null ||
+                    obra.tipo != "CentroUrbano")
+                {
+                    continue;
+                }
+
+                Sprite sprite =
+                    humano
+                        ? centroHumano
+                        : centroMaquina;
+
+                float factor =
+                    Mathf.Lerp(
+                        0.35f,
+                        0.85f,
+                        Mathf.Clamp01(
+                            obra.progreso / 100f));
+
+                GameObject objeto =
+                    CrearSprite(
+                        $"Obra_{propietario}_{obra.tipo}_{obra.coordenada.x}_{obra.coordenada.y}",
+                        sprite,
+                        obra.coordenada.x,
+                        obra.coordenada.y,
+                        18,
+                        contenedor,
+                        Vector3.one *
+                        escalaEdificios *
+                        factor);
+
+                if (objeto == null)
+                    continue;
+
+                SpriteRenderer renderer =
+                    objeto.GetComponent<SpriteRenderer>();
+
+                if (renderer != null)
+                {
+                    Color color =
+                        renderer.color;
+
+                    color.a = 0.55f;
+                    renderer.color = color;
+                }
+            }
+        }
+
+        private void SincronizarUnidades(
+            UnidadEstadoDto[] datos,
+            bool humano,
+            string propietario,
+            Transform contenedor)
+        {
+            if (datos == null)
+                return;
+
+            foreach (UnidadEstadoDto unidad in datos)
+            {
+                if (unidad == null ||
+                    unidad.coordenada == null ||
+                    string.IsNullOrWhiteSpace(
+                        unidad.id))
+                {
+                    continue;
+                }
+
+                EntidadSeleccionableVista existente =
+                    BuscarEntidad(
+                        CategoriaEntidadVisual.Unidad,
+                        unidad.id,
+                        unidad.tipo,
+                        propietario,
+                        unidad.coordenada.x,
+                        unidad.coordenada.y,
+                        ignorarCoordenada: true);
+
+                if (existente != null)
+                {
+                    existente.ActualizarDatosLogicos(
+                        unidad.coordenada.x,
+                        unidad.coordenada.y,
+                        unidad.estado,
+                        unidad.ordenActiva);
+
+                    movimientosVisuales[unidad.id] =
+                        new MovimientoVisualPendiente
+                        {
+                            Entidad = existente,
+                            Destino = PosicionVisual(
+                                unidad.coordenada.x,
+                                unidad.coordenada.y)
+                        };
+
+                    continue;
+                }
+
+                Sprite sprite =
+                    ObtenerSpriteUnidad(
+                        unidad.tipo,
+                        humano);
+
+                if (sprite == null)
+                    continue;
+
+                GameObject objeto =
+                    CrearSprite(
+                        $"Unidad_{propietario}_{unidad.tipo}_{unidad.coordenada.x}_{unidad.coordenada.y}",
+                        sprite,
+                        unidad.coordenada.x,
+                        unidad.coordenada.y,
+                        30,
+                        contenedor,
+                        Vector3.one * escalaUnidades);
+
+                ConfigurarSeleccionable(
+                    objeto,
+                    CategoriaEntidadVisual.Unidad,
+                    unidad.tipo,
+                    propietario,
+                    unidad.coordenada,
+                    unidad.id,
+                    unidad.estado,
+                    unidad.ordenActiva);
+            }
+        }
+
+        private EntidadSeleccionableVista BuscarEntidad(
+            CategoriaEntidadVisual categoria,
+            string id,
+            string tipo,
+            string propietario,
+            int x,
+            int y,
+            bool ignorarCoordenada = false)
+        {
+            EntidadSeleccionableVista[] entidades =
+                GetComponentsInChildren<EntidadSeleccionableVista>(
+                    true);
+
+            foreach (EntidadSeleccionableVista entidad in entidades)
+            {
+                if (entidad == null ||
+                    entidad.Categoria != categoria ||
+                    entidad.TipoLogico != tipo ||
+                    entidad.Propietario != propietario)
+                {
+                    continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(id) &&
+                    entidad.IdLogico != id)
+                {
+                    continue;
+                }
+
+                if (!ignorarCoordenada &&
+                    (entidad.X != x ||
+                     entidad.Y != y))
+                {
+                    continue;
+                }
+
+                return entidad;
+            }
+
+            return null;
+        }
+
+        private Sprite ObtenerSpriteUnidad(
+            string tipo,
+            bool humano)
+        {
+            switch (tipo)
+            {
+                case "Aldeano":
+                    return humano
+                        ? aldeanoHumano
+                        : aldeanoMaquina;
+                case "Guerrero":
+                    return humano
+                        ? guerreroHumano
+                        : guerreroMaquina;
+                case "Lancero":
+                    return humano
+                        ? lanceroHumano
+                        : lanceroMaquina;
+                case "Arquero":
+                    return humano
+                        ? arqueroHumano
+                        : arqueroMaquina;
+                case "Monje":
+                    return humano
+                        ? monjeHumano
+                        : monjeMaquina;
+                default:
+                    Debug.LogWarning(
+                        $"Tipo de unidad desconocido: {tipo}",
+                        this);
+                    return null;
+            }
+        }
+
+        private void LimpiarObrasVisuales(
+            Transform edificios)
+        {
+            if (edificios == null)
+                return;
+
+            for (int i = edificios.childCount - 1;
+                 i >= 0;
+                 i--)
+            {
+                GameObject objeto =
+                    edificios.GetChild(i).gameObject;
+
+                if (objeto == null ||
+                    !objeto.name.StartsWith("Obra_"))
+                {
+                    continue;
+                }
+
+                objeto.SetActive(false);
+
+                if (Application.isPlaying)
+                    Destroy(objeto);
+                else
+                    DestroyImmediate(objeto);
+            }
+        }
+
         private void Limpiar()
         {
             AntesDeLimpiarContenido?.Invoke();
@@ -196,6 +637,58 @@ namespace ImperiosEnGuerra.Vistas
                         Vector3.one * escalaEdificios);
                     ConfigurarSeleccionable(objeto, CategoriaEntidadVisual.Edificio,
                         edificio.tipo, propietario, edificio.coordenada);
+                }
+            }
+
+            if (jugador.obrasConstruccion != null)
+            {
+                foreach (ObraConstruccionEstadoDto obra in jugador.obrasConstruccion)
+                {
+                    if (obra == null ||
+                        obra.coordenada == null ||
+                        obra.tipo != "CentroUrbano")
+                    {
+                        continue;
+                    }
+
+                    Sprite sprite =
+                        humano
+                            ? centroHumano
+                            : centroMaquina;
+
+                    float factor =
+                        Mathf.Lerp(
+                            0.35f,
+                            0.85f,
+                            Mathf.Clamp01(
+                                obra.progreso / 100f));
+
+                    GameObject objeto =
+                        CrearSprite(
+                            $"Obra_{propietario}_{obra.tipo}_{obra.coordenada.x}_{obra.coordenada.y}",
+                            sprite,
+                            obra.coordenada.x,
+                            obra.coordenada.y,
+                            18,
+                            edificios,
+                            Vector3.one *
+                            escalaEdificios *
+                            factor);
+
+                    if (objeto != null)
+                    {
+                        SpriteRenderer renderer =
+                            objeto.GetComponent<SpriteRenderer>();
+
+                        if (renderer != null)
+                        {
+                            Color color =
+                                renderer.color;
+
+                            color.a = 0.55f;
+                            renderer.color = color;
+                        }
+                    }
                 }
             }
 

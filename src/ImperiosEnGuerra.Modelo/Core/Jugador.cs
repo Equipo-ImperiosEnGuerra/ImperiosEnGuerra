@@ -14,6 +14,7 @@ namespace ImperiosEnGuerra.Modelo.Core
     {
         private readonly List<Unidad> unidades;
         private readonly List<Edificio> edificios;
+        private readonly List<ObraConstruccion> obrasConstruccion;
 
         /// <summary>
         /// Nombre del participante dentro de la partida.
@@ -46,6 +47,11 @@ namespace ImperiosEnGuerra.Modelo.Core
         public IReadOnlyList<Edificio> Edificios
         {
             get { return edificios.AsReadOnly(); }
+        }
+
+        public IReadOnlyList<ObraConstruccion> ObrasConstruccion
+        {
+            get { return obrasConstruccion.AsReadOnly(); }
         }
 
         /// <summary>
@@ -87,6 +93,7 @@ namespace ImperiosEnGuerra.Modelo.Core
 
             unidades = new List<Unidad>();
             edificios = new List<Edificio>();
+            obrasConstruccion = new List<ObraConstruccion>();
         }
 
         /// <summary>
@@ -148,5 +155,26 @@ namespace ImperiosEnGuerra.Modelo.Core
 
             return edificios.Remove(edificio);
         }
+        public void AgregarObraConstruccion(
+            ObraConstruccion obra)
+        {
+            if (obra == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(obra));
+            }
+
+            obrasConstruccion.Add(obra);
+        }
+
+        public bool EliminarObraConstruccion(
+            ObraConstruccion obra)
+        {
+            if (obra == null)
+                return false;
+
+            return obrasConstruccion.Remove(obra);
+        }
+
     }
 }

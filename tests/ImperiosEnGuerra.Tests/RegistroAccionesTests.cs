@@ -158,6 +158,10 @@ public class RegistroAccionesTests
             mapa,
             new RecursosJugador());
 
+        humano.Recursos.Agregar(TipoRecurso.Oro, 500);
+        humano.Recursos.Agregar(TipoRecurso.Madera, 500);
+        humano.Recursos.Agregar(TipoRecurso.Comida, 500);
+
         var centroHumano = new CentroUrbano(new Coordenada(0, 0));
         var centroMaquina = new CentroUrbano(new Coordenada(9, 9));
 

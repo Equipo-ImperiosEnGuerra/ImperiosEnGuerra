@@ -49,6 +49,10 @@ public class EntrenamientoTests
         mapa.ObtenerCasilla(1, 1).Ocupar();
         mapa.ObtenerCasilla(4, 4).Ocupar();
 
+        partida.JugadorHumano.Recursos.Agregar(TipoRecurso.Oro, 100);
+        partida.JugadorHumano.Recursos.Agregar(TipoRecurso.Madera, 100);
+        partida.JugadorHumano.Recursos.Agregar(TipoRecurso.Comida, 100);
+
         operacion = new OperacionEntrenamiento();
     }
 

@@ -8,6 +8,8 @@ using ImperiosEnGuerra.Servicios.Concurrencia;
 using ImperiosEnGuerra.Modelo.Edificios;
 using ImperiosEnGuerra.Modelo.Map;
 using ImperiosEnGuerra.Modelo.Movimiento;
+using ImperiosEnGuerra.Modelo.Recoleccion;
+using ImperiosEnGuerra.Modelo.Recursos;
 
 namespace ImperiosEnGuerra.Api.Servicios;
 
@@ -22,6 +24,8 @@ public sealed class ServicioAccionesConcurrentes
     private readonly TimeSpan retardoConstruccion;
     private readonly TimeSpan retardoEntrenamiento;
     private readonly TimeSpan retardoAtaque;
+    private readonly ConfiguracionRecoleccion configuracionRecoleccion;
+    private readonly ConfiguracionEntrenamiento configuracionEntrenamiento;
 
 
     // ============================================================
@@ -31,7 +35,7 @@ public sealed class ServicioAccionesConcurrentes
     // Mantiene los tiempos de demostración actuales del proyecto:
     //
     // Movimiento:      1 segundo
-    // Recolección:     2 segundos
+    // Recolección:     1 segundo
     // Construcción:    7 segundos
     // Entrenamiento:   5 segundos
     // Ataque:          1 segundo
@@ -45,7 +49,7 @@ public sealed class ServicioAccionesConcurrentes
             gestorProcesos,
             servicioOrdenes,
             TimeSpan.FromSeconds(1),
-            TimeSpan.FromSeconds(2),
+            TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(7),
             TimeSpan.FromSeconds(5),
             TimeSpan.FromSeconds(1))
@@ -141,6 +145,11 @@ public sealed class ServicioAccionesConcurrentes
         this.retardoConstruccion = retardoConstruccion;
         this.retardoEntrenamiento = retardoEntrenamiento;
         this.retardoAtaque = retardoAtaque;
+        configuracionRecoleccion =
+            new ConfiguracionRecoleccion();
+
+        configuracionEntrenamiento =
+            new ConfiguracionEntrenamiento();
     }
 
 
@@ -210,6 +219,9 @@ public sealed class ServicioAccionesConcurrentes
 
                 try
                 {
+                    const int maximoReplanes = 12;
+                    int replanteos = 0;
+
                     var pasos =
                         new Queue<Coordenada>(
                             plan.Pasos);
@@ -232,6 +244,20 @@ public sealed class ServicioAccionesConcurrentes
 
                         if (!resultadoPaso.Exito)
                         {
+                            replanteos++;
+
+                            if (replanteos > maximoReplanes)
+                            {
+                                return ResultadoAccion.Fallido(
+                                    "Movimiento detenido para evitar un bucle de colisiones entre unidades. " +
+                                    "La unidad queda libre para recibir una nueva orden.");
+                            }
+
+                            EsperarCesionPaso(
+                                unidadId,
+                                token,
+                                replanteos);
+
                             ResultadoPlanMovimiento
                                 nuevoPlan =
                                     estadoPartida
@@ -282,48 +308,363 @@ public sealed class ServicioAccionesConcurrentes
             "RECOLECTAR",
             token =>
             {
-                Unidad? unidad = null;
-
-                if (Guid.TryParse(
-                    copia?.AldeanoId,
-                    out Guid unidadId))
+                if (!Guid.TryParse(
+                        copia?.AldeanoId,
+                        out Guid unidadId))
                 {
-                    unidad =
-                        estadoPartida.ObtenerUnidad(
-                            unidadId);
+                    return ResultadoAccion.Fallido(
+                        "El ID del Aldeano debe tener formato Guid válido.");
                 }
+
+                if (copia?.Objetivo == null)
+                {
+                    return ResultadoAccion.Fallido(
+                        "El objetivo de recolección es obligatorio.");
+                }
+
+                Unidad? unidad =
+                    estadoPartida.ObtenerUnidad(
+                        unidadId);
+
+                if (!(unidad is Aldeano aldeano))
+                {
+                    return ResultadoAccion.Fallido(
+                        "La unidad seleccionada no es un Aldeano.");
+                }
+
+                Coordenada objetivo =
+                    new Coordenada(
+                        copia.Objetivo.X,
+                        copia.Objetivo.Y);
+
+                TimeSpan retardoPaso =
+                    CalcularRetardoPasoMovimiento(
+                        retardoMovimiento,
+                        aldeano.VelocidadMovimiento);
+
+                int totalDepositado = 0;
+                bool ordenIniciada = false;
+                ResultadoAproximacionRecurso planInicial;
 
                 try
                 {
-                    EsperarAntesDeAplicar(
-                        token,
-                        retardoRecoleccion);
-
-                    var resultado =
-                        estadoPartida.IniciarRecoleccion(
-                            copia);
-
-                    if (resultado.Exito &&
-                        unidad != null)
+                    // Política de cancelación recuperable:
+                    // si el Aldeano conserva una carga de una orden anterior,
+                    // la deposita antes de intentar una nueva extracción.
+                    if (aldeano.CargaActual > 0)
                     {
-                        servicioOrdenes.Iniciar(
-                            unidad,
-                            TipoAccionJuego.Recolectar);
+                        ResultadoAproximacionDeposito cargaPendiente =
+                            PrepararAproximacionDepositoConReintentos(
+                                unidadId,
+                                token);
+
+                        if (!cargaPendiente.Exito)
+                        {
+                            return ResultadoAccion.Fallido(
+                                cargaPendiente.Mensaje);
+                        }
+
+                        TipoAccionJuego ordenCarga =
+                            cargaPendiente.Pasos.Count > 0
+                                ? TipoAccionJuego.Mover
+                                : TipoAccionJuego.Recolectar;
+
+                        if (!estadoPartida.IntentarIniciarOrdenUnidad(
+                                unidadId,
+                                ordenCarga))
+                        {
+                            return ResultadoAccion.Fallido(
+                                "El Aldeano no está disponible.");
+                        }
+
+                        ordenIniciada = true;
+
+                        ResultadoAccion regresoPendiente =
+                            EjecutarHaciaDepositoConReplan(
+                                unidadId,
+                                cargaPendiente,
+                                retardoPaso,
+                                token,
+                                out cargaPendiente);
+
+                        if (!regresoPendiente.Exito)
+                            return regresoPendiente;
+
+                        if (!estadoPartida.IntentarReemplazarOrdenUnidad(
+                                unidadId,
+                                TipoAccionJuego.Recolectar))
+                        {
+                            return ResultadoAccion.Fallido(
+                                "No se pudo activar la fase de depósito pendiente.");
+                        }
+
+                        ResultadoDepositoRecoleccion depositoPendiente =
+                            estadoPartida.DepositarCarga(
+                                unidadId,
+                                cargaPendiente.CentroUrbano);
+
+                        if (!depositoPendiente.Exito)
+                        {
+                            return ResultadoAccion.Fallido(
+                                depositoPendiente.Mensaje);
+                        }
+
+                        totalDepositado +=
+                            depositoPendiente.CantidadDepositada;
+
+                        Console.WriteLine(
+                            $"RECOLECCION_DEPOSITO_PENDIENTE: {unidadId} " +
+                            $"+{depositoPendiente.CantidadDepositada} " +
+                            $"{depositoPendiente.TipoRecurso}");
+
+                        if (!estadoPartida.IntentarReemplazarOrdenUnidad(
+                                unidadId,
+                                TipoAccionJuego.Mover))
+                        {
+                            return ResultadoAccion.Fallido(
+                                "No se pudo iniciar el regreso al recurso.");
+                        }
+
+                        planInicial =
+                            PrepararAproximacionRecursoConReintentos(
+                                copia,
+                                token,
+                                true);
+
+                        if (!planInicial.Exito)
+                        {
+                            if (estadoPartida.RecursoExiste(objetivo) &&
+                                !estadoPartida.RecursoDisponible(objetivo))
+                            {
+                                return ResultadoAccion.Exitoso(
+                                    $"La carga pendiente fue depositada ({totalDepositado}). " +
+                                    "El nodo objetivo ya está agotado.");
+                            }
+
+                            return ResultadoAccion.Fallido(
+                                planInicial.Mensaje);
+                        }
+                    }
+                    else
+                    {
+                        planInicial =
+                            PrepararAproximacionRecursoConReintentos(
+                                copia,
+                                token);
+
+                        if (!planInicial.Exito)
+                        {
+                            return ResultadoAccion.Fallido(
+                                planInicial.Mensaje);
+                        }
+
+                        TipoAccionJuego ordenInicial =
+                            planInicial.Pasos.Count > 0
+                                ? TipoAccionJuego.Mover
+                                : TipoAccionJuego.Recolectar;
+
+                        if (!estadoPartida.IntentarIniciarOrdenUnidad(
+                                unidadId,
+                                ordenInicial))
+                        {
+                            return ResultadoAccion.Fallido(
+                                "El Aldeano no está disponible.");
+                        }
+
+                        ordenIniciada = true;
                     }
 
-                    return resultado;
+                    if (!planInicial.TipoRecurso.HasValue)
+                    {
+                        return ResultadoAccion.Fallido(
+                            "No se pudo determinar el tipo de recurso objetivo.");
+                    }
+
+                    ResultadoAccion movimientoInicial =
+                        EjecutarHaciaRecursoConReplan(
+                            copia,
+                            unidadId,
+                            planInicial,
+                            retardoPaso,
+                            token,
+                            out planInicial);
+
+                    if (!movimientoInicial.Exito)
+                        return movimientoInicial;
+
+                    TipoRecurso tipoObjetivo =
+                        planInicial.TipoRecurso.Value;
+
+                    while (true)
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        if (!estadoPartida.IntentarReemplazarOrdenUnidad(
+                                unidadId,
+                                TipoAccionJuego.Recolectar))
+                        {
+                            return ResultadoAccion.Fallido(
+                                "No se pudo activar la fase de recolección.");
+                        }
+
+                        int tasa =
+                            configuracionRecoleccion.ObtenerTasa(
+                                tipoObjetivo);
+
+                        bool recursoAgotado = false;
+
+                        while (aldeano.CapacidadDisponible > 0)
+                        {
+                            EsperarAntesDeAplicar(
+                                token,
+                                retardoRecoleccion);
+
+                            ResultadoPasoRecoleccion paso =
+                                estadoPartida.RecolectarPaso(
+                                    unidadId,
+                                    objetivo,
+                                    tasa);
+
+                            if (!paso.Exito)
+                            {
+                                return ResultadoAccion.Fallido(
+                                    paso.Mensaje);
+                            }
+
+                            Console.WriteLine(
+                                $"RECOLECCION_PASO: {unidadId} +{paso.CantidadExtraida} " +
+                                $"{paso.TipoRecurso} carga={paso.CargaActual}/{paso.CapacidadCarga}");
+
+                            recursoAgotado =
+                                paso.RecursoAgotado;
+
+                            if (paso.CapacidadCompleta ||
+                                paso.RecursoAgotado ||
+                                paso.CantidadExtraida == 0)
+                            {
+                                break;
+                            }
+                        }
+
+                        if (aldeano.CargaActual > 0)
+                        {
+                            if (!estadoPartida.IntentarReemplazarOrdenUnidad(
+                                    unidadId,
+                                    TipoAccionJuego.Mover))
+                            {
+                                return ResultadoAccion.Fallido(
+                                    "No se pudo iniciar el regreso al depósito.");
+                            }
+
+                            ResultadoAproximacionDeposito depositoPlan =
+                                PrepararAproximacionDepositoConReintentos(
+                                    unidadId,
+                                    token);
+
+                            if (!depositoPlan.Exito)
+                            {
+                                return ResultadoAccion.Fallido(
+                                    depositoPlan.Mensaje);
+                            }
+
+                            ResultadoAccion regreso =
+                                EjecutarHaciaDepositoConReplan(
+                                    unidadId,
+                                    depositoPlan,
+                                    retardoPaso,
+                                    token,
+                                    out depositoPlan);
+
+                            if (!regreso.Exito)
+                                return regreso;
+
+                            if (!estadoPartida.IntentarReemplazarOrdenUnidad(
+                                    unidadId,
+                                    TipoAccionJuego.Recolectar))
+                            {
+                                return ResultadoAccion.Fallido(
+                                    "No se pudo activar la fase de depósito.");
+                            }
+
+                            ResultadoDepositoRecoleccion deposito =
+                                estadoPartida.DepositarCarga(
+                                    unidadId,
+                                    depositoPlan.CentroUrbano);
+
+                            if (!deposito.Exito)
+                            {
+                                return ResultadoAccion.Fallido(
+                                    deposito.Mensaje);
+                            }
+
+                            totalDepositado +=
+                                deposito.CantidadDepositada;
+
+                            Console.WriteLine(
+                                $"RECOLECCION_DEPOSITO: {unidadId} " +
+                                $"+{deposito.CantidadDepositada} {deposito.TipoRecurso}");
+                        }
+
+                        if (recursoAgotado ||
+                            !estadoPartida.RecursoDisponible(
+                                objetivo))
+                        {
+                            return ResultadoAccion.Exitoso(
+                                $"Recolección completada. Se depositaron {totalDepositado} " +
+                                $"de {tipoObjetivo} y el nodo quedó agotado.");
+                        }
+
+                        if (!estadoPartida.IntentarReemplazarOrdenUnidad(
+                                unidadId,
+                                TipoAccionJuego.Mover))
+                        {
+                            return ResultadoAccion.Fallido(
+                                "No se pudo iniciar el regreso al recurso.");
+                        }
+
+                        ResultadoAproximacionRecurso nuevoPlan =
+                            PrepararAproximacionRecursoConReintentos(
+                                copia,
+                                token,
+                                true);
+
+                        if (!nuevoPlan.Exito)
+                        {
+                            if (!estadoPartida.RecursoDisponible(
+                                    objetivo))
+                            {
+                                return ResultadoAccion.Exitoso(
+                                    $"Recolección completada. Se depositaron " +
+                                    $"{totalDepositado} de {tipoObjetivo}.");
+                            }
+
+                            return ResultadoAccion.Fallido(
+                                nuevoPlan.Mensaje);
+                        }
+
+                        ResultadoAccion regresoRecurso =
+                            EjecutarHaciaRecursoConReplan(
+                                copia,
+                                unidadId,
+                                nuevoPlan,
+                                retardoPaso,
+                                token,
+                                out nuevoPlan);
+
+                        if (!regresoRecurso.Exito)
+                            return regresoRecurso;
+                    }
                 }
                 finally
                 {
-                    if (unidad != null)
+                    if (ordenIniciada)
                     {
-                        servicioOrdenes.Completar(
-                            unidad);
+                        estadoPartida.CompletarOrdenUnidad(
+                            unidadId);
                     }
                 }
             });
     }
-
 
     // ============================================================
     // CONSTRUCCIÓN
@@ -339,48 +680,164 @@ public sealed class ServicioAccionesConcurrentes
             "CONSTRUIR",
             token =>
             {
+                CostoRecursos costo = null;
+                bool costoReservado = false;
+                bool completada = false;
+                Guid obraId = Guid.Empty;
+                Guid unidadId = Guid.Empty;
                 Unidad? unidad = null;
-
-                if (Guid.TryParse(
-                    copia?.AldeanoId,
-                    out Guid unidadId))
-                {
-                    unidad =
-                        estadoPartida.ObtenerUnidad(
-                            unidadId);
-                }
 
                 try
                 {
-                    EsperarAntesDeAplicar(
-                        token,
-                        retardoConstruccion);
+                    ResultadoAccion reserva =
+                        estadoPartida.ReservarCostoConstruccion(
+                            copia?.TipoEdificio,
+                            out costo);
 
-                    var resultado =
-                        estadoPartida.Construir(
-                            copia);
+                    if (!reserva.Exito)
+                        return reserva;
 
-                    if (resultado.Exito &&
-                        unidad != null)
+                    costoReservado = true;
+
+                    ResultadoAccion inicioObra =
+                        estadoPartida.IniciarObra(
+                            copia,
+                            out obraId);
+
+                    if (!inicioObra.Exito)
+                        return inicioObra;
+
+                    if (!Guid.TryParse(
+                            copia?.AldeanoId,
+                            out unidadId))
                     {
-                        servicioOrdenes.Iniciar(
-                            unidad,
-                            TipoAccionJuego.Construir);
+                        return ResultadoAccion.Fallido(
+                            "El ID del Aldeano debe tener formato Guid válido.");
                     }
 
-                    return resultado;
+                    unidad =
+                        estadoPartida.ObtenerUnidad(
+                            unidadId);
+
+                    if (!(unidad is Aldeano aldeano))
+                    {
+                        return ResultadoAccion.Fallido(
+                            "La unidad seleccionada no es un Aldeano.");
+                    }
+
+                    ResultadoAproximacionConstruccion plan =
+                        estadoPartida.PrepararAproximacionConstruccion(
+                            unidadId,
+                            obraId);
+
+                    if (!plan.Exito)
+                        return ResultadoAccion.Fallido(plan.Mensaje);
+
+                    TipoAccionJuego ordenInicial =
+                        plan.Pasos.Count > 0
+                            ? TipoAccionJuego.Mover
+                            : TipoAccionJuego.Construir;
+
+                    if (!estadoPartida.IntentarIniciarOrdenUnidad(
+                            unidadId,
+                            ordenInicial))
+                    {
+                        return ResultadoAccion.Fallido(
+                            "El Aldeano no está disponible.");
+                    }
+
+                    TimeSpan retardoPaso =
+                        CalcularRetardoPasoMovimiento(
+                            retardoMovimiento,
+                            aldeano.VelocidadMovimiento);
+
+                    ResultadoAccion movimiento =
+                        EjecutarHaciaObraConReplan(
+                            unidadId,
+                            obraId,
+                            plan,
+                            retardoPaso,
+                            token);
+
+                    if (!movimiento.Exito)
+                        return movimiento;
+
+                    if (!estadoPartida.IntentarReemplazarOrdenUnidad(
+                            unidadId,
+                            TipoAccionJuego.Construir))
+                    {
+                        return ResultadoAccion.Fallido(
+                            "No se pudo iniciar la construcción.");
+                    }
+
+                    const int pasosProgreso = 10;
+                    TimeSpan retardoProgreso =
+                        DividirRetardo(
+                            retardoConstruccion,
+                            pasosProgreso);
+
+                    for (int i = 0;
+                         i < pasosProgreso;
+                         i++)
+                    {
+                        EsperarAntesDeAplicar(
+                            token,
+                            retardoProgreso);
+
+                        ResultadoProgresoConstruccion progreso =
+                            estadoPartida.AvanzarObra(
+                                obraId,
+                                10);
+
+                        if (!progreso.Exito)
+                        {
+                            return ResultadoAccion.Fallido(
+                                progreso.Mensaje);
+                        }
+
+                        Console.WriteLine(
+                            $"CONSTRUCCION_PROGRESO: {obraId} {progreso.Progreso}%");
+
+                        if (progreso.Terminada)
+                        {
+                            completada = true;
+                            break;
+                        }
+                    }
+
+                    if (!completada)
+                    {
+                        return ResultadoAccion.Fallido(
+                            "La construcción no alcanzó el 100%.");
+                    }
+
+                    return ResultadoAccion.Exitoso(
+                        "Construcción terminada correctamente.");
                 }
                 finally
                 {
+                    if (!completada &&
+                        obraId != Guid.Empty)
+                    {
+                        estadoPartida.CancelarObra(
+                            obraId);
+                    }
+
+                    if (!completada &&
+                        costoReservado)
+                    {
+                        estadoPartida.ReembolsarCosto(
+                            costo);
+                    }
+
                     if (unidad != null)
                     {
-                        servicioOrdenes.Completar(
-                            unidad);
+                        estadoPartida.CompletarOrdenUnidad(
+                            unidad.Id);
                     }
                 }
             });
     }
-
 
     // ============================================================
     // ENTRENAMIENTO
@@ -396,47 +853,121 @@ public sealed class ServicioAccionesConcurrentes
             "ENTRENAR",
             token =>
             {
-                CentroUrbano? centro = null;
-
-                if (copia?.EdificioOrigen != null)
-                {
-                    centro =
-                        estadoPartida.ObtenerCentroUrbano(
-                            new Coordenada(
-                                copia.EdificioOrigen.X,
-                                copia.EdificioOrigen.Y));
-                }
+                CostoRecursos costo = null;
+                bool costoReservado = false;
+                bool completado = false;
+                Guid entrenamientoId = Guid.Empty;
+                Coordenada centroUrbano = null;
 
                 try
                 {
-                    if (centro != null)
+                    ResultadoAccion reserva =
+                        estadoPartida.ReservarCostoEntrenamiento(
+                            copia?.TipoUnidad,
+                            out costo);
+
+                    if (!reserva.Exito)
+                        return reserva;
+
+                    costoReservado = true;
+
+                    ResultadoAccion encolado =
+                        estadoPartida.EncolarEntrenamiento(
+                            copia,
+                            out entrenamientoId,
+                            out centroUrbano);
+
+                    if (!encolado.Exito)
+                        return encolado;
+
+                    while (!estadoPartida.EsTurnoEntrenamiento(
+                        centroUrbano,
+                        entrenamientoId))
                     {
-                        if (!centro.IniciarEntrenamiento(
-                            copia?.TipoUnidad
-                            ?? string.Empty))
-                        {
-                            return ResultadoAccion.Fallido(
-                                "El Centro Urbano ya está entrenando.");
-                        }
+                        EsperarAntesDeAplicar(
+                            token,
+                            TimeSpan.FromMilliseconds(10));
                     }
 
-                    EsperarAntesDeAplicar(
-                        token,
-                        retardoEntrenamiento);
+                    if (!configuracionEntrenamiento
+                        .IntentarObtenerFactor(
+                            copia?.TipoUnidad,
+                            out double factor))
+                    {
+                        return ResultadoAccion.Fallido(
+                            "No existe tiempo configurado para la unidad.");
+                    }
 
-                    return estadoPartida.Entrenar(
-                        copia);
+                    TimeSpan tiempoTotal =
+                        MultiplicarRetardo(
+                            retardoEntrenamiento,
+                            factor);
+
+                    TimeSpan retardoProgreso =
+                        DividirRetardo(
+                            tiempoTotal,
+                            10);
+
+                    for (int i = 0; i < 10; i++)
+                    {
+                        EsperarAntesDeAplicar(
+                            token,
+                            retardoProgreso);
+
+                        ResultadoProgresoEntrenamiento progreso =
+                            estadoPartida.AvanzarEntrenamiento(
+                                centroUrbano,
+                                entrenamientoId,
+                                10);
+
+                        if (!progreso.Exito)
+                        {
+                            return ResultadoAccion.Fallido(
+                                progreso.Mensaje);
+                        }
+
+                        Console.WriteLine(
+                            $"ENTRENAMIENTO_PROGRESO: {entrenamientoId} " +
+                            $"{progreso.Progreso}%");
+                    }
+
+                    ResultadoSpawnEntrenamiento spawn =
+                        estadoPartida.CompletarEntrenamientoConSpawn(
+                            centroUrbano,
+                            entrenamientoId,
+                            copia?.TipoUnidad ?? string.Empty);
+
+                    if (!spawn.Exito)
+                    {
+                        return ResultadoAccion.Fallido(
+                            spawn.Mensaje);
+                    }
+
+                    completado = true;
+
+                    return ResultadoAccion.Exitoso(
+                        $"{spawn.Mensaje} Spawn ({spawn.Coordenada.X},{spawn.Coordenada.Y}).");
                 }
                 finally
                 {
-                    if (centro != null)
+                    if (!completado &&
+                        entrenamientoId != Guid.Empty &&
+                        centroUrbano != null)
                     {
-                        centro.CompletarEntrenamiento();
+                        estadoPartida.CancelarEntrenamientoCola(
+                            centroUrbano,
+                            entrenamientoId);
+                    }
+
+                    if (!completado &&
+                        costoReservado)
+                    {
+                        estadoPartida.ReembolsarCosto(
+                            costo);
                     }
                 }
             });
     }
-
 
     // ============================================================
     // ATAQUE
@@ -504,6 +1035,457 @@ public sealed class ServicioAccionesConcurrentes
 
     public int ProcesosActivos =>
         gestorProcesos.ProcesosActivos;
+
+
+    private ResultadoAproximacionRecurso
+        PrepararAproximacionRecursoConReintentos(
+            RecolectarRequest? request,
+            CancellationToken token,
+            bool permitirOrdenMovimientoActiva = false)
+    {
+        const int maximoIntentos = 8;
+
+        ResultadoAproximacionRecurso ultimoResultado =
+            ResultadoAproximacionRecurso.Fallido(
+                "No se pudo preparar la aproximación al recurso.");
+
+        for (int intento = 1;
+             intento <= maximoIntentos;
+             intento++)
+        {
+            token.ThrowIfCancellationRequested();
+
+            ultimoResultado =
+                estadoPartida.PrepararAproximacionRecurso(
+                    request,
+                    permitirOrdenMovimientoActiva);
+
+            if (ultimoResultado.Exito ||
+                !ultimoResultado.Reintentable ||
+                intento == maximoIntentos)
+            {
+                return ultimoResultado;
+            }
+
+            EsperarAntesDeAplicar(
+                token,
+                retardoMovimiento);
+        }
+
+        return ultimoResultado;
+    }
+
+    private ResultadoAproximacionDeposito
+        PrepararAproximacionDepositoConReintentos(
+            Guid aldeanoId,
+            CancellationToken token)
+    {
+        const int maximoIntentos = 8;
+
+        ResultadoAproximacionDeposito ultimoResultado =
+            ResultadoAproximacionDeposito.Fallido(
+                "No se pudo preparar la aproximación al depósito.");
+
+        for (int intento = 1;
+             intento <= maximoIntentos;
+             intento++)
+        {
+            token.ThrowIfCancellationRequested();
+
+            ultimoResultado =
+                estadoPartida.PrepararAproximacionDeposito(
+                    aldeanoId,
+                    true);
+
+            if (ultimoResultado.Exito ||
+                !ultimoResultado.Reintentable ||
+                intento == maximoIntentos)
+            {
+                return ultimoResultado;
+            }
+
+            EsperarAntesDeAplicar(
+                token,
+                retardoMovimiento);
+        }
+
+        return ultimoResultado;
+    }
+
+    private ResultadoAccion EjecutarHaciaRecursoConReplan(
+        RecolectarRequest? request,
+        Guid unidadId,
+        ResultadoAproximacionRecurso planInicial,
+        TimeSpan retardoPaso,
+        CancellationToken token,
+        out ResultadoAproximacionRecurso planFinal)
+    {
+        const int maximoReplanes = 12;
+        planFinal = planInicial;
+
+        for (int intento = 1;
+             intento <= maximoReplanes;
+             intento++)
+        {
+            token.ThrowIfCancellationRequested();
+
+            ResultadoAccion movimiento =
+                EjecutarPasosRecoleccion(
+                    unidadId,
+                    planFinal.Pasos,
+                    retardoPaso,
+                    token);
+
+            if (movimiento.Exito)
+                return movimiento;
+
+            if (intento == maximoReplanes)
+                break;
+
+            EsperarCesionPaso(
+                unidadId,
+                token,
+                intento);
+
+            planFinal =
+                PrepararAproximacionRecursoConReintentos(
+                    request,
+                    token,
+                    true);
+
+            if (!planFinal.Exito)
+            {
+                return ResultadoAccion.Fallido(
+                    planFinal.Mensaje);
+            }
+
+            Console.WriteLine(
+                $"RECOLECCION_REPLAN: {unidadId} intento {intento + 1}");
+        }
+
+        return ResultadoAccion.Fallido(
+            "No se encontró una ruta libre hacia el recurso tras varios cambios del mapa. " +
+            "La orden terminó sin bloquear los demás workers.");
+    }
+
+    private ResultadoAccion EjecutarHaciaDepositoConReplan(
+        Guid unidadId,
+        ResultadoAproximacionDeposito planInicial,
+        TimeSpan retardoPaso,
+        CancellationToken token,
+        out ResultadoAproximacionDeposito planFinal)
+    {
+        const int maximoReplanes = 12;
+        planFinal = planInicial;
+
+        for (int intento = 1;
+             intento <= maximoReplanes;
+             intento++)
+        {
+            token.ThrowIfCancellationRequested();
+
+            ResultadoAccion movimiento =
+                EjecutarPasosRecoleccion(
+                    unidadId,
+                    planFinal.Pasos,
+                    retardoPaso,
+                    token);
+
+            if (movimiento.Exito)
+                return movimiento;
+
+            if (intento == maximoReplanes)
+                break;
+
+            EsperarCesionPaso(
+                unidadId,
+                token,
+                intento);
+
+            planFinal =
+                PrepararAproximacionDepositoConReintentos(
+                    unidadId,
+                    token);
+
+            if (!planFinal.Exito)
+            {
+                return ResultadoAccion.Fallido(
+                    planFinal.Mensaje);
+            }
+
+            Console.WriteLine(
+                $"DEPOSITO_REPLAN: {unidadId} intento {intento + 1}");
+        }
+
+        return ResultadoAccion.Fallido(
+            "No se encontró una ruta libre hacia un Centro Urbano tras varios cambios del mapa. " +
+            "La carga del Aldeano se conserva para poder reintentarla.");
+    }
+
+    private ResultadoAccion EjecutarHaciaObraConReplan(
+        Guid unidadId,
+        Guid obraId,
+        ResultadoAproximacionConstruccion planInicial,
+        TimeSpan retardoPaso,
+        CancellationToken token)
+    {
+        const int maximoReplanes = 12;
+        ResultadoAproximacionConstruccion planActual =
+            planInicial;
+
+        for (int intento = 1;
+             intento <= maximoReplanes;
+             intento++)
+        {
+            token.ThrowIfCancellationRequested();
+
+            ResultadoAccion movimiento =
+                EjecutarPasosConstruccion(
+                    unidadId,
+                    planActual.Pasos,
+                    retardoPaso,
+                    token);
+
+            if (movimiento.Exito)
+                return movimiento;
+
+            if (intento == maximoReplanes)
+                break;
+
+            EsperarCesionPaso(
+                unidadId,
+                token,
+                intento);
+
+            planActual =
+                estadoPartida.PrepararAproximacionConstruccion(
+                    unidadId,
+                    obraId,
+                    true);
+
+            if (!planActual.Exito)
+            {
+                if (planActual.Reintentable)
+                {
+                    EsperarAntesDeAplicar(
+                        token,
+                        retardoMovimiento);
+
+                    continue;
+                }
+
+                return ResultadoAccion.Fallido(
+                    planActual.Mensaje);
+            }
+
+            Console.WriteLine(
+                $"CONSTRUCCION_REPLAN: {unidadId} intento {intento + 1}");
+        }
+
+        return ResultadoAccion.Fallido(
+            "No se encontró una ruta libre hasta la obra tras varios cambios del mapa. " +
+            "La obra se cancelará y su costo será reembolsado.");
+    }
+
+    private ResultadoAccion EjecutarPasosRecoleccion(
+        Guid unidadId,
+        IReadOnlyList<Coordenada> pasosPlanificados,
+        TimeSpan retardoPaso,
+        CancellationToken token)
+    {
+        var pasos =
+            new Queue<Coordenada>(
+                pasosPlanificados);
+
+        while (pasos.Count > 0)
+        {
+            EsperarAntesDeAplicar(
+                token,
+                retardoPaso);
+
+            Coordenada siguiente =
+                pasos.Dequeue();
+
+            ResultadoAccion resultado =
+                AvanzarMovimientoConReintentos(
+                    unidadId,
+                    siguiente,
+                    token);
+
+            if (!resultado.Exito)
+            {
+                return resultado;
+            }
+
+            Console.WriteLine(
+                $"RECOLECCION_MOVIMIENTO: {unidadId} -> " +
+                $"({siguiente.X},{siguiente.Y})");
+        }
+
+        return ResultadoAccion.Exitoso(
+            "Movimiento de recolección completado.");
+    }
+
+
+    private ResultadoAccion EjecutarPasosConstruccion(
+        Guid unidadId,
+        IReadOnlyList<Coordenada> pasosPlanificados,
+        TimeSpan retardoPaso,
+        CancellationToken token)
+    {
+        var pasos =
+            new Queue<Coordenada>(
+                pasosPlanificados);
+
+        while (pasos.Count > 0)
+        {
+            EsperarAntesDeAplicar(
+                token,
+                retardoPaso);
+
+            Coordenada siguiente =
+                pasos.Dequeue();
+
+            ResultadoAccion resultado =
+                AvanzarMovimientoConReintentos(
+                    unidadId,
+                    siguiente,
+                    token);
+
+            if (!resultado.Exito)
+                return resultado;
+
+            Console.WriteLine(
+                $"CONSTRUCCION_MOVIMIENTO: {unidadId} -> " +
+                $"({siguiente.X},{siguiente.Y})");
+        }
+
+        return ResultadoAccion.Exitoso(
+            "Aldeano posicionado junto a la obra.");
+    }
+
+    private ResultadoAccion AvanzarMovimientoConReintentos(
+        Guid unidadId,
+        Coordenada siguiente,
+        CancellationToken token)
+    {
+        const int maximoIntentos = 3;
+
+        ResultadoAccion ultimo =
+            ResultadoAccion.Fallido(
+                "No se pudo avanzar el movimiento.");
+
+        for (int intento = 1;
+             intento <= maximoIntentos;
+             intento++)
+        {
+            token.ThrowIfCancellationRequested();
+
+            ultimo =
+                estadoPartida.AvanzarMovimiento(
+                    unidadId,
+                    siguiente);
+
+            if (ultimo.Exito)
+            {
+                return ultimo;
+            }
+
+            if (intento < maximoIntentos)
+            {
+                EsperarCesionPaso(
+                    unidadId,
+                    token,
+                    intento);
+            }
+        }
+
+        return ResultadoAccion.Fallido(
+            $"El paso está temporalmente bloqueado tras {maximoIntentos} intentos. " +
+            ultimo.Mensaje);
+    }
+
+
+    private void EsperarCesionPaso(
+        Guid unidadId,
+        CancellationToken token,
+        int intento)
+    {
+        if (retardoMovimiento <= TimeSpan.Zero)
+            return;
+
+        byte[] bytes =
+            unidadId.ToByteArray();
+
+        int marca =
+            bytes[0] ^
+            bytes[5] ^
+            bytes[10] ^
+            bytes[15];
+
+        double baseMs =
+            Math.Max(
+                50d,
+                Math.Min(
+                    250d,
+                    retardoMovimiento.TotalMilliseconds * 0.20d));
+
+        double esperaMs =
+            baseMs * (1 + (marca % 5)) +
+            Math.Min(intento, 4) * 25d;
+
+        EsperarAntesDeAplicar(
+            token,
+            TimeSpan.FromMilliseconds(
+                esperaMs));
+    }
+
+
+    private static TimeSpan MultiplicarRetardo(
+        TimeSpan baseTiempo,
+        double factor)
+    {
+        if (baseTiempo <= TimeSpan.Zero)
+            return TimeSpan.Zero;
+
+        if (factor <= 0d ||
+            double.IsNaN(factor) ||
+            double.IsInfinity(factor))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(factor));
+        }
+
+        long ticks =
+            (long)Math.Round(
+                baseTiempo.Ticks *
+                factor);
+
+        return TimeSpan.FromTicks(
+            Math.Max(1L, ticks));
+    }
+
+
+    private static TimeSpan DividirRetardo(
+        TimeSpan total,
+        int partes)
+    {
+        if (partes <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(partes));
+        }
+
+        if (total <= TimeSpan.Zero)
+            return TimeSpan.Zero;
+
+        long ticks =
+            Math.Max(
+                1L,
+                total.Ticks / partes);
+
+        return TimeSpan.FromTicks(ticks);
+    }
 
 
     private static TimeSpan CalcularRetardoPasoMovimiento(

@@ -64,6 +64,10 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                 return ResultadoAccion.Fallido(
                     "El objetivo no contiene un tipo de recurso válido.");
 
+            if (recurso.Agotado)
+                return ResultadoAccion.Fallido(
+                    "El recurso objetivo está agotado.");
+
             return ResultadoAccion.Exitoso(
                 $"Recolección de {recurso.Tipo} preparada.");
         }

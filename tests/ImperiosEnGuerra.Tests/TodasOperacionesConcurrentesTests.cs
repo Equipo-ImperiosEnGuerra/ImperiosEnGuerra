@@ -42,8 +42,11 @@ public class TodasOperacionesConcurrentesTests
                     UnidadId = aldeanoMovimiento.Id.ToString(),
                     Destino = new CoordenadaRequest
                     {
-                        X = 3,
-                        Y = 3
+                        // Destino independiente de las zonas usadas por
+                        // construcción y recolección. Esta prueba valida
+                        // convivencia concurrente, no colisión intencional.
+                        X = 5,
+                        Y = 0
                     }
                 });
 
@@ -167,7 +170,8 @@ public class TodasOperacionesConcurrentesTests
 
         Assert.That(
             resultado.Resultado.Exito,
-            Is.True);
+            Is.True,
+            $"{nombre}: {resultado.Resultado.Mensaje}");
     }
 
 
@@ -193,6 +197,10 @@ public class TodasOperacionesConcurrentesTests
             TipoJugador.Maquina,
             mapa,
             new RecursosJugador());
+
+        humano.Recursos.Agregar(TipoRecurso.Oro, 500);
+        humano.Recursos.Agregar(TipoRecurso.Madera, 500);
+        humano.Recursos.Agregar(TipoRecurso.Comida, 500);
 
 
         aldeanoMovimiento =

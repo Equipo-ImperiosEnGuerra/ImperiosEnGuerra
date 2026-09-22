@@ -160,6 +160,60 @@ namespace ImperiosEnGuerra.Tests.Editor
                 Is.Not.SameAs(partida.JugadorMaquina.Recursos));
         }
 
+        [Test]
+        public void Inicializador_InicioEsJugableSinCrearRecursosDeLaNada()
+        {
+            Mapa mapa = new Mapa(10, 8);
+
+            Partida partida = new InicializadorPartida().Crear(
+                "Humano",
+                mapa,
+                new Coordenada(0, 0),
+                new List<Recurso>
+                {
+                    new Recurso(TipoRecurso.Oro, new Coordenada(2, 1)),
+                    new Recurso(TipoRecurso.Madera, new Coordenada(3, 1)),
+                    new Recurso(TipoRecurso.Comida, new Coordenada(4, 1))
+                },
+                "Maquina",
+                mapa,
+                new Coordenada(9, 7),
+                new List<Recurso>
+                {
+                    new Recurso(TipoRecurso.Oro, new Coordenada(7, 6)),
+                    new Recurso(TipoRecurso.Madera, new Coordenada(6, 6)),
+                    new Recurso(TipoRecurso.Comida, new Coordenada(5, 6))
+                });
+
+            Assert.That(
+                partida.JugadorHumano.Unidades.OfType<Aldeano>().Count(),
+                Is.EqualTo(2));
+
+            Assert.That(
+                partida.JugadorHumano.Recursos.ObtenerCantidad(TipoRecurso.Comida),
+                Is.GreaterThanOrEqualTo(10));
+
+            Assert.That(
+                partida.JugadorHumano.Recursos.ObtenerCantidad(TipoRecurso.Madera),
+                Is.EqualTo(20));
+
+            Assert.That(
+                partida.JugadorHumano.Recursos.ObtenerCantidad(TipoRecurso.Oro),
+                Is.Zero);
+
+            var economia = new ConfiguracionEconomia();
+
+            Assert.That(
+                economia.IntentarObtenerCostoUnidad(
+                    nameof(Aldeano),
+                    out CostoRecursos costoAldeano),
+                Is.True);
+
+            Assert.That(
+                partida.JugadorHumano.Recursos.ObtenerCantidad(TipoRecurso.Comida),
+                Is.GreaterThanOrEqualTo(costoAldeano.Comida));
+        }
+
         [TestCase("mapa null")]
         [TestCase("centro null")]
         [TestCase("lista null")]
@@ -309,8 +363,32 @@ namespace ImperiosEnGuerra.Tests.Editor
             {
                 Assert.That(mapa.ObtenerRecursoEn(
                     new Coordenada(recurso.Coordenada.X, recurso.Coordenada.Y)), Is.SameAs(recurso));
-                Assert.That(jugador.Recursos.ObtenerCantidad(recurso.Tipo), Is.Zero);
             }
+
+            Assert.That(
+                jugador.Recursos.ObtenerCantidad(TipoRecurso.Oro),
+                Is.EqualTo(ConfiguracionInicioPartida.OroInicialPredeterminado));
+            Assert.That(
+                jugador.Recursos.ObtenerCantidad(TipoRecurso.Madera),
+                Is.EqualTo(ConfiguracionInicioPartida.MaderaInicialPredeterminada));
+            Assert.That(
+                jugador.Recursos.ObtenerCantidad(TipoRecurso.Comida),
+                Is.EqualTo(ConfiguracionInicioPartida.ComidaInicialPredeterminada));
+
+            Assert.That(
+                jugador.Unidades.Count,
+                Is.EqualTo(ConfiguracionInicioPartida.AldeanosInicialesPredeterminados));
+            Assert.That(
+                jugador.Unidades.All(unidad => unidad is Aldeano),
+                Is.True);
+            Assert.That(
+                jugador.Unidades.Select(unidad => (unidad.Coordenada.X, unidad.Coordenada.Y)).Distinct().Count(),
+                Is.EqualTo(ConfiguracionInicioPartida.AldeanosInicialesPredeterminados));
+            Assert.That(
+                jugador.Unidades.All(unidad =>
+                    mapa.ObtenerRecursoEn(unidad.Coordenada) == null &&
+                    !(unidad.Coordenada.X == centro.X && unidad.Coordenada.Y == centro.Y)),
+                Is.True);
         }
     }
 }

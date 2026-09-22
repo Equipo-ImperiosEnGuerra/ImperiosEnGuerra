@@ -108,7 +108,30 @@ public class MovimientoUnityTests
     }
 
     [Test]
-    public void MovimientoEnCurso_BloqueaSegundoMovimiento()
+    public void UnidadConOrdenActiva_NoAceptaSegundaOrdenSimultanea()
+    {
+        unidad.ActualizarDatosLogicos(
+            1,
+            1,
+            "Moviendo",
+            "Mover");
+
+        Invocar(
+            acciones,
+            "PrepararAccion",
+            "Mover");
+
+        Assert.That(
+            seleccion.CapturandoDestino,
+            Is.False);
+
+        Assert.That(
+            mensaje.text,
+            Does.Contain("entidad humana apropiada"));
+    }
+
+    [Test]
+    public void MovimientoEnCurso_NoBloqueaPrepararOtraOrden()
     {
         CampoAutomatico(
             conexion,
@@ -122,11 +145,11 @@ public class MovimientoUnityTests
 
         Assert.That(
             seleccion.CapturandoDestino,
-            Is.False);
+            Is.True);
 
         Assert.That(
             mensaje.text,
-            Does.Contain("esa acción ya está en curso"));
+            Is.EqualTo("Selecciona una casilla destino."));
     }
 
     [Test]

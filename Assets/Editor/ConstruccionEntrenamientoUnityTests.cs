@@ -272,7 +272,7 @@ public class ConstruccionEntrenamientoUnityTests
         Assert.That(
             mensaje.text,
             Is.EqualTo(
-                "Selecciona una casilla para crear Arquero."));
+                "Selecciona una casilla de referencia para Arquero."));
     }
 
     [Test]
@@ -309,6 +309,52 @@ public class ConstruccionEntrenamientoUnityTests
                 acciones,
                 "accionPendiente"),
             Is.Null);
+    }
+
+    [Test]
+    public void ConstruccionEnCurso_NoBloqueaOtraOrdenDeConstruccion()
+    {
+        CampoAutomatico(
+            conexion,
+            "ConstruccionEnCurso",
+            true);
+
+        Invocar(
+            seleccion,
+            "Seleccionar",
+            aldeano);
+
+        Invocar(
+            acciones,
+            "PrepararAccion",
+            "Construir");
+
+        Assert.That(
+            seleccion.CapturandoDestino,
+            Is.True);
+    }
+
+    [Test]
+    public void EntrenamientoEnCurso_NoBloqueaOtraOrdenDeCola()
+    {
+        CampoAutomatico(
+            conexion,
+            "EntrenamientoEnCurso",
+            true);
+
+        Invocar(
+            seleccion,
+            "Seleccionar",
+            centroUrbano);
+
+        Invocar(
+            acciones,
+            "PrepararAccion",
+            "Entrenar");
+
+        Assert.That(
+            selectorEntrenamiento.activeSelf,
+            Is.True);
     }
 
     [Test]
@@ -482,6 +528,19 @@ public class ConstruccionEntrenamientoUnityTests
         objeto.GetType()
             .GetField(
                 nombre,
+                BindingFlags.Instance |
+                BindingFlags.NonPublic)
+            .SetValue(objeto, valor);
+    }
+
+    private static void CampoAutomatico(
+        object objeto,
+        string nombre,
+        object valor)
+    {
+        objeto.GetType()
+            .GetField(
+                $"<{nombre}>k__BackingField",
                 BindingFlags.Instance |
                 BindingFlags.NonPublic)
             .SetValue(objeto, valor);
