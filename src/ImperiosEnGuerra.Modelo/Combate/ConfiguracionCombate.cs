@@ -77,6 +77,53 @@ namespace ImperiosEnGuerra.Modelo.Combate
 
             return estadisticas;
         }
+
+        /// <summary>
+        /// Resuelve estadísticas para una Unidad real. Si una subclase técnica
+        /// o de prueba no tiene balance explícito, recibe un perfil neutral
+        /// no ofensivo en vez de impedir su construcción.
+        /// </summary>
+        public EstadisticasCombate ObtenerParaUnidad(
+            string tipo)
+        {
+            if (!string.IsNullOrWhiteSpace(tipo) &&
+                porTipo.TryGetValue(
+                    tipo,
+                    out EstadisticasCombate estadisticas))
+            {
+                return estadisticas;
+            }
+
+            return new EstadisticasCombate(
+                tipo ?? "Unidad",
+                60,
+                0,
+                0,
+                0d);
+        }
+
+        /// <summary>
+        /// Equivalente neutral para subclases técnicas de Edificio.
+        /// Los edificios reales configurados conservan siempre sus valores exactos.
+        /// </summary>
+        public EstadisticasCombate ObtenerParaEdificio(
+            string tipo)
+        {
+            if (!string.IsNullOrWhiteSpace(tipo) &&
+                porTipo.TryGetValue(
+                    tipo,
+                    out EstadisticasCombate estadisticas))
+            {
+                return estadisticas;
+            }
+
+            return new EstadisticasCombate(
+                tipo ?? "Edificio",
+                100,
+                0,
+                0,
+                0d);
+        }
     }
 
     public sealed class EstadisticasCombate

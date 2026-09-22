@@ -34,7 +34,7 @@ namespace ImperiosEnGuerra.Modelo.Edificios
 
             EstadisticasCombate estadisticas =
                 new ConfiguracionCombate()
-                    .Obtener(
+                    .ObtenerParaEdificio(
                         GetType().Name);
 
             Id = Guid.NewGuid();

@@ -51,7 +51,7 @@ namespace ImperiosEnGuerra.Modelo.Unidades
 
             EstadisticasCombate estadisticas =
                 new ConfiguracionCombate()
-                    .Obtener(
+                    .ObtenerParaUnidad(
                         GetType().Name);
 
             Id = Guid.NewGuid();
