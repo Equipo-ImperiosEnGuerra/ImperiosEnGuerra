@@ -77,8 +77,9 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                 objetivoEdificio.Coordenada;
 
             int distancia =
-                Math.Abs(atacante.Coordenada.X - objetivo.X) +
-                Math.Abs(atacante.Coordenada.Y - objetivo.Y);
+                DistanciaCombate(
+                    atacante.Coordenada,
+                    objetivo);
 
             if (distancia <= 0 ||
                 distancia > atacante.AlcanceAtaque)
@@ -157,6 +158,27 @@ namespace ImperiosEnGuerra.Modelo.Acciones
 
             return ResultadoAccion.Exitoso(
                 mensaje);
+        }
+
+        private static int DistanciaCombate(
+            Coordenada origen,
+            Coordenada objetivo)
+        {
+            int deltaX =
+                Math.Abs(
+                    origen.X -
+                    objetivo.X);
+
+            int deltaY =
+                Math.Abs(
+                    origen.Y -
+                    objetivo.Y);
+
+            // En combate una diagonal también cuenta como casilla adyacente.
+            // El movimiento continúa siendo ortogonal y conserva su A* actual.
+            return Math.Max(
+                deltaX,
+                deltaY);
         }
 
         private static void LiberarCasilla(

@@ -297,7 +297,7 @@ namespace ImperiosEnGuerra.Modelo.IA
             foreach (Unidad militar in militares)
             {
                 int distancia =
-                    Distancia(
+                    DistanciaCombate(
                         militar.Coordenada,
                         objetivoCoordenada);
 
@@ -358,7 +358,7 @@ namespace ImperiosEnGuerra.Modelo.IA
                         new Coordenada(x, y);
 
                     int distanciaObjetivo =
-                        Distancia(
+                        DistanciaCombate(
                             candidata,
                             objetivo);
 
@@ -595,6 +595,19 @@ namespace ImperiosEnGuerra.Modelo.IA
                        e => Coincide(
                            e,
                            centro));
+        }
+
+        private static int DistanciaCombate(
+            Coordenada a,
+            Coordenada b)
+        {
+            return Math.Max(
+                Math.Abs(
+                    a.X -
+                    b.X),
+                Math.Abs(
+                    a.Y -
+                    b.Y));
         }
 
         private static int Distancia(

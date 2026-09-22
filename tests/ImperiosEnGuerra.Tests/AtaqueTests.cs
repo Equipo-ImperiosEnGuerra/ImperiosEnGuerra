@@ -80,6 +80,67 @@ public class AtaqueTests
     }
 
     [Test]
+    public void Guerrero_PuedeAtacarEnDiagonalAdyacente()
+    {
+        var diagonal =
+            new Guerrero(
+                new Coordenada(2, 2));
+
+        partida.JugadorMaquina.AgregarUnidad(
+            diagonal);
+
+        ResultadoAccion resultado =
+            operacion.Ejecutar(
+                partida,
+                new SolicitudAtaque(
+                    atacante.Id,
+                    diagonal.Id));
+
+        Assert.That(
+            resultado.Exito,
+            Is.True,
+            resultado.Mensaje);
+
+        Assert.That(
+            diagonal.VidaActual,
+            Is.EqualTo(90));
+    }
+
+    [Test]
+    public void Arquero_AlcanceTres_IncluyeDiagonal()
+    {
+        var arquero =
+            new Arquero(
+                new Coordenada(1, 1));
+
+        var enemigo =
+            new Guerrero(
+                new Coordenada(4, 4));
+
+        partida.JugadorHumano.AgregarUnidad(
+            arquero);
+
+        partida.JugadorMaquina.AgregarUnidad(
+            enemigo);
+
+        ResultadoAccion resultado =
+            operacion.Ejecutar(
+                partida,
+                new SolicitudAtaque(
+                    arquero.Id,
+                    enemigo.Id));
+
+        Assert.That(
+            resultado.Exito,
+            Is.True,
+            resultado.Mensaje);
+
+        Assert.That(
+            enemigo.VidaActual,
+            Is.EqualTo(100));
+    }
+
+    [Test]
     public void Guerrero_NoPuedeAtacarADosCasillas()
     {
         var lejano = new Guerrero(new Coordenada(3, 1));
