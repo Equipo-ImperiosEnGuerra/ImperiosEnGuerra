@@ -1607,6 +1607,30 @@ public sealed class EstadoPartidaService
         }
     }
 
+    public double ObtenerIntervaloAtaqueSegundos(
+        Guid unidadId)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+                return 4d;
+
+            Jugador propietario =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    unidadId);
+
+            Unidad unidad =
+                propietario?.Unidades
+                    .FirstOrDefault(
+                        u => u.Id == unidadId);
+
+            return unidad == null ||
+                   unidad.IntervaloAtaqueSegundos <= 0d
+                ? 4d
+                : unidad.IntervaloAtaqueSegundos;
+        }
+    }
+
     private void RegistrarFinalizacionSeguro()
     {
         if (partidaActiva == null ||

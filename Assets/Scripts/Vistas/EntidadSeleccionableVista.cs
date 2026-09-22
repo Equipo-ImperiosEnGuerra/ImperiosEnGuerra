@@ -21,6 +21,10 @@ namespace ImperiosEnGuerra.Vistas
         public int Y { get; private set; }
         public string EstadoLogico { get; private set; }
         public string OrdenActiva { get; private set; }
+        public int VidaActual { get; private set; }
+        public int VidaMaxima { get; private set; }
+        public int Danio { get; private set; }
+        public int Alcance { get; private set; }
 
         public SpriteRenderer Renderer { get; private set; }
 
@@ -51,7 +55,11 @@ namespace ImperiosEnGuerra.Vistas
             int x,
             int y,
             string estadoLogico = "",
-            string ordenActiva = "")
+            string ordenActiva = "",
+            int vidaActual = 0,
+            int vidaMaxima = 0,
+            int danio = 0,
+            int alcance = 0)
         {
             OcultarSeleccion();
 
@@ -64,6 +72,10 @@ namespace ImperiosEnGuerra.Vistas
 
             EstadoLogico = estadoLogico ?? string.Empty;
             OrdenActiva = ordenActiva ?? string.Empty;
+            VidaActual = vidaActual;
+            VidaMaxima = vidaMaxima;
+            Danio = danio;
+            Alcance = alcance;
 
             Renderer = GetComponent<SpriteRenderer>();
             colorOriginal = Renderer.color;
@@ -73,12 +85,20 @@ namespace ImperiosEnGuerra.Vistas
             int x,
             int y,
             string estadoLogico,
-            string ordenActiva)
+            string ordenActiva,
+            int vidaActual = 0,
+            int vidaMaxima = 0,
+            int danio = 0,
+            int alcance = 0)
         {
             X = x;
             Y = y;
             EstadoLogico = estadoLogico ?? string.Empty;
             OrdenActiva = ordenActiva ?? string.Empty;
+            VidaActual = vidaActual;
+            VidaMaxima = vidaMaxima;
+            Danio = danio;
+            Alcance = alcance;
         }
 
         public void MostrarSeleccion()

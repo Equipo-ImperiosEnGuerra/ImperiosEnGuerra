@@ -27,6 +27,7 @@ public sealed class ServicioAccionesConcurrentes
     private readonly TimeSpan retardoAtaque;
     private readonly ConfiguracionRecoleccion configuracionRecoleccion;
     private readonly ConfiguracionEntrenamiento configuracionEntrenamiento;
+    private bool usarIntervaloCombateConfigurado;
 
 
     // ============================================================
@@ -55,6 +56,7 @@ public sealed class ServicioAccionesConcurrentes
             TimeSpan.FromSeconds(5),
             TimeSpan.FromSeconds(4))
     {
+        usarIntervaloCombateConfigurado = true;
     }
 
 
@@ -1023,7 +1025,18 @@ public sealed class ServicioAccionesConcurrentes
                         return ResultadoAccion.Fallido("La unidad atacante no está disponible.");
 
                     ordenIniciada = true;
-                    EsperarAntesDeAplicar(token, retardoAtaque);
+
+                    TimeSpan esperaAtaque =
+                        usarIntervaloCombateConfigurado
+                            ? TimeSpan.FromSeconds(
+                                estadoPartida.ObtenerIntervaloAtaqueSegundos(
+                                    unidadId))
+                            : retardoAtaque;
+
+                    EsperarAntesDeAplicar(
+                        token,
+                        esperaAtaque);
+
                     return estadoPartida.Atacar(copia);
                 }
                 finally

@@ -291,6 +291,12 @@ namespace ImperiosEnGuerra.Vistas
                 $"Propietario: {entidad.Propietario}\n" +
                 $"Coordenada: ({entidad.X},{entidad.Y})";
 
+            if (entidad.VidaMaxima > 0)
+            {
+                texto +=
+                    $"\nVida: {entidad.VidaActual}/{entidad.VidaMaxima}";
+            }
+
             if (entidad.Categoria == CategoriaEntidadVisual.Unidad)
             {
                 string estado =
@@ -306,6 +312,13 @@ namespace ImperiosEnGuerra.Vistas
                 texto +=
                     $"\nEstado: {estado}" +
                     $"\nOrden: {orden}";
+
+                if (entidad.Danio > 0)
+                {
+                    texto +=
+                        $"\nDaño: {entidad.Danio}" +
+                        $" | Alcance: {entidad.Alcance}";
+                }
             }
 
             if (entidad.Propietario == "Maquina")

@@ -277,7 +277,11 @@ namespace ImperiosEnGuerra.Vistas
                     edificio.tipo,
                     propietario,
                     edificio.coordenada,
-                    edificio.id);
+                    edificio.id,
+                    "",
+                    "",
+                    edificio.vidaActual,
+                    edificio.vidaMaxima);
             }
         }
 
@@ -377,7 +381,11 @@ namespace ImperiosEnGuerra.Vistas
                         unidad.coordenada.x,
                         unidad.coordenada.y,
                         unidad.estado,
-                        unidad.ordenActiva);
+                        unidad.ordenActiva,
+                        unidad.vidaActual,
+                        unidad.vidaMaxima,
+                        unidad.danio,
+                        unidad.alcance);
 
                     movimientosVisuales[unidad.id] =
                         new MovimientoVisualPendiente
@@ -417,7 +425,11 @@ namespace ImperiosEnGuerra.Vistas
                     unidad.coordenada,
                     unidad.id,
                     unidad.estado,
-                    unidad.ordenActiva);
+                    unidad.ordenActiva,
+                    unidad.vidaActual,
+                    unidad.vidaMaxima,
+                    unidad.danio,
+                    unidad.alcance);
             }
         }
 
@@ -709,7 +721,11 @@ namespace ImperiosEnGuerra.Vistas
                         edificio.tipo,
                         propietario,
                         edificio.coordenada,
-                        edificio.id);
+                        edificio.id,
+                        "",
+                        "",
+                        edificio.vidaActual,
+                        edificio.vidaMaxima);
                 }
             }
 
@@ -802,7 +818,11 @@ namespace ImperiosEnGuerra.Vistas
                     unidad.coordenada,
                     unidad.id,
                     unidad.estado,
-                    unidad.ordenActiva);
+                    unidad.ordenActiva,
+                    unidad.vidaActual,
+                    unidad.vidaMaxima,
+                    unidad.danio,
+                    unidad.alcance);
             }
         }
 
@@ -944,7 +964,11 @@ namespace ImperiosEnGuerra.Vistas
             CoordenadaEstadoDto coordenada,
             string idLogico = "",
             string estadoLogico = "",
-            string ordenActiva = "")
+            string ordenActiva = "",
+            int vidaActual = 0,
+            int vidaMaxima = 0,
+            int danio = 0,
+            int alcance = 0)
         {
             if (objeto == null)
             {
@@ -961,7 +985,11 @@ namespace ImperiosEnGuerra.Vistas
                 coordenada.x,
                 coordenada.y,
                 estadoLogico,
-                ordenActiva);
+                ordenActiva,
+                vidaActual,
+                vidaMaxima,
+                danio,
+                alcance);
 
             var collider = objeto.AddComponent<BoxCollider2D>();
 

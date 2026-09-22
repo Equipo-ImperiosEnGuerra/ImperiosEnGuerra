@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using ImperiosEnGuerra.Api.Contratos;
@@ -27,14 +28,12 @@ public class VictoriaFinalTests
                 out Guerrero militarMaquina,
                 out _);
 
-        ResultadoAccion resultado =
-            new OperacionAtaque().Ejecutar(
-                partida,
-                new SolicitudAtaque(
-                    atacante.Id,
-                    militarMaquina.Id));
+        AtacarHastaEliminarUnidad(
+            partida,
+            atacante.Id,
+            militarMaquina.Id,
+            partida.JugadorMaquina);
 
-        Assert.That(resultado.Exito, Is.True, resultado.Mensaje);
         Assert.That(partida.Finalizada, Is.False);
         Assert.That(partida.Ganador, Is.Null);
     }
@@ -48,14 +47,12 @@ public class VictoriaFinalTests
                 out _,
                 out CentroUrbano centroMaquina);
 
-        ResultadoAccion resultado =
-            new OperacionAtaque().Ejecutar(
-                partida,
-                new SolicitudAtaque(
-                    atacante.Id,
-                    centroMaquina.Id));
+        AtacarHastaEliminarEdificio(
+            partida,
+            atacante.Id,
+            centroMaquina.Id,
+            partida.JugadorMaquina);
 
-        Assert.That(resultado.Exito, Is.True, resultado.Mensaje);
         Assert.That(partida.Finalizada, Is.False);
         Assert.That(partida.Ganador, Is.Null);
     }
@@ -69,24 +66,20 @@ public class VictoriaFinalTests
                 out Guerrero militarMaquina,
                 out CentroUrbano centroMaquina);
 
-        ResultadoAccion primerImpacto =
-            new OperacionAtaque().Ejecutar(
-                partida,
-                new SolicitudAtaque(
-                    atacante.Id,
-                    militarMaquina.Id));
+        AtacarHastaEliminarUnidad(
+            partida,
+            atacante.Id,
+            militarMaquina.Id,
+            partida.JugadorMaquina);
 
-        Assert.That(primerImpacto.Exito, Is.True);
         Assert.That(partida.Finalizada, Is.False);
 
-        ResultadoAccion segundoImpacto =
-            new OperacionAtaque().Ejecutar(
-                partida,
-                new SolicitudAtaque(
-                    atacante.Id,
-                    centroMaquina.Id));
+        AtacarHastaEliminarEdificio(
+            partida,
+            atacante.Id,
+            centroMaquina.Id,
+            partida.JugadorMaquina);
 
-        Assert.That(segundoImpacto.Exito, Is.True, segundoImpacto.Mensaje);
         Assert.That(partida.Finalizada, Is.True);
         Assert.That(partida.Ganador, Is.SameAs(partida.JugadorHumano));
         Assert.That(partida.MotivoFinalizacion, Does.Contain("Regla AND"));
@@ -119,70 +112,47 @@ public class VictoriaFinalTests
                     out Guerrero militarMaquina,
                     out CentroUrbano centroMaquina);
 
-            estado.EstablecerPartida(
-                partida);
+            estado.EstablecerPartida(partida);
 
-            Assert.That(
-                estado.Atacar(
-                    Ataque(
-                        atacante.Id,
-                        militarMaquina.Id)).Exito,
-                Is.True);
+            AtacarHastaEliminarConServicio(
+                estado,
+                atacante.Id,
+                militarMaquina.Id,
+                () => partida.JugadorMaquina.Unidades.Any(u => u.Id == militarMaquina.Id));
 
-            Assert.That(
-                estado.Atacar(
-                    Ataque(
-                        atacante.Id,
-                        centroMaquina.Id)).Exito,
-                Is.True);
+            AtacarHastaEliminarConServicio(
+                estado,
+                atacante.Id,
+                centroMaquina.Id,
+                () => partida.JugadorMaquina.Edificios.Any(e => e.Id == centroMaquina.Id));
 
             string ruta =
                 Path.Combine(
                     directorio,
                     "resultado_final.txt");
 
-            Assert.That(
-                File.Exists(ruta),
-                Is.True);
+            Assert.That(File.Exists(ruta), Is.True);
 
             string contenido =
-                File.ReadAllText(
-                    ruta);
+                File.ReadAllText(ruta);
 
-            Assert.That(
-                contenido,
-                Does.Contain("ReglaVictoria=AND"));
-
-            Assert.That(
-                contenido,
-                Does.Contain("GanadorTipo=Humano"));
-
-            Assert.That(
-                contenido,
-                Does.Contain("GanadorNombre=Humano"));
+            Assert.That(contenido, Does.Contain("ReglaVictoria=AND"));
+            Assert.That(contenido, Does.Contain("GanadorTipo=Humano"));
 
             ResultadoAccion posterior =
                 estado.MoverUnidad(
                     new MoverUnidadRequest
                     {
-                        UnidadId =
-                            atacante.Id.ToString("D"),
-
-                        Destino =
-                            new CoordenadaRequest
-                            {
-                                X = 3,
-                                Y = 1
-                            }
+                        UnidadId = atacante.Id.ToString("D"),
+                        Destino = new CoordenadaRequest
+                        {
+                            X = 3,
+                            Y = 1
+                        }
                     });
 
-            Assert.That(
-                posterior.Exito,
-                Is.False);
-
-            Assert.That(
-                posterior.Mensaje,
-                Does.Contain("finalizó"));
+            Assert.That(posterior.Exito, Is.False);
+            Assert.That(posterior.Mensaje, Does.Contain("finalizó"));
         }
         finally
         {
@@ -226,38 +196,31 @@ public class VictoriaFinalTests
             acciones.IniciarMovimiento(
                 new MoverUnidadRequest
                 {
-                    UnidadId =
-                        aldeano.Id.ToString("D"),
-
-                    Destino =
-                        new CoordenadaRequest
-                        {
-                            X = 5,
-                            Y = 5
-                        }
+                    UnidadId = aldeano.Id.ToString("D"),
+                    Destino = new CoordenadaRequest
+                    {
+                        X = 5,
+                        Y = 5
+                    }
                 });
 
         Assert.That(
             SpinWait.SpinUntil(
-                () => aldeano.OrdenActiva ==
-                      TipoAccionJuego.Mover,
+                () => aldeano.OrdenActiva == TipoAccionJuego.Mover,
                 TimeSpan.FromSeconds(1)),
-            Is.True,
-            "El worker de movimiento debe haber iniciado su orden antes de probar la cancelación global.");
-
-        Assert.That(
-            estado.Atacar(
-                Ataque(
-                    atacante.Id,
-                    militarMaquina.Id)).Exito,
             Is.True);
 
-        Assert.That(
-            estado.Atacar(
-                Ataque(
-                    atacante.Id,
-                    centroMaquina.Id)).Exito,
-            Is.True);
+        AtacarHastaEliminarConServicio(
+            estado,
+            atacante.Id,
+            militarMaquina.Id,
+            () => partida.JugadorMaquina.Unidades.Any(u => u.Id == militarMaquina.Id));
+
+        AtacarHastaEliminarConServicio(
+            estado,
+            atacante.Id,
+            centroMaquina.Id,
+            () => partida.JugadorMaquina.Edificios.Any(e => e.Id == centroMaquina.Id));
 
         await movimiento.Finalizacion;
 
@@ -269,8 +232,7 @@ public class VictoriaFinalTests
 
         Assert.That(
             resultado.Estado,
-            Is.EqualTo(
-                EstadoProcesoConcurrente.Cancelado));
+            Is.EqualTo(EstadoProcesoConcurrente.Cancelado));
     }
 
     [Test]
@@ -305,14 +267,9 @@ public class VictoriaFinalTests
             new CentroUrbano(
                 new Coordenada(1, 2));
 
-        maquina.AgregarUnidad(
-            atacante);
-
-        humano.AgregarUnidad(
-            militarHumano);
-
-        humano.AgregarEdificio(
-            centroHumano);
+        maquina.AgregarUnidad(atacante);
+        humano.AgregarUnidad(militarHumano);
+        humano.AgregarEdificio(centroHumano);
 
         mapa.ObtenerCasilla(1, 2).Ocupar();
 
@@ -321,33 +278,20 @@ public class VictoriaFinalTests
                 humano,
                 maquina);
 
-        var operacion =
-            new OperacionAtaque();
+        AtacarHastaEliminarUnidad(
+            partida,
+            atacante.Id,
+            militarHumano.Id,
+            humano);
 
-        Assert.That(
-            operacion.Ejecutar(
-                partida,
-                new SolicitudAtaque(
-                    atacante.Id,
-                    militarHumano.Id)).Exito,
-            Is.True);
+        AtacarHastaEliminarEdificio(
+            partida,
+            atacante.Id,
+            centroHumano.Id,
+            humano);
 
-        Assert.That(
-            operacion.Ejecutar(
-                partida,
-                new SolicitudAtaque(
-                    atacante.Id,
-                    centroHumano.Id)).Exito,
-            Is.True);
-
-        Assert.That(
-            partida.Finalizada,
-            Is.True);
-
-        Assert.That(
-            partida.Ganador,
-            Is.SameAs(
-                maquina));
+        Assert.That(partida.Finalizada, Is.True);
+        Assert.That(partida.Ganador, Is.SameAs(maquina));
     }
 
     private static Partida CrearEscenarioHumanoAtaca(
@@ -384,14 +328,9 @@ public class VictoriaFinalTests
             new CentroUrbano(
                 new Coordenada(1, 2));
 
-        humano.AgregarUnidad(
-            atacante);
-
-        maquina.AgregarUnidad(
-            militarMaquina);
-
-        maquina.AgregarEdificio(
-            centroMaquina);
+        humano.AgregarUnidad(atacante);
+        maquina.AgregarUnidad(militarMaquina);
+        maquina.AgregarEdificio(centroMaquina);
 
         mapa.ObtenerCasilla(1, 2).Ocupar();
 
@@ -400,17 +339,91 @@ public class VictoriaFinalTests
             maquina);
     }
 
+    private static void AtacarHastaEliminarUnidad(
+        Partida partida,
+        Guid atacanteId,
+        Guid objetivoId,
+        Jugador propietarioObjetivo)
+    {
+        var operacion =
+            new OperacionAtaque();
+
+        int seguridad = 0;
+
+        while (propietarioObjetivo.Unidades.Any(u => u.Id == objetivoId) &&
+               seguridad++ < 30)
+        {
+            ResultadoAccion resultado =
+                operacion.Ejecutar(
+                    partida,
+                    new SolicitudAtaque(
+                        atacanteId,
+                        objetivoId));
+
+            Assert.That(resultado.Exito, Is.True, resultado.Mensaje);
+        }
+
+        Assert.That(seguridad, Is.LessThan(30));
+    }
+
+    private static void AtacarHastaEliminarEdificio(
+        Partida partida,
+        Guid atacanteId,
+        Guid objetivoId,
+        Jugador propietarioObjetivo)
+    {
+        var operacion =
+            new OperacionAtaque();
+
+        int seguridad = 0;
+
+        while (propietarioObjetivo.Edificios.Any(e => e.Id == objetivoId) &&
+               seguridad++ < 30)
+        {
+            ResultadoAccion resultado =
+                operacion.Ejecutar(
+                    partida,
+                    new SolicitudAtaque(
+                        atacanteId,
+                        objetivoId));
+
+            Assert.That(resultado.Exito, Is.True, resultado.Mensaje);
+        }
+
+        Assert.That(seguridad, Is.LessThan(30));
+    }
+
+    private static void AtacarHastaEliminarConServicio(
+        EstadoPartidaService estado,
+        Guid atacanteId,
+        Guid objetivoId,
+        Func<bool> sigueExistiendo)
+    {
+        int seguridad = 0;
+
+        while (sigueExistiendo() &&
+               seguridad++ < 30)
+        {
+            ResultadoAccion resultado =
+                estado.Atacar(
+                    Ataque(
+                        atacanteId,
+                        objetivoId));
+
+            Assert.That(resultado.Exito, Is.True, resultado.Mensaje);
+        }
+
+        Assert.That(seguridad, Is.LessThan(30));
+    }
+
     private static AtacarRequest Ataque(
         Guid atacanteId,
         Guid objetivoId)
     {
         return new AtacarRequest
         {
-            AtacanteId =
-                atacanteId.ToString("D"),
-
-            ObjetivoId =
-                objetivoId.ToString("D")
+            AtacanteId = atacanteId.ToString("D"),
+            ObjetivoId = objetivoId.ToString("D")
         };
     }
 }

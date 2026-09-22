@@ -74,6 +74,8 @@ namespace ImperiosEnGuerra.Controladores.Red.Contratos
     {
         public string id;
         public string tipo;
+        public int vidaActual;
+        public int vidaMaxima;
         public CoordenadaEstadoDto coordenada;
         public EntrenamientoEstadoDto[] colaEntrenamiento;
     }
@@ -102,6 +104,10 @@ namespace ImperiosEnGuerra.Controladores.Red.Contratos
         public string tipo;
         public CoordenadaEstadoDto coordenada;
         public bool disponible;
+        public int vidaActual;
+        public int vidaMaxima;
+        public int danio;
+        public int alcance;
 
         public string estado;
         public string ordenActiva;

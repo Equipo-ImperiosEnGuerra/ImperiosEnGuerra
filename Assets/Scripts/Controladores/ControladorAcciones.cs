@@ -23,6 +23,7 @@ namespace ImperiosEnGuerra.Controladores
         private string ultimaEntidadMostrada;
         private string ultimoEstadoMostrado;
         private string ultimaOrdenMostrada;
+        private int ultimaVidaMostrada = -1;
 
         private bool EsperandoObjetivo =>
             !string.IsNullOrEmpty(accionPendiente);
@@ -140,7 +141,8 @@ namespace ImperiosEnGuerra.Controladores
 
             if (identidad == ultimaEntidadMostrada &&
                 entidad.EstadoLogico == ultimoEstadoMostrado &&
-                entidad.OrdenActiva == ultimaOrdenMostrada)
+                entidad.OrdenActiva == ultimaOrdenMostrada &&
+                entidad.VidaActual == ultimaVidaMostrada)
             {
                 return;
             }
@@ -183,6 +185,9 @@ namespace ImperiosEnGuerra.Controladores
                 ultimaOrdenMostrada =
                     string.Empty;
 
+                ultimaVidaMostrada =
+                    -1;
+
                 return;
             }
 
@@ -197,6 +202,9 @@ namespace ImperiosEnGuerra.Controladores
 
             ultimaOrdenMostrada =
                 entidad.OrdenActiva ?? string.Empty;
+
+            ultimaVidaMostrada =
+                entidad.VidaActual;
         }
 
         private bool ConservaSeleccion()

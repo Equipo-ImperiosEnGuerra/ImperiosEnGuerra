@@ -314,7 +314,8 @@ namespace ImperiosEnGuerra.Modelo.IA
                     "No se pudo seleccionar una unidad atacante.");
             }
 
-            if (mejorDistancia <= 1)
+            if (mejorDistancia <=
+                atacante.AlcanceAtaque)
             {
                 return DecisionMaquina.Atacar(
                     atacante.Id,
@@ -325,7 +326,8 @@ namespace ImperiosEnGuerra.Modelo.IA
                 BuscarCasillaAproximacion(
                     partida,
                     atacante,
-                    objetivoCoordenada);
+                    objetivoCoordenada,
+                    atacante.AlcanceAtaque);
 
             return aproximacion == null
                 ? DecisionMaquina.SinAccion(
@@ -339,23 +341,41 @@ namespace ImperiosEnGuerra.Modelo.IA
         private static Coordenada BuscarCasillaAproximacion(
             Partida partida,
             Unidad atacante,
-            Coordenada objetivo)
+            Coordenada objetivo,
+            int alcance)
         {
             Mapa mapa =
                 partida.JugadorMaquina.Mapa;
 
-            Coordenada[] candidatas =
+            var candidatas =
+                new List<Coordenada>();
+
+            for (int x = 0; x < mapa.Ancho; x++)
             {
-                new Coordenada(objetivo.X - 1, objetivo.Y),
-                new Coordenada(objetivo.X + 1, objetivo.Y),
-                new Coordenada(objetivo.X, objetivo.Y - 1),
-                new Coordenada(objetivo.X, objetivo.Y + 1)
-            };
+                for (int y = 0; y < mapa.Alto; y++)
+                {
+                    var candidata =
+                        new Coordenada(x, y);
+
+                    int distanciaObjetivo =
+                        Distancia(
+                            candidata,
+                            objetivo);
+
+                    if (distanciaObjetivo <= 0 ||
+                        distanciaObjetivo > alcance)
+                    {
+                        continue;
+                    }
+
+                    candidatas.Add(
+                        candidata);
+                }
+            }
 
             return candidatas
                 .Where(
                     c =>
-                        mapa.EstaDentroDeLimites(c) &&
                         mapa.PuedeColocar(c) &&
                         !HayEntidadEn(
                             partida.JugadorHumano,

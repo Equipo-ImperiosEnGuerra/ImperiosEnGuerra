@@ -11,7 +11,7 @@ namespace ImperiosEnGuerra.Tests;
 public class AtaqueConcurrenteTests
 {
     [Test]
-    public async Task AtaqueConcurrente_EjecutaEnWorkerYDestruyeObjetivo()
+    public async Task AtaqueConcurrente_AplicaUnImpactoYLiberaOrden()
     {
         Partida partida = CrearPartida(out Guerrero atacante, out Lancero objetivo);
 
@@ -36,13 +36,13 @@ public class AtaqueConcurrenteTests
 
         Assert.That(resultado.Estado, Is.EqualTo(EstadoProcesoConcurrente.Completado));
         Assert.That(resultado.Resultado?.Exito, Is.True, resultado.Resultado?.Mensaje);
-        Assert.That(resultado.Resultado?.Mensaje, Does.Contain("destruido"));
-        Assert.That(partida.JugadorMaquina.Unidades, Is.Empty);
+        Assert.That(objetivo.VidaActual, Is.EqualTo(70));
+        Assert.That(partida.JugadorMaquina.Unidades, Does.Contain(objetivo));
         Assert.That(atacante.Disponible, Is.True);
     }
 
     [Test]
-    public async Task CancelarAtaque_AntesDeAplicar_NoModificaModelo()
+    public async Task CancelarAtaque_AntesDeAplicar_NoReduceVida()
     {
         Partida partida = CrearPartida(out Guerrero atacante, out Lancero objetivo);
 
@@ -71,9 +71,7 @@ public class AtaqueConcurrenteTests
             Is.True);
 
         Assert.That(resultado.Estado, Is.EqualTo(EstadoProcesoConcurrente.Cancelado));
-        Assert.That(partida.JugadorMaquina.Unidades, Does.Contain(objetivo));
-        Assert.That(objetivo.Coordenada.X, Is.EqualTo(2));
-        Assert.That(objetivo.Coordenada.Y, Is.EqualTo(1));
+        Assert.That(objetivo.VidaActual, Is.EqualTo(objetivo.VidaMaxima));
         Assert.That(atacante.Disponible, Is.True);
     }
 

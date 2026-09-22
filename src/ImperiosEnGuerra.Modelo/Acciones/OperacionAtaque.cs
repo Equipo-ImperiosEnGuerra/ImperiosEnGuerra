@@ -38,8 +38,13 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                 atacante.OrdenActiva != TipoAccionJuego.Atacar)
                 return ResultadoAccion.Fallido("La unidad atacante no está disponible.");
 
-            if (!EsUnidadMilitar(atacante))
-                return ResultadoAccion.Fallido("La unidad atacante no es una unidad militar permitida.");
+            if (!EsUnidadMilitar(atacante) ||
+                atacante.DanioAtaque <= 0 ||
+                atacante.AlcanceAtaque <= 0)
+            {
+                return ResultadoAccion.Fallido(
+                    "La unidad atacante no es una unidad militar ofensiva permitida.");
+            }
 
             if (propietario.Unidades.Any(u => u.Id == solicitud.ObjetivoId) ||
                 propietario.Edificios.Any(e => e.Id == solicitud.ObjetivoId))
@@ -75,10 +80,48 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                 Math.Abs(atacante.Coordenada.X - objetivo.X) +
                 Math.Abs(atacante.Coordenada.Y - objetivo.Y);
 
-            if (distancia != 1)
-                return ResultadoAccion.Fallido("El objetivo debe estar en una casilla ortogonal adyacente.");
+            if (distancia <= 0 ||
+                distancia > atacante.AlcanceAtaque)
+            {
+                return ResultadoAccion.Fallido(
+                    $"El objetivo está fuera de alcance. Alcance de {atacante.GetType().Name}: {atacante.AlcanceAtaque} casilla(s).");
+            }
 
-            string tipoDestruido;
+            int vidaRestante;
+            int vidaMaxima;
+            string tipoObjetivo;
+
+            if (objetivoUnidad != null)
+            {
+                vidaRestante =
+                    objetivoUnidad.RecibirDanio(
+                        atacante.DanioAtaque);
+
+                vidaMaxima =
+                    objetivoUnidad.VidaMaxima;
+
+                tipoObjetivo =
+                    $"Unidad {objetivoUnidad.GetType().Name}";
+            }
+            else
+            {
+                vidaRestante =
+                    objetivoEdificio.RecibirDanio(
+                        atacante.DanioAtaque);
+
+                vidaMaxima =
+                    objetivoEdificio.VidaMaxima;
+
+                tipoObjetivo =
+                    $"Edificio {objetivoEdificio.GetType().Name}";
+            }
+
+            if (vidaRestante > 0)
+            {
+                return ResultadoAccion.Exitoso(
+                    $"Impacto de {atacante.GetType().Name}: daño {atacante.DanioAtaque}. " +
+                    $"{tipoObjetivo} conserva {vidaRestante}/{vidaMaxima} de vida.");
+            }
 
             if (objetivoUnidad != null)
             {
@@ -86,7 +129,6 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     return ResultadoAccion.Fallido("No se pudo retirar la unidad objetivo.");
 
                 LiberarCasilla(oponente.Mapa, objetivoUnidad.Coordenada);
-                tipoDestruido = $"Unidad {objetivoUnidad.GetType().Name}";
             }
             else
             {
@@ -94,7 +136,6 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     return ResultadoAccion.Fallido("No se pudo retirar el edificio objetivo.");
 
                 LiberarCasilla(oponente.Mapa, objetivoEdificio.Coordenada);
-                tipoDestruido = $"Edificio {objetivoEdificio.GetType().Name}";
             }
 
             EvaluacionVictoria evaluacion =
@@ -104,9 +145,8 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                         oponente);
 
             string mensaje =
-                $"Impacto - {tipoDestruido} enemigo destruido. " +
-                $"SinCentroUrbano={evaluacion.SinCentroUrbano}; " +
-                $"SinUnidadesMilitares={evaluacion.SinUnidadesMilitares}.";
+                $"Impacto de {atacante.GetType().Name}: daño {atacante.DanioAtaque}. " +
+                $"{tipoObjetivo} enemigo destruido.";
 
             if (partida.Finalizada &&
                 partida.Ganador != null)
