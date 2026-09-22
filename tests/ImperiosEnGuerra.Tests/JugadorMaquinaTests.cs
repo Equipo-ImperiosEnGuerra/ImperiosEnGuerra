@@ -347,6 +347,163 @@ public class JugadorMaquinaTests
             Is.EqualTo(2));
     }
 
+    [Test]
+    public void Planificador_MilitarLejano_DecideAproximarse()
+    {
+        Partida partida =
+            CrearPartidaCombate(
+                out Guerrero maquina,
+                out Guerrero humano);
+
+        DecisionMaquina decision =
+            new PlanificadorDecisionMaquina()
+                .Preparar(partida);
+
+        Assert.That(
+            decision.Tipo,
+            Is.EqualTo(TipoDecisionMaquina.Mover));
+
+        Assert.That(
+            decision.UnidadId,
+            Is.EqualTo(maquina.Id));
+
+        Assert.That(
+            decision.ObjetivoUnidadId,
+            Is.EqualTo(humano.Id));
+
+        Assert.That(
+            decision.Objetivo,
+            Is.Not.Null);
+    }
+
+    [Test]
+    public async Task EjecutarDosPasos_MueveYLuegoPreparaAtaque()
+    {
+        Partida partida =
+            CrearPartidaCombate(
+                out Guerrero maquina,
+                out Guerrero humano);
+
+        var estado =
+            new EstadoPartidaService();
+
+        estado.EstablecerPartida(partida);
+
+        using var gestor =
+            new GestorProcesosConcurrentes();
+
+        var acciones =
+            new ServicioAccionesConcurrentes(
+                estado,
+                gestor,
+                TimeSpan.Zero);
+
+        using var ia =
+            new ServicioJugadorMaquina(
+                estado,
+                acciones,
+                TimeSpan.FromMilliseconds(10));
+
+        ProcesoConcurrente? movimiento =
+            ia.EjecutarPaso();
+
+        Assert.That(
+            movimiento,
+            Is.Not.Null);
+
+        await movimiento!.Finalizacion;
+
+        Assert.That(
+            Math.Abs(
+                maquina.Coordenada.X -
+                humano.Coordenada.X)
+            +
+            Math.Abs(
+                maquina.Coordenada.Y -
+                humano.Coordenada.Y),
+            Is.EqualTo(1));
+
+        ProcesoConcurrente? ataque =
+            ia.EjecutarPaso();
+
+        Assert.That(
+            ataque,
+            Is.Not.Null);
+
+        await ataque!.Finalizacion;
+
+        Assert.That(
+            acciones.IntentarObtenerResultado(
+                ataque.Id,
+                out ResultadoProcesoConcurrente resultado),
+            Is.True);
+
+        Assert.That(
+            resultado.Resultado?.Exito,
+            Is.True,
+            resultado.Resultado?.Mensaje);
+
+        Assert.That(
+            resultado.Resultado?.Mensaje,
+            Does.Contain("pendiente"));
+    }
+
+    private static Partida CrearPartidaCombate(
+        out Guerrero maquina,
+        out Guerrero humano)
+    {
+        var mapa =
+            new Mapa(10, 10);
+
+        var jugadorHumano =
+            new Jugador(
+                "Humano",
+                TipoJugador.Humano,
+                mapa,
+                new RecursosJugador());
+
+        var jugadorMaquina =
+            new Jugador(
+                "Máquina",
+                TipoJugador.Maquina,
+                mapa,
+                new RecursosJugador());
+
+        jugadorMaquina.AgregarEdificio(
+            new CentroUrbano(
+                new Coordenada(0, 0)));
+
+        jugadorMaquina.AgregarEdificio(
+            new CentroUrbano(
+                new Coordenada(8, 8)));
+
+        jugadorHumano.AgregarEdificio(
+            new CentroUrbano(
+                new Coordenada(9, 9)));
+
+        mapa.ObtenerCasilla(0, 0).Ocupar();
+        mapa.ObtenerCasilla(8, 8).Ocupar();
+        mapa.ObtenerCasilla(9, 9).Ocupar();
+
+        maquina =
+            new Guerrero(
+                new Coordenada(1, 1));
+
+        humano =
+            new Guerrero(
+                new Coordenada(5, 1));
+
+        jugadorMaquina.AgregarUnidad(
+            maquina);
+
+        jugadorHumano.AgregarUnidad(
+            humano);
+
+        return new Partida(
+            jugadorHumano,
+            jugadorMaquina);
+    }
+
     private static Partida CrearPartidaEstrategica(
         int aldeanos,
         int centros,

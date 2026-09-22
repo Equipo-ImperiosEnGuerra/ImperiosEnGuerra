@@ -208,6 +208,36 @@ public sealed class ServicioJugadorMaquina : IDisposable
                                     decision.TipoUnidad
                             }));
 
+            case TipoDecisionMaquina.Mover:
+                return EjecutarConUnidadAsignada(
+                    decision.UnidadId,
+                    () =>
+                        acciones.IniciarMovimiento(
+                            new MoverUnidadRequest
+                            {
+                                UnidadId =
+                                    decision.UnidadId.ToString("D"),
+                                Destino =
+                                    new CoordenadaRequest
+                                    {
+                                        X = decision.Objetivo.X,
+                                        Y = decision.Objetivo.Y
+                                    }
+                            }));
+
+            case TipoDecisionMaquina.Atacar:
+                return EjecutarConUnidadAsignada(
+                    decision.UnidadId,
+                    () =>
+                        acciones.IniciarAtaque(
+                            new AtacarRequest
+                            {
+                                AtacanteId =
+                                    decision.UnidadId.ToString("D"),
+                                ObjetivoId =
+                                    decision.ObjetivoUnidadId.ToString("D")
+                            }));
+
             default:
                 return null;
         }

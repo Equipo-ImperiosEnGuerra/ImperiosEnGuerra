@@ -136,6 +136,15 @@ namespace ImperiosEnGuerra.Modelo.IA
                     nameof(Guerrero));
             }
 
+            DecisionMaquina combate =
+                PrepararCombate(
+                    partida,
+                    maquina,
+                    excluidas);
+
+            if (combate.Tipo != TipoDecisionMaquina.Ninguna)
+                return combate;
+
             if (disponibles.Length == 0)
             {
                 return DecisionMaquina.SinAccion(
@@ -194,6 +203,134 @@ namespace ImperiosEnGuerra.Modelo.IA
                 : DecisionMaquina.Recolectar(
                     mejorAldeano.Id,
                     mejorRecurso.Coordenada);
+        }
+
+        private static DecisionMaquina PrepararCombate(
+            Partida partida,
+            Jugador maquina,
+            HashSet<Guid> excluidas)
+        {
+            if (!ReferenceEquals(
+                    maquina.Mapa,
+                    partida.JugadorHumano.Mapa))
+            {
+                return DecisionMaquina.SinAccion(
+                    "Los jugadores no comparten el mismo mapa lógico.");
+            }
+
+            Unidad[] militares =
+                maquina.Unidades
+                    .Where(
+                        u =>
+                            (u is Soldado || u is Monje) &&
+                            u.Disponible &&
+                            !excluidas.Contains(u.Id))
+                    .OrderBy(u => u.Coordenada.X)
+                    .ThenBy(u => u.Coordenada.Y)
+                    .ThenBy(u => u.Id)
+                    .ToArray();
+
+            Unidad[] enemigos =
+                partida.JugadorHumano.Unidades
+                    .OrderBy(u => u.Coordenada.X)
+                    .ThenBy(u => u.Coordenada.Y)
+                    .ThenBy(u => u.Id)
+                    .ToArray();
+
+            if (militares.Length == 0 ||
+                enemigos.Length == 0)
+            {
+                return DecisionMaquina.SinAccion(
+                    "No hay combate disponible.");
+            }
+
+            Unidad atacante = null;
+            Unidad objetivo = null;
+            int mejorDistancia = int.MaxValue;
+
+            foreach (Unidad militar in militares)
+            {
+                foreach (Unidad enemigo in enemigos)
+                {
+                    int distancia =
+                        Distancia(
+                            militar.Coordenada,
+                            enemigo.Coordenada);
+
+                    if (distancia >= mejorDistancia)
+                        continue;
+
+                    mejorDistancia = distancia;
+                    atacante = militar;
+                    objetivo = enemigo;
+                }
+            }
+
+            if (atacante == null ||
+                objetivo == null)
+            {
+                return DecisionMaquina.SinAccion(
+                    "No se pudo seleccionar un objetivo militar.");
+            }
+
+            if (mejorDistancia <= 1)
+            {
+                return DecisionMaquina.Atacar(
+                    atacante.Id,
+                    objetivo.Id);
+            }
+
+            Coordenada aproximacion =
+                BuscarCasillaAproximacion(
+                    partida,
+                    atacante,
+                    objetivo.Coordenada);
+
+            return aproximacion == null
+                ? DecisionMaquina.SinAccion(
+                    "No existe una casilla de aproximación disponible.")
+                : DecisionMaquina.Mover(
+                    atacante.Id,
+                    aproximacion,
+                    objetivo.Id);
+        }
+
+        private static Coordenada BuscarCasillaAproximacion(
+            Partida partida,
+            Unidad atacante,
+            Coordenada objetivo)
+        {
+            Mapa mapa =
+                partida.JugadorMaquina.Mapa;
+
+            Coordenada[] candidatas =
+            {
+                new Coordenada(objetivo.X - 1, objetivo.Y),
+                new Coordenada(objetivo.X + 1, objetivo.Y),
+                new Coordenada(objetivo.X, objetivo.Y - 1),
+                new Coordenada(objetivo.X, objetivo.Y + 1)
+            };
+
+            return candidatas
+                .Where(
+                    c =>
+                        mapa.EstaDentroDeLimites(c) &&
+                        mapa.PuedeColocar(c) &&
+                        !HayEntidadEn(
+                            partida.JugadorHumano,
+                            mapa,
+                            c) &&
+                        !HayEntidadEn(
+                            partida.JugadorMaquina,
+                            mapa,
+                            c))
+                .OrderBy(
+                    c => Distancia(
+                        atacante.Coordenada,
+                        c))
+                .ThenBy(c => c.X)
+                .ThenBy(c => c.Y)
+                .FirstOrDefault();
         }
 
         private bool PuedePagarUnidad(
