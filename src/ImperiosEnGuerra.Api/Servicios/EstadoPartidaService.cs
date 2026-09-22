@@ -765,7 +765,7 @@ public sealed class EstadoPartidaService
                         "El tipo de edificio no tiene un costo configurado."));
             }
 
-            if (!partidaActiva.JugadorHumano.Recursos
+            if (!propietario.Recursos
                 .IntentarGastar(costo))
             {
                 return RegistrarResultado(
