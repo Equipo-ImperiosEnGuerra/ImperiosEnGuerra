@@ -189,7 +189,7 @@ namespace ImperiosEnGuerra.Servicios
         /// <summary>
         /// Guarda el resultado estructurado de una partida ya finalizada.
         /// </summary>
-        public void GuardarResultadoFinal(Partida partida)
+        public void GuardarResultadoPartidaFinalizada(Partida partida)
         {
             if (partida == null)
                 throw new ArgumentNullException(nameof(partida));

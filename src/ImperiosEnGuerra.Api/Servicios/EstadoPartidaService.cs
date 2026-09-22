@@ -1622,7 +1622,7 @@ public sealed class EstadoPartidaService
         {
             try
             {
-                servicioArchivos.GuardarResultadoFinal(
+                servicioArchivos.GuardarResultadoPartidaFinalizada(
                     partidaActiva);
             }
             catch (IOException ex)

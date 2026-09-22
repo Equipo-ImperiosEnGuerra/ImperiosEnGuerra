@@ -10,7 +10,7 @@ namespace ImperiosEnGuerra.Modelo.Core
         public Jugador JugadorMaquina { get; }
 
         public bool Finalizada { get; private set; }
-        public Jugador? Ganador { get; private set; }
+        public Jugador Ganador { get; private set; }
         public string MotivoFinalizacion { get; private set; }
 
         public Partida(
