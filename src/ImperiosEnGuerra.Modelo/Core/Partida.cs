@@ -36,10 +36,21 @@ namespace ImperiosEnGuerra.Modelo.Core
             JugadorMaquina = jugadorMaquina;
         }
 
+        public Jugador ObtenerJugador(
+            TipoJugador tipo)
+        {
+            return tipo == TipoJugador.Humano
+                ? JugadorHumano
+                : tipo == TipoJugador.Maquina
+                    ? JugadorMaquina
+                    : null;
+        }
+
         /// <summary>
         /// Localiza al propietario de una unidad sin asumir si es Humano o Máquina.
         /// </summary>
-        public Jugador BuscarJugadorPorUnidad(Guid unidadId)
+        public Jugador BuscarJugadorPorUnidad(
+            Guid unidadId)
         {
             if (JugadorHumano.Unidades.Any(
                     u => u.Id == unidadId))
@@ -57,9 +68,40 @@ namespace ImperiosEnGuerra.Modelo.Core
         }
 
         /// <summary>
+        /// Localiza al propietario único de un edificio por su coordenada.
+        /// Devuelve null si no existe o si la coordenada resulta ambigua.
+        /// </summary>
+        public Jugador BuscarJugadorPorEdificio(
+            Coordenada coordenada)
+        {
+            if (coordenada == null)
+                return null;
+
+            bool humano =
+                JugadorHumano.Edificios.Any(
+                    e => Coincide(
+                        e.Coordenada,
+                        coordenada));
+
+            bool maquina =
+                JugadorMaquina.Edificios.Any(
+                    e => Coincide(
+                        e.Coordenada,
+                        coordenada));
+
+            if (humano == maquina)
+                return null;
+
+            return humano
+                ? JugadorHumano
+                : JugadorMaquina;
+        }
+
+        /// <summary>
         /// Devuelve el oponente del jugador recibido.
         /// </summary>
-        public Jugador ObtenerOponente(Jugador jugador)
+        public Jugador ObtenerOponente(
+            Jugador jugador)
         {
             if (ReferenceEquals(
                     jugador,
@@ -76,6 +118,16 @@ namespace ImperiosEnGuerra.Modelo.Core
             }
 
             return null;
+        }
+
+        private static bool Coincide(
+            Coordenada primera,
+            Coordenada segunda)
+        {
+            return primera != null &&
+                   segunda != null &&
+                   primera.X == segunda.X &&
+                   primera.Y == segunda.Y;
         }
     }
 }

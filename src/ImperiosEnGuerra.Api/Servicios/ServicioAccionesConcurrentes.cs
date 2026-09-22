@@ -10,6 +10,7 @@ using ImperiosEnGuerra.Modelo.Map;
 using ImperiosEnGuerra.Modelo.Movimiento;
 using ImperiosEnGuerra.Modelo.Recoleccion;
 using ImperiosEnGuerra.Modelo.Recursos;
+using ImperiosEnGuerra.Modelo.Core;
 
 namespace ImperiosEnGuerra.Api.Servicios;
 
@@ -860,13 +861,16 @@ public sealed class ServicioAccionesConcurrentes
                 bool completado = false;
                 Guid entrenamientoId = Guid.Empty;
                 Coordenada centroUrbano = null;
+                TipoJugador propietarioTipo =
+                    TipoJugador.Humano;
 
                 try
                 {
                     ResultadoAccion reserva =
                         estadoPartida.ReservarCostoEntrenamiento(
-                            copia?.TipoUnidad,
-                            out costo);
+                            copia,
+                            out costo,
+                            out propietarioTipo);
 
                     if (!reserva.Exito)
                         return reserva;
@@ -876,6 +880,7 @@ public sealed class ServicioAccionesConcurrentes
                     ResultadoAccion encolado =
                         estadoPartida.EncolarEntrenamiento(
                             copia,
+                            propietarioTipo,
                             out entrenamientoId,
                             out centroUrbano);
 
@@ -884,7 +889,8 @@ public sealed class ServicioAccionesConcurrentes
 
                     while (!estadoPartida.EsTurnoEntrenamiento(
                         centroUrbano,
-                        entrenamientoId))
+                        entrenamientoId,
+                        propietarioTipo))
                     {
                         EsperarAntesDeAplicar(
                             token,
@@ -910,7 +916,9 @@ public sealed class ServicioAccionesConcurrentes
                             tiempoTotal,
                             10);
 
-                    for (int i = 0; i < 10; i++)
+                    for (int i = 0;
+                         i < 10;
+                         i++)
                     {
                         EsperarAntesDeAplicar(
                             token,
@@ -920,7 +928,8 @@ public sealed class ServicioAccionesConcurrentes
                             estadoPartida.AvanzarEntrenamiento(
                                 centroUrbano,
                                 entrenamientoId,
-                                10);
+                                10,
+                                propietarioTipo);
 
                         if (!progreso.Exito)
                         {
@@ -937,7 +946,8 @@ public sealed class ServicioAccionesConcurrentes
                         estadoPartida.CompletarEntrenamientoConSpawn(
                             centroUrbano,
                             entrenamientoId,
-                            copia?.TipoUnidad ?? string.Empty);
+                            copia?.TipoUnidad ?? string.Empty,
+                            propietarioTipo);
 
                     if (!spawn.Exito)
                     {
@@ -958,13 +968,15 @@ public sealed class ServicioAccionesConcurrentes
                     {
                         estadoPartida.CancelarEntrenamientoCola(
                             centroUrbano,
-                            entrenamientoId);
+                            entrenamientoId,
+                            propietarioTipo);
                     }
 
                     if (!completado &&
                         costoReservado)
                     {
                         estadoPartida.ReembolsarCosto(
+                            propietarioTipo,
                             costo);
                     }
                 }
