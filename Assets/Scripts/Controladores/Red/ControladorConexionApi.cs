@@ -1242,6 +1242,8 @@ public bool PuedeIniciarAtaque =>
             string procesoId)
         {
             const float intervaloConsulta = 0.1f;
+            const int consultasPorSincronizacion = 5;
+            int consultasPendientes = 0;
 
             while (isActiveAndEnabled)
             {
@@ -1271,6 +1273,19 @@ public bool PuedeIniciarAtaque =>
                     string.IsNullOrWhiteSpace(
                         request.downloadHandler.text))
                 {
+                    consultasPendientes++;
+
+                    if (consultasPendientes >=
+                        consultasPorSincronizacion)
+                    {
+                        consultasPendientes = 0;
+
+                        yield return ObtenerPartidaActiva(
+                            "",
+                            "",
+                            false);
+                    }
+
                     yield return new WaitForSecondsRealtime(
                         intervaloConsulta);
 

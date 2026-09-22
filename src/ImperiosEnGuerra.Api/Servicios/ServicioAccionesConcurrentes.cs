@@ -1014,17 +1014,95 @@ public sealed class ServicioAccionesConcurrentes
             "ATACAR",
             token =>
             {
-                if (!Guid.TryParse(copia?.AtacanteId, out Guid unidadId))
-                    return ResultadoAccion.Fallido("El ID del atacante debe tener formato Guid válido.");
+                if (!Guid.TryParse(
+                        copia?.AtacanteId,
+                        out Guid unidadId))
+                {
+                    return ResultadoAccion.Fallido(
+                        "El ID del atacante debe tener formato Guid válido.");
+                }
+
+                Unidad? unidad =
+                    estadoPartida.ObtenerUnidad(
+                        unidadId);
+
+                if (unidad == null)
+                {
+                    return ResultadoAccion.Fallido(
+                        "No existe la unidad atacante indicada.");
+                }
+
+                ResultadoAproximacionAtaque aproximacion =
+                    estadoPartida.PrepararAproximacionAtaque(
+                        copia);
+
+                if (!aproximacion.Exito)
+                {
+                    return ResultadoAccion.Fallido(
+                        aproximacion.Mensaje);
+                }
 
                 bool ordenIniciada = false;
 
                 try
                 {
-                    if (!estadoPartida.IntentarIniciarOrdenUnidad(unidadId, TipoAccionJuego.Atacar))
-                        return ResultadoAccion.Fallido("La unidad atacante no está disponible.");
+                    if (aproximacion.Pasos.Count > 0)
+                    {
+                        if (!estadoPartida.IntentarIniciarOrdenUnidad(
+                                unidadId,
+                                TipoAccionJuego.Mover))
+                        {
+                            return ResultadoAccion.Fallido(
+                                "La unidad atacante no está disponible.");
+                        }
 
-                    ordenIniciada = true;
+                        ordenIniciada = true;
+
+                        TimeSpan retardoPaso =
+                            CalcularRetardoPasoMovimiento(
+                                retardoMovimiento,
+                                unidad.VelocidadMovimiento);
+
+                        foreach (Coordenada paso in aproximacion.Pasos)
+                        {
+                            EsperarAntesDeAplicar(
+                                token,
+                                retardoPaso);
+
+                            token.ThrowIfCancellationRequested();
+
+                            ResultadoAccion movimiento =
+                                estadoPartida.AvanzarMovimiento(
+                                    unidadId,
+                                    paso);
+
+                            if (!movimiento.Exito)
+                            {
+                                return ResultadoAccion.Fallido(
+                                    $"No se pudo aproximar al objetivo: {movimiento.Mensaje}");
+                            }
+                        }
+
+                        if (!estadoPartida.IntentarReemplazarOrdenUnidad(
+                                unidadId,
+                                TipoAccionJuego.Atacar))
+                        {
+                            return ResultadoAccion.Fallido(
+                                "No se pudo cambiar de aproximación a ataque.");
+                        }
+                    }
+                    else
+                    {
+                        if (!estadoPartida.IntentarIniciarOrdenUnidad(
+                                unidadId,
+                                TipoAccionJuego.Atacar))
+                        {
+                            return ResultadoAccion.Fallido(
+                                "La unidad atacante no está disponible.");
+                        }
+
+                        ordenIniciada = true;
+                    }
 
                     TimeSpan esperaAtaque =
                         usarIntervaloCombateConfigurado
@@ -1037,12 +1115,16 @@ public sealed class ServicioAccionesConcurrentes
                         token,
                         esperaAtaque);
 
-                    return estadoPartida.Atacar(copia);
+                    return estadoPartida.Atacar(
+                        copia);
                 }
                 finally
                 {
                     if (ordenIniciada)
-                        estadoPartida.CompletarOrdenUnidad(unidadId);
+                    {
+                        estadoPartida.CompletarOrdenUnidad(
+                            unidadId);
+                    }
                 }
             });
     }

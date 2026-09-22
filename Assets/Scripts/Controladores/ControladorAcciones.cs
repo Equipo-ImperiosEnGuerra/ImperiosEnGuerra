@@ -389,6 +389,13 @@ namespace ImperiosEnGuerra.Controladores
                 return;
             }
 
+            if (vistaHud != null)
+            {
+                vistaHud.MostrarMensaje(
+                    $"Atacando {objetivo.TipoLogico} enemigo... " +
+                    "La unidad se acercará automáticamente si está fuera de alcance.");
+            }
+
             conexionApi.Atacar(
                 atacanteId,
                 objetivoId);

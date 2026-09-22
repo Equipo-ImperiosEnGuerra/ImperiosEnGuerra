@@ -116,6 +116,48 @@ public sealed class EstadoPartidaService
         }
     }
 
+    public ResultadoAproximacionAtaque PrepararAproximacionAtaque(
+        AtacarRequest? request)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+            {
+                return ResultadoAproximacionAtaque.Fallido(
+                    "No hay una partida activa.");
+            }
+
+            if (request == null)
+            {
+                return ResultadoAproximacionAtaque.Fallido(
+                    "La solicitud de ataque es obligatoria.");
+            }
+
+            if (!Guid.TryParse(
+                    request.AtacanteId,
+                    out Guid atacanteId))
+            {
+                return ResultadoAproximacionAtaque.Fallido(
+                    "El ID del atacante debe tener formato Guid válido.");
+            }
+
+            if (!Guid.TryParse(
+                    request.ObjetivoId,
+                    out Guid objetivoId))
+            {
+                return ResultadoAproximacionAtaque.Fallido(
+                    "El ID del objetivo debe tener formato Guid válido.");
+            }
+
+            return new PlanificadorAproximacionAtaque()
+                .Preparar(
+                    partidaActiva,
+                    new SolicitudAtaque(
+                        atacanteId,
+                        objetivoId));
+        }
+    }
+
     public bool IntentarIniciarOrdenUnidad(
         Guid unidadId,
         TipoAccionJuego tipo)
