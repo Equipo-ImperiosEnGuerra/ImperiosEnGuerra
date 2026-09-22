@@ -236,6 +236,8 @@ namespace ImperiosEnGuerra.Vistas
             if (datos == null)
                 return;
 
+            OcultarEdificiosAusentes(datos, propietario);
+
             foreach (EdificioEstadoDto edificio in datos)
             {
                 if (edificio == null ||
@@ -248,7 +250,7 @@ namespace ImperiosEnGuerra.Vistas
                 EntidadSeleccionableVista existente =
                     BuscarEntidad(
                         CategoriaEntidadVisual.Edificio,
-                        string.Empty,
+                        edificio.id,
                         edificio.tipo,
                         propietario,
                         edificio.coordenada.x,
@@ -274,7 +276,8 @@ namespace ImperiosEnGuerra.Vistas
                     CategoriaEntidadVisual.Edificio,
                     edificio.tipo,
                     propietario,
-                    edificio.coordenada);
+                    edificio.coordenada,
+                    edificio.id);
             }
         }
 
@@ -346,6 +349,8 @@ namespace ImperiosEnGuerra.Vistas
             if (datos == null)
                 return;
 
+            OcultarUnidadesAusentes(datos, propietario);
+
             foreach (UnidadEstadoDto unidad in datos)
             {
                 if (unidad == null ||
@@ -413,6 +418,69 @@ namespace ImperiosEnGuerra.Vistas
                     unidad.id,
                     unidad.estado,
                     unidad.ordenActiva);
+            }
+        }
+
+        private void OcultarEdificiosAusentes(
+            EdificioEstadoDto[] datos,
+            string propietario)
+        {
+            EntidadSeleccionableVista[] entidades =
+                GetComponentsInChildren<EntidadSeleccionableVista>(true);
+
+            foreach (EntidadSeleccionableVista entidad in entidades)
+            {
+                if (entidad == null ||
+                    entidad.Categoria != CategoriaEntidadVisual.Edificio ||
+                    entidad.Propietario != propietario)
+                    continue;
+
+                bool existe = false;
+                foreach (EdificioEstadoDto edificio in datos)
+                {
+                    if (edificio != null &&
+                        edificio.id == entidad.IdLogico)
+                    {
+                        existe = true;
+                        break;
+                    }
+                }
+
+                if (!existe)
+                    entidad.gameObject.SetActive(false);
+            }
+        }
+
+        private void OcultarUnidadesAusentes(
+            UnidadEstadoDto[] datos,
+            string propietario)
+        {
+            EntidadSeleccionableVista[] entidades =
+                GetComponentsInChildren<EntidadSeleccionableVista>(true);
+
+            foreach (EntidadSeleccionableVista entidad in entidades)
+            {
+                if (entidad == null ||
+                    entidad.Categoria != CategoriaEntidadVisual.Unidad ||
+                    entidad.Propietario != propietario)
+                    continue;
+
+                bool existe = false;
+                foreach (UnidadEstadoDto unidad in datos)
+                {
+                    if (unidad != null &&
+                        unidad.id == entidad.IdLogico)
+                    {
+                        existe = true;
+                        break;
+                    }
+                }
+
+                if (!existe)
+                {
+                    movimientosVisuales.Remove(entidad.IdLogico);
+                    entidad.gameObject.SetActive(false);
+                }
             }
         }
 
@@ -635,8 +703,13 @@ namespace ImperiosEnGuerra.Vistas
                         humano ? centroHumano : centroMaquina,
                         edificio.coordenada.x, edificio.coordenada.y, 20, edificios,
                         Vector3.one * escalaEdificios);
-                    ConfigurarSeleccionable(objeto, CategoriaEntidadVisual.Edificio,
-                        edificio.tipo, propietario, edificio.coordenada);
+                    ConfigurarSeleccionable(
+                        objeto,
+                        CategoriaEntidadVisual.Edificio,
+                        edificio.tipo,
+                        propietario,
+                        edificio.coordenada,
+                        edificio.id);
                 }
             }
 

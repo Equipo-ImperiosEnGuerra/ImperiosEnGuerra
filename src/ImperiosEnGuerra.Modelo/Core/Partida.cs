@@ -46,31 +46,30 @@ namespace ImperiosEnGuerra.Modelo.Core
                     : null;
         }
 
-        /// <summary>
-        /// Localiza al propietario de una unidad sin asumir si es Humano o Máquina.
-        /// </summary>
         public Jugador BuscarJugadorPorUnidad(
             Guid unidadId)
         {
-            if (JugadorHumano.Unidades.Any(
-                    u => u.Id == unidadId))
-            {
+            if (JugadorHumano.Unidades.Any(u => u.Id == unidadId))
                 return JugadorHumano;
-            }
 
-            if (JugadorMaquina.Unidades.Any(
-                    u => u.Id == unidadId))
-            {
+            if (JugadorMaquina.Unidades.Any(u => u.Id == unidadId))
                 return JugadorMaquina;
-            }
 
             return null;
         }
 
-        /// <summary>
-        /// Localiza al propietario único de un edificio por su coordenada.
-        /// Devuelve null si no existe o si la coordenada resulta ambigua.
-        /// </summary>
+        public Jugador BuscarJugadorPorEdificio(
+            Guid edificioId)
+        {
+            if (JugadorHumano.Edificios.Any(e => e.Id == edificioId))
+                return JugadorHumano;
+
+            if (JugadorMaquina.Edificios.Any(e => e.Id == edificioId))
+                return JugadorMaquina;
+
+            return null;
+        }
+
         public Jugador BuscarJugadorPorEdificio(
             Coordenada coordenada)
         {
@@ -79,15 +78,11 @@ namespace ImperiosEnGuerra.Modelo.Core
 
             bool humano =
                 JugadorHumano.Edificios.Any(
-                    e => Coincide(
-                        e.Coordenada,
-                        coordenada));
+                    e => Coincide(e.Coordenada, coordenada));
 
             bool maquina =
                 JugadorMaquina.Edificios.Any(
-                    e => Coincide(
-                        e.Coordenada,
-                        coordenada));
+                    e => Coincide(e.Coordenada, coordenada));
 
             if (humano == maquina)
                 return null;
@@ -97,25 +92,14 @@ namespace ImperiosEnGuerra.Modelo.Core
                 : JugadorMaquina;
         }
 
-        /// <summary>
-        /// Devuelve el oponente del jugador recibido.
-        /// </summary>
         public Jugador ObtenerOponente(
             Jugador jugador)
         {
-            if (ReferenceEquals(
-                    jugador,
-                    JugadorHumano))
-            {
+            if (ReferenceEquals(jugador, JugadorHumano))
                 return JugadorMaquina;
-            }
 
-            if (ReferenceEquals(
-                    jugador,
-                    JugadorMaquina))
-            {
+            if (ReferenceEquals(jugador, JugadorMaquina))
                 return JugadorHumano;
-            }
 
             return null;
         }

@@ -352,7 +352,7 @@ namespace ImperiosEnGuerra.Controladores
                 if (vistaHud != null)
                 {
                     vistaHud.MostrarMensaje(
-                        "Selecciona una unidad enemiga válida como objetivo.",
+                        "Selecciona una unidad o edificio enemigo válido como objetivo.",
                         true);
                 }
 
@@ -387,7 +387,8 @@ namespace ImperiosEnGuerra.Controladores
         {
             return objetivo != null &&
                 objetivo.isActiveAndEnabled &&
-                objetivo.Categoria == CategoriaEntidadVisual.Unidad &&
+                (objetivo.Categoria == CategoriaEntidadVisual.Unidad ||
+                 objetivo.Categoria == CategoriaEntidadVisual.Edificio) &&
                 objetivo.Propietario == "Maquina" &&
                 !string.IsNullOrWhiteSpace(objetivo.IdLogico);
         }
@@ -533,7 +534,7 @@ namespace ImperiosEnGuerra.Controladores
                 controladorSeleccion.IniciarCapturaObjetivoEntidad();
 
                 vistaHud.MostrarMensaje(
-                    "Selecciona una unidad enemiga como objetivo.");
+                    "Selecciona una unidad o edificio enemigo como objetivo.");
 
                 return;
             }

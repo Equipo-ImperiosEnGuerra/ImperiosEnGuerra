@@ -11,171 +11,75 @@ namespace ImperiosEnGuerra.Tests;
 public class AtaqueConcurrenteTests
 {
     [Test]
-    public async Task AtaqueConcurrente_EjecutaEnWorkerYPublicaResultado()
+    public async Task AtaqueConcurrente_EjecutaEnWorkerYDestruyeObjetivo()
     {
-        Partida partida = CrearPartida(
-            out Guerrero atacante,
-            out Lancero objetivo);
+        Partida partida = CrearPartida(out Guerrero atacante, out Lancero objetivo);
 
         var estado = new EstadoPartidaService();
         estado.EstablecerPartida(partida);
 
         using var gestor = new GestorProcesosConcurrentes();
+        var servicio = new ServicioAccionesConcurrentes(estado, gestor, TimeSpan.Zero);
 
-        var servicio = new ServicioAccionesConcurrentes(
-            estado,
-            gestor,
-            TimeSpan.Zero);
-
-        ProcesoConcurrente proceso =
-            servicio.IniciarAtaque(
-                new AtacarRequest
-                {
-                    AtacanteId = atacante.Id.ToString(),
-                    ObjetivoId = objetivo.Id.ToString()
-                });
+        ProcesoConcurrente proceso = servicio.IniciarAtaque(
+            new AtacarRequest
+            {
+                AtacanteId = atacante.Id.ToString(),
+                ObjetivoId = objetivo.Id.ToString()
+            });
 
         await proceso.Finalizacion;
 
         Assert.That(
-            servicio.IntentarObtenerResultado(
-                out ResultadoProcesoConcurrente resultado),
+            servicio.IntentarObtenerResultado(proceso.Id, out ResultadoProcesoConcurrente resultado),
             Is.True);
 
-        Assert.That(
-            resultado.Estado,
-            Is.EqualTo(EstadoProcesoConcurrente.Completado));
-
-        Assert.That(resultado.Resultado, Is.Not.Null);
-        Assert.That(resultado.Resultado.Exito, Is.True);
-        Assert.That(resultado.Resultado.Mensaje,
-            Does.Contain("pendiente"));
+        Assert.That(resultado.Estado, Is.EqualTo(EstadoProcesoConcurrente.Completado));
+        Assert.That(resultado.Resultado?.Exito, Is.True, resultado.Resultado?.Mensaje);
+        Assert.That(resultado.Resultado?.Mensaje, Does.Contain("destruido"));
+        Assert.That(partida.JugadorMaquina.Unidades, Is.Empty);
+        Assert.That(atacante.Disponible, Is.True);
     }
-
-
-    [Test]
-    public async Task AtaqueConcurrenteMaquina_EjecutaConMismasValidaciones()
-    {
-        Partida partida =
-            CrearPartida(
-                out Guerrero humano,
-                out Lancero maquina);
-
-        var estado =
-            new EstadoPartidaService();
-
-        estado.EstablecerPartida(
-            partida);
-
-        using var gestor =
-            new GestorProcesosConcurrentes();
-
-        var servicio =
-            new ServicioAccionesConcurrentes(
-                estado,
-                gestor,
-                TimeSpan.Zero);
-
-        ProcesoConcurrente proceso =
-            servicio.IniciarAtaque(
-                new AtacarRequest
-                {
-                    AtacanteId =
-                        maquina.Id.ToString(),
-
-                    ObjetivoId =
-                        humano.Id.ToString()
-                });
-
-        await proceso.Finalizacion;
-
-        Assert.That(
-            servicio.IntentarObtenerResultado(
-                proceso.Id,
-                out ResultadoProcesoConcurrente resultado),
-            Is.True);
-
-        Assert.That(
-            resultado.Estado,
-            Is.EqualTo(
-                EstadoProcesoConcurrente.Completado));
-
-        Assert.That(
-            resultado.Resultado?.Exito,
-            Is.True,
-            resultado.Resultado?.Mensaje);
-
-        Assert.That(
-            resultado.Resultado?.Mensaje,
-            Does.Contain("pendiente"));
-
-        Assert.That(
-            humano.Coordenada.X,
-            Is.EqualTo(1));
-
-        Assert.That(
-            humano.Coordenada.Y,
-            Is.EqualTo(1));
-    }
-
 
     [Test]
     public async Task CancelarAtaque_AntesDeAplicar_NoModificaModelo()
     {
-        Partida partida = CrearPartida(
-            out Guerrero atacante,
-            out Lancero objetivo);
+        Partida partida = CrearPartida(out Guerrero atacante, out Lancero objetivo);
 
         var estado = new EstadoPartidaService();
         estado.EstablecerPartida(partida);
 
         using var gestor = new GestorProcesosConcurrentes();
-
         var servicio = new ServicioAccionesConcurrentes(
             estado,
             gestor,
             TimeSpan.FromSeconds(10));
 
+        ProcesoConcurrente proceso = servicio.IniciarAtaque(
+            new AtacarRequest
+            {
+                AtacanteId = atacante.Id.ToString(),
+                ObjetivoId = objetivo.Id.ToString()
+            });
 
-        ProcesoConcurrente proceso =
-            servicio.IniciarAtaque(
-                new AtacarRequest
-                {
-                    AtacanteId = atacante.Id.ToString(),
-                    ObjetivoId = objetivo.Id.ToString()
-                });
-
-
-        Assert.That(
-            servicio.Cancelar(proceso.Id),
-            Is.True);
-
+        Assert.That(servicio.Cancelar(proceso.Id), Is.True);
 
         await proceso.Finalizacion;
 
-
         Assert.That(
-            servicio.IntentarObtenerResultado(
-                out ResultadoProcesoConcurrente resultado),
+            servicio.IntentarObtenerResultado(proceso.Id, out ResultadoProcesoConcurrente resultado),
             Is.True);
 
-
-        Assert.That(
-            resultado.Estado,
-            Is.EqualTo(EstadoProcesoConcurrente.Cancelado));
-
-
-        Assert.That(objetivo.Coordenada.X, Is.EqualTo(4));
-        Assert.That(objetivo.Coordenada.Y, Is.EqualTo(4));
+        Assert.That(resultado.Estado, Is.EqualTo(EstadoProcesoConcurrente.Cancelado));
+        Assert.That(partida.JugadorMaquina.Unidades, Does.Contain(objetivo));
+        Assert.That(objetivo.Coordenada.X, Is.EqualTo(2));
+        Assert.That(objetivo.Coordenada.Y, Is.EqualTo(1));
+        Assert.That(atacante.Disponible, Is.True);
     }
 
-
-    private static Partida CrearPartida(
-        out Guerrero atacante,
-        out Lancero objetivo)
+    private static Partida CrearPartida(out Guerrero atacante, out Lancero objetivo)
     {
         var mapa = new Mapa(6, 6);
-
 
         var humano = new Jugador(
             "Humano",
@@ -183,30 +87,18 @@ public class AtaqueConcurrenteTests
             mapa,
             new RecursosJugador());
 
-
         var maquina = new Jugador(
             "Máquina",
             TipoJugador.Maquina,
             mapa,
             new RecursosJugador());
 
-
-        atacante =
-            new Guerrero(
-                new Coordenada(1, 1));
-
-
-        objetivo =
-            new Lancero(
-                new Coordenada(4, 4));
-
+        atacante = new Guerrero(new Coordenada(1, 1));
+        objetivo = new Lancero(new Coordenada(2, 1));
 
         humano.AgregarUnidad(atacante);
         maquina.AgregarUnidad(objetivo);
 
-
-        return new Partida(
-            humano,
-            maquina);
+        return new Partida(humano, maquina);
     }
 }

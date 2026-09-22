@@ -100,6 +100,7 @@ public static class PartidaEstadoMapper
             },
             Edificios = jugador.Edificios.Select(edificio => new EdificioEstadoResponse
             {
+                Id = edificio.Id.ToString("D"),
                 Tipo = edificio.GetType().Name,
                 Coordenada = ConvertirCoordenada(edificio.Coordenada),
                 ColaEntrenamiento = edificio is CentroUrbano centro

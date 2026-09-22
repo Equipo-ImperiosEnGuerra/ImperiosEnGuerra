@@ -445,7 +445,7 @@ public class JugadorMaquinaTests
 
         Assert.That(
             resultado.Resultado?.Mensaje,
-            Does.Contain("pendiente"));
+            Does.Contain("destruido"));
     }
 
     private static Partida CrearPartidaCombate(

@@ -1003,12 +1003,25 @@ public sealed class ServicioAccionesConcurrentes
             "ATACAR",
             token =>
             {
-                EsperarAntesDeAplicar(
-                    token,
-                    retardoAtaque);
+                if (!Guid.TryParse(copia?.AtacanteId, out Guid unidadId))
+                    return ResultadoAccion.Fallido("El ID del atacante debe tener formato Guid válido.");
 
-                return estadoPartida.Atacar(
-                    copia);
+                bool ordenIniciada = false;
+
+                try
+                {
+                    if (!estadoPartida.IntentarIniciarOrdenUnidad(unidadId, TipoAccionJuego.Atacar))
+                        return ResultadoAccion.Fallido("La unidad atacante no está disponible.");
+
+                    ordenIniciada = true;
+                    EsperarAntesDeAplicar(token, retardoAtaque);
+                    return estadoPartida.Atacar(copia);
+                }
+                finally
+                {
+                    if (ordenIniciada)
+                        estadoPartida.CompletarOrdenUnidad(unidadId);
+                }
             });
     }
 
