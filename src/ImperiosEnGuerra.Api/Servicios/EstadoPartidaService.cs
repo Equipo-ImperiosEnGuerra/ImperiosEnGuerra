@@ -438,7 +438,7 @@ public sealed class EstadoPartidaService
                     "El tipo de unidad no tiene un costo configurado.");
             }
 
-            if (!propietario.Recursos
+            if (!partidaActiva.JugadorHumano.Recursos
                 .IntentarGastar(costo))
             {
                 return ResultadoAccion.Fallido(
