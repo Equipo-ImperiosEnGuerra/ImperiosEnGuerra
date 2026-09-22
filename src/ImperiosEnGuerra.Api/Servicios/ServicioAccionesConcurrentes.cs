@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using ImperiosEnGuerra.Modelo.Unidades;
 using ImperiosEnGuerra.Modelo.Acciones;
+using ImperiosEnGuerra.Modelo.Combate;
 using ImperiosEnGuerra.Api.Contratos;
 using ImperiosEnGuerra.Servicios.Concurrencia;
 using ImperiosEnGuerra.Modelo.Edificios;

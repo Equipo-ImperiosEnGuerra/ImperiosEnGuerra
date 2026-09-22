@@ -3,6 +3,7 @@ using System.IO;
 using ImperiosEnGuerra.Api.Contratos;
 using ImperiosEnGuerra.Api.Mapeadores;
 using ImperiosEnGuerra.Modelo.Acciones;
+using ImperiosEnGuerra.Modelo.Combate;
 using ImperiosEnGuerra.Modelo.Core;
 using ImperiosEnGuerra.Modelo.Unidades;
 using ImperiosEnGuerra.Servicios;

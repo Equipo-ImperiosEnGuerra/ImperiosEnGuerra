@@ -1,6 +1,7 @@
 using ImperiosEnGuerra.Api.Contratos;
 using ImperiosEnGuerra.Api.Servicios;
 using ImperiosEnGuerra.Modelo.Core;
+using ImperiosEnGuerra.Modelo.Edificios;
 using ImperiosEnGuerra.Modelo.Map;
 using ImperiosEnGuerra.Modelo.Recursos;
 using ImperiosEnGuerra.Modelo.Unidades;
