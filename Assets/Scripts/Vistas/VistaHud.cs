@@ -149,6 +149,40 @@ namespace ImperiosEnGuerra.Vistas
             if (atacar != null) atacar.gameObject.SetActive(puedeAtacar);
         }
 
+        public void MostrarResultadoFinal(
+            string ganador,
+            string ganadorNombre,
+            string motivo)
+        {
+            MostrarOpciones(
+                false,
+                false,
+                false,
+                false,
+                false);
+
+            MostrarSelectorEntrenamiento(
+                false);
+
+            string nombre =
+                string.IsNullOrWhiteSpace(
+                    ganadorNombre)
+                    ? ganador
+                    : ganadorNombre;
+
+            bool victoriaHumana =
+                ganador == "Humano";
+
+            string titulo =
+                victoriaHumana
+                    ? "VICTORIA"
+                    : "DERROTA";
+
+            MostrarMensaje(
+                $"{titulo} — Ganador: {nombre}\n{motivo}",
+                !victoriaHumana);
+        }
+
         public void MostrarMensaje(string texto, bool error = false)
         {
             if (mensaje == null) return;

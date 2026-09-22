@@ -7,8 +7,9 @@ using ImperiosEnGuerra.Modelo.Unidades;
 namespace ImperiosEnGuerra.Modelo.Combate
 {
     /// <summary>
-    /// Calcula por separado los dos hechos que la guía menciona para victoria.
-    /// No decide la semántica de "y/o" hasta que el equipo la fije explícitamente.
+    /// Regla terminal confirmada por el equipo: AND.
+    /// Un jugador pierde únicamente cuando no conserva ningún Centro Urbano
+    /// y tampoco conserva unidades militares.
     /// </summary>
     public sealed class EvaluadorVictoria
     {
@@ -32,6 +33,40 @@ namespace ImperiosEnGuerra.Modelo.Combate
                 sinUnidadesMilitares);
         }
 
+        public EvaluacionVictoria Evaluar(
+            Partida partida,
+            Jugador jugadorAfectado)
+        {
+            if (partida == null)
+                throw new ArgumentNullException(nameof(partida));
+
+            if (jugadorAfectado == null)
+                throw new ArgumentNullException(nameof(jugadorAfectado));
+
+            EvaluacionVictoria evaluacion =
+                Evaluar(
+                    jugadorAfectado);
+
+            if (!evaluacion.HayVictoria ||
+                partida.Finalizada)
+            {
+                return evaluacion;
+            }
+
+            Jugador ganador =
+                partida.ObtenerOponente(
+                    jugadorAfectado);
+
+            if (ganador != null)
+            {
+                partida.IntentarFinalizar(
+                    ganador,
+                    "Regla AND cumplida: el jugador perdió todos sus Centros Urbanos y todas sus unidades militares.");
+            }
+
+            return evaluacion;
+        }
+
         private static bool EsUnidadMilitar(
             Unidad unidad)
         {
@@ -44,6 +79,9 @@ namespace ImperiosEnGuerra.Modelo.Combate
     {
         public bool SinCentroUrbano { get; }
         public bool SinUnidadesMilitares { get; }
+        public bool HayVictoria =>
+            SinCentroUrbano &&
+            SinUnidadesMilitares;
 
         public EvaluacionVictoria(
             bool sinCentroUrbano,

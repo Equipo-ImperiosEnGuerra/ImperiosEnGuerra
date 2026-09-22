@@ -3,6 +3,9 @@ namespace ImperiosEnGuerra.Api.Contratos;
 public sealed class EstadoPartidaResponse
 {
     public required string Estado { get; init; }
+    public string? Ganador { get; init; }
+    public string? GanadorNombre { get; init; }
+    public string? MotivoFinalizacion { get; init; }
     public required MapaEstadoResponse Mapa { get; init; }
     public required JugadorEstadoResponse JugadorHumano { get; init; }
     public required JugadorEstadoResponse JugadorMaquina { get; init; }

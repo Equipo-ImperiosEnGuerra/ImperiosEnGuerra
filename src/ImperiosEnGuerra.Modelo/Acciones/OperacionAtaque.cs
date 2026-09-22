@@ -8,10 +8,6 @@ using ImperiosEnGuerra.Modelo.Unidades;
 
 namespace ImperiosEnGuerra.Modelo.Acciones
 {
-    /// <summary>
-    /// Ejecuta un impacto destructivo sobre una entidad enemiga adyacente.
-    /// No introduce puntos de vida, daño, armadura o alcance numéricos no definidos.
-    /// </summary>
     public sealed class OperacionAtaque
     {
         public ResultadoAccion Ejecutar(
@@ -20,6 +16,9 @@ namespace ImperiosEnGuerra.Modelo.Acciones
         {
             if (partida == null)
                 return ResultadoAccion.Fallido("No hay una partida activa.");
+
+            if (partida.Finalizada)
+                return ResultadoAccion.Fallido("La partida ya finalizó.");
 
             if (solicitud == null)
                 return ResultadoAccion.Fallido("La solicitud de ataque es obligatoria.");
@@ -99,12 +98,25 @@ namespace ImperiosEnGuerra.Modelo.Acciones
             }
 
             EvaluacionVictoria evaluacion =
-                new EvaluadorVictoria().Evaluar(oponente);
+                new EvaluadorVictoria()
+                    .Evaluar(
+                        partida,
+                        oponente);
 
-            return ResultadoAccion.Exitoso(
+            string mensaje =
                 $"Impacto - {tipoDestruido} enemigo destruido. " +
                 $"SinCentroUrbano={evaluacion.SinCentroUrbano}; " +
-                $"SinUnidadesMilitares={evaluacion.SinUnidadesMilitares}.");
+                $"SinUnidadesMilitares={evaluacion.SinUnidadesMilitares}.";
+
+            if (partida.Finalizada &&
+                partida.Ganador != null)
+            {
+                mensaje +=
+                    $" Ganador: {partida.Ganador.Nombre}.";
+            }
+
+            return ResultadoAccion.Exitoso(
+                mensaje);
         }
 
         private static void LiberarCasilla(

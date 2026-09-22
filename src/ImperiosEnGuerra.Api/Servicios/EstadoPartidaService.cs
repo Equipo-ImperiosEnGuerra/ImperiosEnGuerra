@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using ImperiosEnGuerra.Api.Contratos;
 using ImperiosEnGuerra.Api.Mapeadores;
@@ -22,6 +23,9 @@ public sealed class EstadoPartidaService
     private readonly ConfiguracionEconomia configuracionEconomia =
         new ConfiguracionEconomia();
     private Partida? partidaActiva;
+    private bool finalizacionNotificada;
+
+    public event Action? PartidaFinalizada;
 
     public EstadoPartidaService()
     {
@@ -41,6 +45,11 @@ public sealed class EstadoPartidaService
                 return RegistrarResultado(
                     "MOVER",
                     ResultadoAccion.Fallido("No hay una partida activa."));
+
+            if (partidaActiva.Finalizada)
+                return RegistrarResultado(
+                    "MOVER",
+                    ResultadoAccion.Fallido("La partida ya finalizó."));
 
             if (request == null)
                 return RegistrarResultado(
@@ -113,7 +122,8 @@ public sealed class EstadoPartidaService
     {
         lock (sincronizacion)
         {
-            if (partidaActiva == null)
+            if (partidaActiva == null ||
+                partidaActiva.Finalizada)
                 return false;
 
             Jugador? propietario =
@@ -136,7 +146,8 @@ public sealed class EstadoPartidaService
     {
         lock (sincronizacion)
         {
-            if (partidaActiva == null)
+            if (partidaActiva == null ||
+                partidaActiva.Finalizada)
                 return false;
 
             Jugador? propietario =
@@ -405,6 +416,11 @@ public sealed class EstadoPartidaService
                     "RECOLECTAR",
                     ResultadoAccion.Fallido("No hay una partida activa."));
 
+            if (partidaActiva.Finalizada)
+                return RegistrarResultado(
+                    "RECOLECTAR",
+                    ResultadoAccion.Fallido("La partida ya finalizó."));
+
             if (request == null)
                 return RegistrarResultado(
                     "RECOLECTAR",
@@ -443,6 +459,12 @@ public sealed class EstadoPartidaService
             {
                 return ResultadoAccion.Fallido(
                     "No hay una partida activa.");
+            }
+
+            if (partidaActiva.Finalizada)
+            {
+                return ResultadoAccion.Fallido(
+                    "La partida ya finalizó.");
             }
 
             if (!configuracionEconomia
@@ -490,6 +512,12 @@ public sealed class EstadoPartidaService
                     "No hay una partida activa.");
             }
 
+            if (partidaActiva.Finalizada)
+            {
+                return ResultadoAccion.Fallido(
+                    "La partida ya finalizó.");
+            }
+
             if (!configuracionEconomia
                 .IntentarObtenerCostoUnidad(
                     tipoUnidad,
@@ -525,6 +553,12 @@ public sealed class EstadoPartidaService
             {
                 return ResultadoAccion.Fallido(
                     "No hay una partida activa.");
+            }
+
+            if (partidaActiva.Finalizada)
+            {
+                return ResultadoAccion.Fallido(
+                    "La partida ya finalizó.");
             }
 
             if (request == null)
@@ -869,6 +903,11 @@ public sealed class EstadoPartidaService
                 return RegistrarResultado(
                     "CONSTRUIR",
                     ResultadoAccion.Fallido("No hay una partida activa."));
+
+            if (partidaActiva.Finalizada)
+                return RegistrarResultado(
+                    "CONSTRUIR",
+                    ResultadoAccion.Fallido("La partida ya finalizó."));
 
             if (request == null)
                 return RegistrarResultado(
@@ -1356,6 +1395,11 @@ public sealed class EstadoPartidaService
                     "ENTRENAR",
                     ResultadoAccion.Fallido("No hay una partida activa."));
 
+            if (partidaActiva.Finalizada)
+                return RegistrarResultado(
+                    "ENTRENAR",
+                    ResultadoAccion.Fallido("La partida ya finalizó."));
+
             if (request == null)
                 return RegistrarResultado(
                     "ENTRENAR",
@@ -1446,6 +1490,11 @@ public sealed class EstadoPartidaService
                     "ATACAR",
                     ResultadoAccion.Fallido("No hay una partida activa."));
 
+            if (partidaActiva.Finalizada)
+                return RegistrarResultado(
+                    "ATACAR",
+                    ResultadoAccion.Fallido("La partida ya finalizó."));
+
             if (request == null)
                 return RegistrarResultado(
                     "ATACAR",
@@ -1465,9 +1514,21 @@ public sealed class EstadoPartidaService
                 atacanteId,
                 objetivoId);
 
-            return RegistrarResultado(
-                "ATACAR",
-                new OperacionAtaque().Ejecutar(partidaActiva, solicitud));
+            ResultadoAccion resultado =
+                new OperacionAtaque()
+                    .Ejecutar(
+                        partidaActiva,
+                        solicitud);
+
+            ResultadoAccion registrado =
+                RegistrarResultado(
+                    "ATACAR",
+                    resultado);
+
+            if (partidaActiva.Finalizada)
+                RegistrarFinalizacionSeguro();
+
+            return registrado;
         }
     }
 
@@ -1488,6 +1549,7 @@ public sealed class EstadoPartidaService
         lock (sincronizacion)
         {
             partidaActiva = partida;
+            finalizacionNotificada = false;
             RegistrarEventoSeguro("PARTIDA|EXITO|Partida establecida.");
         }
     }
@@ -1535,6 +1597,50 @@ public sealed class EstadoPartidaService
         {
             return partidaActiva != null;
         }
+    }
+
+    public bool EstaFinalizada()
+    {
+        lock (sincronizacion)
+        {
+            return partidaActiva?.Finalizada ?? false;
+        }
+    }
+
+    private void RegistrarFinalizacionSeguro()
+    {
+        if (partidaActiva == null ||
+            !partidaActiva.Finalizada ||
+            finalizacionNotificada)
+        {
+            return;
+        }
+
+        finalizacionNotificada = true;
+
+        if (servicioArchivos != null)
+        {
+            try
+            {
+                servicioArchivos.GuardarResultadoFinal(
+                    partidaActiva);
+            }
+            catch (IOException ex)
+            {
+                Console.Error.WriteLine(
+                    $"No se pudo escribir resultado_final.txt: {ex.Message}");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                Console.Error.WriteLine(
+                    $"No se pudo escribir resultado_final.txt: {ex.Message}");
+            }
+        }
+
+        RegistrarEventoSeguro(
+            $"PARTIDA|FINALIZADA|Ganador={partidaActiva.Ganador?.Nombre}; Motivo={partidaActiva.MotivoFinalizacion}");
+
+        PartidaFinalizada?.Invoke();
     }
 
     private ResultadoAccion RegistrarResultado(

@@ -236,8 +236,15 @@ public class TodasOperacionesConcurrentesTests
             new CentroUrbano(
                 new Coordenada(1,1)));
 
+        // La Máquina conserva un Centro Urbano: destruir su última unidad
+        // militar no debe finalizar la partida con la regla AND.
+        maquina.AgregarEdificio(
+            new CentroUrbano(
+                new Coordenada(5,5)));
+
 
         mapa.ObtenerCasilla(1,1).Ocupar();
+        mapa.ObtenerCasilla(5,5).Ocupar();
 
 
         mapa.ColocarRecurso(

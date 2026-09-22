@@ -151,6 +151,9 @@ public sealed class ServicioAccionesConcurrentes
 
         configuracionEntrenamiento =
             new ConfiguracionEntrenamiento();
+
+        this.estadoPartida.PartidaFinalizada +=
+            CancelarTodos;
     }
 
 

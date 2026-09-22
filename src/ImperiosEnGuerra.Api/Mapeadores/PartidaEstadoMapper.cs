@@ -17,7 +17,12 @@ public static class PartidaEstadoMapper
 
         return new EstadoPartidaResponse
         {
-            Estado = "activa",
+            Estado = partida.Finalizada
+                ? "finalizada"
+                : "activa",
+            Ganador = partida.Ganador?.Tipo.ToString(),
+            GanadorNombre = partida.Ganador?.Nombre,
+            MotivoFinalizacion = partida.MotivoFinalizacion,
             Mapa = new MapaEstadoResponse
             {
                 Ancho = mapa.Ancho,

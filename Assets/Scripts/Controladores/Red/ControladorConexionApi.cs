@@ -25,6 +25,7 @@ namespace ImperiosEnGuerra.Controladores.Red
     public bool ConstruccionEnCurso { get; private set; }
     public bool EntrenamientoEnCurso { get; private set; }
     public bool AtaqueEnCurso { get; private set; }
+    public bool PartidaFinalizada { get; private set; }
 
     private int movimientosActivos;
     private int recoleccionesActivas;
@@ -40,19 +41,24 @@ public bool AccionEnCurso =>
     AtaqueEnCurso;
 
 public bool PuedeIniciarMovimiento =>
-    isActiveAndEnabled;
+    isActiveAndEnabled &&
+    !PartidaFinalizada;
 
 public bool PuedeIniciarRecoleccion =>
-    isActiveAndEnabled;
+    isActiveAndEnabled &&
+    !PartidaFinalizada;
 
 public bool PuedeIniciarConstruccion =>
-    isActiveAndEnabled;
+    isActiveAndEnabled &&
+    !PartidaFinalizada;
 
 public bool PuedeIniciarEntrenamiento =>
-    isActiveAndEnabled;
+    isActiveAndEnabled &&
+    !PartidaFinalizada;
 
 public bool PuedeIniciarAtaque =>
-    isActiveAndEnabled;
+    isActiveAndEnabled &&
+    !PartidaFinalizada;
 
         public void MoverUnidad(string unidadId, int x, int y)
         {
@@ -1507,6 +1513,10 @@ public bool PuedeIniciarAtaque =>
                 yield break;
             }
 
+            PartidaFinalizada =
+                estadoPartida.estado ==
+                "finalizada";
+
             vistaPartida.Sincronizar(estadoPartida);
 
             if (vistaHud != null)
@@ -1521,7 +1531,14 @@ public bool PuedeIniciarAtaque =>
                         recursos.madera,
                         recursos.comida);
 
-                    if (mostrarMensaje)
+                    if (PartidaFinalizada)
+                    {
+                        vistaHud.MostrarResultadoFinal(
+                            estadoPartida.ganador,
+                            estadoPartida.ganadorNombre,
+                            estadoPartida.motivoFinalizacion);
+                    }
+                    else if (mostrarMensaje)
                     {
                         vistaHud.MostrarMensaje(
                             mensajeExito);

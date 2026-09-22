@@ -6,6 +6,9 @@ namespace ImperiosEnGuerra.Controladores.Red.Contratos
     public class EstadoPartidaDto
     {
         public string estado;
+        public string ganador;
+        public string ganadorNombre;
+        public string motivoFinalizacion;
         public MapaEstadoDto mapa;
         public JugadorEstadoDto jugadorHumano;
         public JugadorEstadoDto jugadorMaquina;

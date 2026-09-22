@@ -4,13 +4,14 @@ using ImperiosEnGuerra.Modelo.Map;
 
 namespace ImperiosEnGuerra.Modelo.Core
 {
-    /// <summary>
-    /// Agrupa a los participantes humano y máquina de la partida.
-    /// </summary>
     public class Partida
     {
         public Jugador JugadorHumano { get; }
         public Jugador JugadorMaquina { get; }
+
+        public bool Finalizada { get; private set; }
+        public Jugador? Ganador { get; private set; }
+        public string MotivoFinalizacion { get; private set; }
 
         public Partida(
             Jugador jugadorHumano,
@@ -34,6 +35,9 @@ namespace ImperiosEnGuerra.Modelo.Core
 
             JugadorHumano = jugadorHumano;
             JugadorMaquina = jugadorMaquina;
+            Finalizada = false;
+            Ganador = null;
+            MotivoFinalizacion = string.Empty;
         }
 
         public Jugador ObtenerJugador(
@@ -102,6 +106,30 @@ namespace ImperiosEnGuerra.Modelo.Core
                 return JugadorHumano;
 
             return null;
+        }
+
+        public bool IntentarFinalizar(
+            Jugador ganador,
+            string motivo)
+        {
+            if (ganador == null)
+                throw new ArgumentNullException(nameof(ganador));
+
+            if (!ReferenceEquals(ganador, JugadorHumano) &&
+                !ReferenceEquals(ganador, JugadorMaquina))
+            {
+                throw new ArgumentException(
+                    "El ganador debe pertenecer a la partida.",
+                    nameof(ganador));
+            }
+
+            if (Finalizada)
+                return false;
+
+            Finalizada = true;
+            Ganador = ganador;
+            MotivoFinalizacion = motivo ?? string.Empty;
+            return true;
         }
 
         private static bool Coincide(

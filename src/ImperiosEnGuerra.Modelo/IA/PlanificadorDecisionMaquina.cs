@@ -31,6 +31,12 @@ namespace ImperiosEnGuerra.Modelo.IA
                     "No hay una partida activa.");
             }
 
+            if (partida.Finalizada)
+            {
+                return DecisionMaquina.SinAccion(
+                    "La partida ya finalizó.");
+            }
+
             Jugador maquina =
                 partida.JugadorMaquina;
 

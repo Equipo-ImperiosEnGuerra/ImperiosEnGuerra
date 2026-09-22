@@ -47,6 +47,9 @@ public sealed class ServicioJugadorMaquina : IDisposable
 
         this.intervaloDecision =
             intervaloDecision;
+
+        this.estadoPartida.PartidaFinalizada +=
+            DetenerPorFinalizacion;
     }
 
     public bool Activo
@@ -412,6 +415,11 @@ public sealed class ServicioJugadorMaquina : IDisposable
             y);
     }
 
+    private void DetenerPorFinalizacion()
+    {
+        Detener();
+    }
+
     private void ThrowSiDispuesto()
     {
         if (dispuesto)
@@ -434,6 +442,9 @@ public sealed class ServicioJugadorMaquina : IDisposable
             actual =
                 cancelacion;
         }
+
+        estadoPartida.PartidaFinalizada -=
+            DetenerPorFinalizacion;
 
         actual?.Cancel();
     }
