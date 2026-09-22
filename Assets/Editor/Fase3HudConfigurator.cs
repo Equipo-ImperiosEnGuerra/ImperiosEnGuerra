@@ -230,6 +230,7 @@ public static class Fase3HudConfigurator
         accionesSerializadas.ApplyModifiedProperties();
         var conexionSerializada = new SerializedObject(conexion);
         conexionSerializada.FindProperty("vistaHud").objectReferenceValue = hud;
+        conexionSerializada.FindProperty("controladorSeleccion").objectReferenceValue = seleccion;
         conexionSerializada.ApplyModifiedProperties();
 
         GameObject eventos = escena.GetRootGameObjects()

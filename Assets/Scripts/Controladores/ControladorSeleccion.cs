@@ -27,6 +27,20 @@ namespace ImperiosEnGuerra.Controladores
         public event System.Action CapturaCancelada;
         private VistaPartida vistaSuscrita;
 
+        public bool InteraccionBloqueada { get; private set; }
+
+        public void BloquearInteraccion()
+        {
+            InteraccionBloqueada = true;
+            CancelarCapturaDestino();
+            LimpiarSeleccion();
+        }
+
+        public void DesbloquearInteraccion()
+        {
+            InteraccionBloqueada = false;
+        }
+
         public void IniciarCapturaDestino()
         {
             CapturandoObjetivoEntidad = false;
@@ -92,6 +106,9 @@ namespace ImperiosEnGuerra.Controladores
 
         private void Update()
         {
+            if (InteraccionBloqueada)
+                return;
+
             if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
                 if (CapturandoDestino || CapturandoObjetivoEntidad)

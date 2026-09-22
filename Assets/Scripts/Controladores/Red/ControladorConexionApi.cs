@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Text;
+using ImperiosEnGuerra.Controladores;
 using ImperiosEnGuerra.Controladores.Red.Contratos;
 using ImperiosEnGuerra.Vistas;
 using UnityEngine;
@@ -17,6 +18,9 @@ namespace ImperiosEnGuerra.Controladores.Red
 
         [SerializeField]
         private VistaHud vistaHud;
+
+        [SerializeField]
+        private ControladorSeleccion controladorSeleccion;
 
         private EconomiaEstadoDto economiaActual;
 
@@ -1615,6 +1619,15 @@ public bool PuedeIniciarAtaque =>
             PartidaFinalizada = false;
             ApiDisponible = true;
 
+            if (controladorSeleccion == null)
+            {
+                controladorSeleccion =
+                    FindFirstObjectByType<ControladorSeleccion>();
+            }
+
+            controladorSeleccion?.DesbloquearInteraccion();
+            vistaHud?.OcultarResultadoFinal();
+
             Debug.Log(
                 $"Partida iniciada correctamente: " +
                 $"{request.downloadHandler.text}");
@@ -1714,6 +1727,14 @@ public bool PuedeIniciarAtaque =>
 
                     if (PartidaFinalizada)
                     {
+                        if (controladorSeleccion == null)
+                        {
+                            controladorSeleccion =
+                                FindFirstObjectByType<ControladorSeleccion>();
+                        }
+
+                        controladorSeleccion?.BloquearInteraccion();
+
                         vistaHud.MostrarResultadoFinal(
                             estadoPartida.ganador,
                             estadoPartida.ganadorNombre,

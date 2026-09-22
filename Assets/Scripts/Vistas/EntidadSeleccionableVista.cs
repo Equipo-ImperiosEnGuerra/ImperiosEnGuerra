@@ -28,6 +28,8 @@ namespace ImperiosEnGuerra.Vistas
 
         public SpriteRenderer Renderer { get; private set; }
 
+        private const float UmbralVidaCritica = 0.25f;
+
         private Color colorOriginal;
         private bool seleccionada;
 
@@ -79,6 +81,8 @@ namespace ImperiosEnGuerra.Vistas
 
             Renderer = GetComponent<SpriteRenderer>();
             colorOriginal = Renderer.color;
+
+            AplicarColorVisual();
         }
 
         public void ActualizarDatosLogicos(
@@ -105,33 +109,72 @@ namespace ImperiosEnGuerra.Vistas
                 Danio = danio;
                 Alcance = alcance;
             }
+
+            AplicarColorVisual();
         }
 
         public void MostrarSeleccion()
         {
             if (Renderer == null || seleccionada)
-            {
                 return;
-            }
 
-            colorOriginal = Renderer.color;
-            // Atenuar verde produce un tinte visible conservando los canales rojo y azul.
-            Renderer.color = colorOriginal * new Color(1f, 0.45f, 1f, 1f);
             seleccionada = true;
+            AplicarColorVisual();
         }
 
         public void OcultarSeleccion()
         {
-            if (seleccionada && Renderer != null)
-            {
-                Renderer.color = colorOriginal;
-            }
             seleccionada = false;
+            AplicarColorVisual();
+        }
+
+        private void AplicarColorVisual()
+        {
+            if (Renderer == null)
+                return;
+
+            Color visual =
+                colorOriginal;
+
+            if (EsVidaCritica())
+            {
+                // Feedback puramente visual: no modifica daño, vida ni reglas.
+                visual =
+                    Color.Lerp(
+                        colorOriginal,
+                        new Color(1f, 0.1f, 0.1f, colorOriginal.a),
+                        0.72f);
+            }
+
+            if (seleccionada)
+            {
+                visual *=
+                    new Color(
+                        1f,
+                        0.58f,
+                        1f,
+                        1f);
+            }
+
+            Renderer.color = visual;
+        }
+
+        private bool EsVidaCritica()
+        {
+            return VidaMaxima > 0 &&
+                   VidaActual > 0 &&
+                   VidaActual <=
+                       Mathf.CeilToInt(
+                           VidaMaxima *
+                           UmbralVidaCritica);
         }
 
         private void OnDisable()
         {
-            OcultarSeleccion();
+            seleccionada = false;
+
+            if (Renderer != null)
+                Renderer.color = colorOriginal;
         }
     }
 }

@@ -22,12 +22,17 @@ namespace ImperiosEnGuerra.Vistas
         [SerializeField] private Button entrenarArquero;
         [SerializeField] private Button entrenarMonje;
 
+        private GameObject pantallaResultadoFinal;
+        private Text tituloResultadoFinal;
+        private Text detalleResultadoFinal;
+
         public event Action<string> AccionSolicitada;
         public event Action<string> TipoUnidadSolicitado;
 
         private void Awake()
         {
             AplicarLayoutCompacto();
+            CrearPantallaResultadoFinal();
         }
 
         private void AplicarLayoutCompacto()
@@ -433,6 +438,274 @@ namespace ImperiosEnGuerra.Vistas
             MostrarMensaje(
                 $"{titulo} — Ganador: {nombre}\n{motivo}",
                 !victoriaHumana);
+
+            CrearPantallaResultadoFinal();
+
+            if (tituloResultadoFinal != null)
+                tituloResultadoFinal.text = titulo;
+
+            if (detalleResultadoFinal != null)
+            {
+                detalleResultadoFinal.text =
+                    $"Ganador: {nombre}\n{motivo}";
+            }
+
+            if (pantallaResultadoFinal != null)
+            {
+                pantallaResultadoFinal.SetActive(true);
+                pantallaResultadoFinal.transform.SetAsLastSibling();
+            }
+        }
+
+        public void OcultarResultadoFinal()
+        {
+            if (pantallaResultadoFinal != null)
+                pantallaResultadoFinal.SetActive(false);
+        }
+
+        private void CrearPantallaResultadoFinal()
+        {
+            if (pantallaResultadoFinal != null)
+                return;
+
+            Transform existente =
+                transform.Find(
+                    "PantallaResultadoFinal");
+
+            if (existente != null)
+            {
+                pantallaResultadoFinal =
+                    existente.gameObject;
+            }
+            else
+            {
+                pantallaResultadoFinal =
+                    new GameObject(
+                        "PantallaResultadoFinal",
+                        typeof(RectTransform),
+                        typeof(Image));
+
+                pantallaResultadoFinal.transform.SetParent(
+                    transform,
+                    false);
+            }
+
+            RectTransform rect =
+                pantallaResultadoFinal
+                    .GetComponent<RectTransform>();
+
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.pivot =
+                new Vector2(
+                    0.5f,
+                    0.5f);
+
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            Image fondo =
+                pantallaResultadoFinal
+                    .GetComponent<Image>();
+
+            fondo.color =
+                new Color(
+                    0.02f,
+                    0.025f,
+                    0.04f,
+                    0.97f);
+
+            fondo.raycastTarget = true;
+
+            tituloResultadoFinal =
+                CrearTextoResultado(
+                    pantallaResultadoFinal.transform,
+                    "Titulo",
+                    "DERROTA",
+                    54,
+                    new Vector2(0f, 90f),
+                    new Vector2(700f, 90f));
+
+            tituloResultadoFinal.alignment =
+                TextAnchor.MiddleCenter;
+
+            detalleResultadoFinal =
+                CrearTextoResultado(
+                    pantallaResultadoFinal.transform,
+                    "Detalle",
+                    "",
+                    22,
+                    new Vector2(0f, 0f),
+                    new Vector2(760f, 120f));
+
+            detalleResultadoFinal.alignment =
+                TextAnchor.MiddleCenter;
+
+            Button salir =
+                CrearBotonSalir(
+                    pantallaResultadoFinal.transform);
+
+            salir.onClick.RemoveAllListeners();
+            salir.onClick.AddListener(
+                SalirDelJuego);
+
+            pantallaResultadoFinal.SetActive(false);
+        }
+
+        private static Text CrearTextoResultado(
+            Transform padre,
+            string nombre,
+            string contenido,
+            int tamano,
+            Vector2 posicion,
+            Vector2 dimensiones)
+        {
+            Transform existente =
+                padre.Find(nombre);
+
+            GameObject objeto =
+                existente == null
+                    ? new GameObject(
+                        nombre,
+                        typeof(RectTransform),
+                        typeof(Text))
+                    : existente.gameObject;
+
+            if (existente == null)
+            {
+                objeto.transform.SetParent(
+                    padre,
+                    false);
+            }
+
+            RectTransform rect =
+                objeto.GetComponent<RectTransform>();
+
+            rect.anchorMin =
+                new Vector2(
+                    0.5f,
+                    0.5f);
+
+            rect.anchorMax =
+                rect.anchorMin;
+
+            rect.pivot =
+                new Vector2(
+                    0.5f,
+                    0.5f);
+
+            rect.anchoredPosition =
+                posicion;
+
+            rect.sizeDelta =
+                dimensiones;
+
+            Text texto =
+                objeto.GetComponent<Text>();
+
+            texto.font =
+                Resources.GetBuiltinResource<Font>(
+                    "LegacyRuntime.ttf");
+
+            texto.fontSize = tamano;
+            texto.color = Color.white;
+            texto.text = contenido;
+            texto.raycastTarget = false;
+            texto.resizeTextForBestFit = true;
+            texto.resizeTextMinSize = 16;
+            texto.resizeTextMaxSize = tamano;
+
+            return texto;
+        }
+
+        private static Button CrearBotonSalir(
+            Transform padre)
+        {
+            Transform existente =
+                padre.Find("Salir");
+
+            GameObject objeto =
+                existente == null
+                    ? new GameObject(
+                        "Salir",
+                        typeof(RectTransform),
+                        typeof(Image),
+                        typeof(Button))
+                    : existente.gameObject;
+
+            if (existente == null)
+            {
+                objeto.transform.SetParent(
+                    padre,
+                    false);
+            }
+
+            RectTransform rect =
+                objeto.GetComponent<RectTransform>();
+
+            rect.anchorMin =
+                new Vector2(
+                    0.5f,
+                    0.5f);
+
+            rect.anchorMax =
+                rect.anchorMin;
+
+            rect.pivot =
+                new Vector2(
+                    0.5f,
+                    0.5f);
+
+            rect.anchoredPosition =
+                new Vector2(
+                    0f,
+                    -125f);
+
+            rect.sizeDelta =
+                new Vector2(
+                    190f,
+                    54f);
+
+            Image imagen =
+                objeto.GetComponent<Image>();
+
+            imagen.color =
+                new Color(
+                    0.24f,
+                    0.30f,
+                    0.38f,
+                    1f);
+
+            Button boton =
+                objeto.GetComponent<Button>();
+
+            boton.targetGraphic = imagen;
+
+            Text etiqueta =
+                CrearTextoResultado(
+                    objeto.transform,
+                    "Texto",
+                    "SALIR",
+                    22,
+                    Vector2.zero,
+                    new Vector2(
+                        180f,
+                        48f));
+
+            etiqueta.alignment =
+                TextAnchor.MiddleCenter;
+
+            return boton;
+        }
+
+        private void SalirDelJuego()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying =
+                false;
+#else
+            Application.Quit();
+#endif
         }
 
         public void MostrarMensaje(string texto, bool error = false)
