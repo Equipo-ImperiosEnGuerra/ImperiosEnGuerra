@@ -16,6 +16,10 @@ public sealed class ServicioJugadorMaquina : IDisposable
     private readonly HashSet<string> centrosAsignados =
         new HashSet<string>();
 
+    // La economía puede seguir siendo concurrente, pero la Máquina mantiene
+    // un único frente de combate para no encadenar varias bajas simultáneas.
+    private bool combateAsignado;
+
     private CancellationTokenSource? cancelacion;
     private bool dispuesto;
 
@@ -47,6 +51,9 @@ public sealed class ServicioJugadorMaquina : IDisposable
 
         this.intervaloDecision =
             intervaloDecision;
+
+        this.estadoPartida.PartidaFinalizada +=
+            DetenerPorFinalizacion;
     }
 
     public bool Activo
@@ -121,6 +128,9 @@ public sealed class ServicioJugadorMaquina : IDisposable
 
         lock (sincronizacion)
         {
+            if (combateAsignado)
+                return null;
+
             unidadesExcluidas =
                 unidadesAsignadas.ToArray();
 
@@ -209,7 +219,7 @@ public sealed class ServicioJugadorMaquina : IDisposable
                             }));
 
             case TipoDecisionMaquina.Mover:
-                return EjecutarConUnidadAsignada(
+                return EjecutarConCombateAsignado(
                     decision.UnidadId,
                     () =>
                         acciones.IniciarMovimiento(
@@ -226,7 +236,7 @@ public sealed class ServicioJugadorMaquina : IDisposable
                             }));
 
             case TipoDecisionMaquina.Atacar:
-                return EjecutarConUnidadAsignada(
+                return EjecutarConCombateAsignado(
                     decision.UnidadId,
                     () =>
                         acciones.IniciarAtaque(
@@ -240,6 +250,65 @@ public sealed class ServicioJugadorMaquina : IDisposable
 
             default:
                 return null;
+        }
+    }
+
+    private ProcesoConcurrente? EjecutarConCombateAsignado(
+        Guid unidadId,
+        Func<ProcesoConcurrente> iniciar)
+    {
+        if (unidadId == Guid.Empty ||
+            iniciar == null)
+        {
+            return null;
+        }
+
+        lock (sincronizacion)
+        {
+            if (combateAsignado ||
+                !unidadesAsignadas.Add(
+                    unidadId))
+            {
+                return null;
+            }
+
+            combateAsignado = true;
+        }
+
+        try
+        {
+            ProcesoConcurrente proceso =
+                iniciar();
+
+            _ = proceso.Finalizacion
+                .ContinueWith(
+                    _ =>
+                    {
+                        lock (sincronizacion)
+                        {
+                            unidadesAsignadas.Remove(
+                                unidadId);
+
+                            combateAsignado = false;
+                        }
+                    },
+                    CancellationToken.None,
+                    TaskContinuationOptions.ExecuteSynchronously,
+                    TaskScheduler.Default);
+
+            return proceso;
+        }
+        catch
+        {
+            lock (sincronizacion)
+            {
+                unidadesAsignadas.Remove(
+                    unidadId);
+
+                combateAsignado = false;
+            }
+
+            throw;
         }
     }
 
@@ -412,6 +481,11 @@ public sealed class ServicioJugadorMaquina : IDisposable
             y);
     }
 
+    private void DetenerPorFinalizacion()
+    {
+        Detener();
+    }
+
     private void ThrowSiDispuesto()
     {
         if (dispuesto)
@@ -434,6 +508,9 @@ public sealed class ServicioJugadorMaquina : IDisposable
             actual =
                 cancelacion;
         }
+
+        estadoPartida.PartidaFinalizada -=
+            DetenerPorFinalizacion;
 
         actual?.Cancel();
     }

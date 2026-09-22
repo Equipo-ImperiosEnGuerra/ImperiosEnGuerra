@@ -4,13 +4,14 @@ using ImperiosEnGuerra.Modelo.Map;
 
 namespace ImperiosEnGuerra.Modelo.Core
 {
-    /// <summary>
-    /// Agrupa a los participantes humano y máquina de la partida.
-    /// </summary>
     public class Partida
     {
         public Jugador JugadorHumano { get; }
         public Jugador JugadorMaquina { get; }
+
+        public bool Finalizada { get; private set; }
+        public Jugador Ganador { get; private set; }
+        public string MotivoFinalizacion { get; private set; }
 
         public Partida(
             Jugador jugadorHumano,
@@ -34,6 +35,9 @@ namespace ImperiosEnGuerra.Modelo.Core
 
             JugadorHumano = jugadorHumano;
             JugadorMaquina = jugadorMaquina;
+            Finalizada = false;
+            Ganador = null;
+            MotivoFinalizacion = string.Empty;
         }
 
         public Jugador ObtenerJugador(
@@ -46,31 +50,30 @@ namespace ImperiosEnGuerra.Modelo.Core
                     : null;
         }
 
-        /// <summary>
-        /// Localiza al propietario de una unidad sin asumir si es Humano o Máquina.
-        /// </summary>
         public Jugador BuscarJugadorPorUnidad(
             Guid unidadId)
         {
-            if (JugadorHumano.Unidades.Any(
-                    u => u.Id == unidadId))
-            {
+            if (JugadorHumano.Unidades.Any(u => u.Id == unidadId))
                 return JugadorHumano;
-            }
 
-            if (JugadorMaquina.Unidades.Any(
-                    u => u.Id == unidadId))
-            {
+            if (JugadorMaquina.Unidades.Any(u => u.Id == unidadId))
                 return JugadorMaquina;
-            }
 
             return null;
         }
 
-        /// <summary>
-        /// Localiza al propietario único de un edificio por su coordenada.
-        /// Devuelve null si no existe o si la coordenada resulta ambigua.
-        /// </summary>
+        public Jugador BuscarJugadorPorEdificio(
+            Guid edificioId)
+        {
+            if (JugadorHumano.Edificios.Any(e => e.Id == edificioId))
+                return JugadorHumano;
+
+            if (JugadorMaquina.Edificios.Any(e => e.Id == edificioId))
+                return JugadorMaquina;
+
+            return null;
+        }
+
         public Jugador BuscarJugadorPorEdificio(
             Coordenada coordenada)
         {
@@ -79,15 +82,11 @@ namespace ImperiosEnGuerra.Modelo.Core
 
             bool humano =
                 JugadorHumano.Edificios.Any(
-                    e => Coincide(
-                        e.Coordenada,
-                        coordenada));
+                    e => Coincide(e.Coordenada, coordenada));
 
             bool maquina =
                 JugadorMaquina.Edificios.Any(
-                    e => Coincide(
-                        e.Coordenada,
-                        coordenada));
+                    e => Coincide(e.Coordenada, coordenada));
 
             if (humano == maquina)
                 return null;
@@ -97,27 +96,40 @@ namespace ImperiosEnGuerra.Modelo.Core
                 : JugadorMaquina;
         }
 
-        /// <summary>
-        /// Devuelve el oponente del jugador recibido.
-        /// </summary>
         public Jugador ObtenerOponente(
             Jugador jugador)
         {
-            if (ReferenceEquals(
-                    jugador,
-                    JugadorHumano))
-            {
+            if (ReferenceEquals(jugador, JugadorHumano))
                 return JugadorMaquina;
-            }
 
-            if (ReferenceEquals(
-                    jugador,
-                    JugadorMaquina))
-            {
+            if (ReferenceEquals(jugador, JugadorMaquina))
                 return JugadorHumano;
-            }
 
             return null;
+        }
+
+        public bool IntentarFinalizar(
+            Jugador ganador,
+            string motivo)
+        {
+            if (ganador == null)
+                throw new ArgumentNullException(nameof(ganador));
+
+            if (!ReferenceEquals(ganador, JugadorHumano) &&
+                !ReferenceEquals(ganador, JugadorMaquina))
+            {
+                throw new ArgumentException(
+                    "El ganador debe pertenecer a la partida.",
+                    nameof(ganador));
+            }
+
+            if (Finalizada)
+                return false;
+
+            Finalizada = true;
+            Ganador = ganador;
+            MotivoFinalizacion = motivo ?? string.Empty;
+            return true;
         }
 
         private static bool Coincide(

@@ -3,6 +3,9 @@ namespace ImperiosEnGuerra.Api.Contratos;
 public sealed class EstadoPartidaResponse
 {
     public required string Estado { get; init; }
+    public string? Ganador { get; init; }
+    public string? GanadorNombre { get; init; }
+    public string? MotivoFinalizacion { get; init; }
     public required MapaEstadoResponse Mapa { get; init; }
     public required JugadorEstadoResponse JugadorHumano { get; init; }
     public required JugadorEstadoResponse JugadorMaquina { get; init; }
@@ -59,7 +62,10 @@ public sealed class RecursoEstadoResponse
 
 public sealed class EdificioEstadoResponse
 {
+    public required string Id { get; init; }
     public required string Tipo { get; init; }
+    public int VidaActual { get; init; }
+    public int VidaMaxima { get; init; }
     public required CoordenadaEstadoResponse Coordenada { get; init; }
     public required IReadOnlyList<EntrenamientoEstadoResponse> ColaEntrenamiento { get; init; }
 }
@@ -85,6 +91,10 @@ public sealed class UnidadEstadoResponse
     public required string Tipo { get; init; }
     public CoordenadaEstadoResponse? Coordenada { get; init; }
     public bool Disponible { get; init; }
+    public int VidaActual { get; init; }
+    public int VidaMaxima { get; init; }
+    public int Danio { get; init; }
+    public int Alcance { get; init; }
 
     public required string Estado { get; init; }
     public string? OrdenActiva { get; init; }

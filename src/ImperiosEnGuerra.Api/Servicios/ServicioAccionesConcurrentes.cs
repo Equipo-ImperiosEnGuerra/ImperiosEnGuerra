@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using ImperiosEnGuerra.Modelo.Unidades;
 using ImperiosEnGuerra.Modelo.Acciones;
+using ImperiosEnGuerra.Modelo.Combate;
 using ImperiosEnGuerra.Api.Contratos;
 using ImperiosEnGuerra.Servicios.Concurrencia;
 using ImperiosEnGuerra.Modelo.Edificios;
@@ -27,6 +28,7 @@ public sealed class ServicioAccionesConcurrentes
     private readonly TimeSpan retardoAtaque;
     private readonly ConfiguracionRecoleccion configuracionRecoleccion;
     private readonly ConfiguracionEntrenamiento configuracionEntrenamiento;
+    private bool usarIntervaloCombateConfigurado;
 
 
     // ============================================================
@@ -39,7 +41,7 @@ public sealed class ServicioAccionesConcurrentes
     // Recolección:     1 segundo
     // Construcción:    7 segundos
     // Entrenamiento:   5 segundos
-    // Ataque:          1 segundo
+    // Ataque:          4 segundos
     //
     public ServicioAccionesConcurrentes(
         EstadoPartidaService estadoPartida,
@@ -53,8 +55,9 @@ public sealed class ServicioAccionesConcurrentes
             TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(7),
             TimeSpan.FromSeconds(5),
-            TimeSpan.FromSeconds(1))
+            TimeSpan.FromSeconds(4))
     {
+        usarIntervaloCombateConfigurado = true;
     }
 
 
@@ -151,6 +154,9 @@ public sealed class ServicioAccionesConcurrentes
 
         configuracionEntrenamiento =
             new ConfiguracionEntrenamiento();
+
+        this.estadoPartida.PartidaFinalizada +=
+            CancelarTodos;
     }
 
 
@@ -197,9 +203,13 @@ public sealed class ServicioAccionesConcurrentes
 
                 if (!plan.Exito)
                 {
+                    token.ThrowIfCancellationRequested();
+
                     return ResultadoAccion.Fallido(
                         plan.Mensaje);
                 }
+
+                token.ThrowIfCancellationRequested();
 
                 if (plan.Pasos.Count == 0)
                 {
@@ -214,6 +224,8 @@ public sealed class ServicioAccionesConcurrentes
 
                 if (!ordenIniciada)
                 {
+                    token.ThrowIfCancellationRequested();
+
                     return ResultadoAccion.Fallido(
                         "La unidad no está disponible.");
                 }
@@ -1003,12 +1015,118 @@ public sealed class ServicioAccionesConcurrentes
             "ATACAR",
             token =>
             {
-                EsperarAntesDeAplicar(
-                    token,
-                    retardoAtaque);
+                if (!Guid.TryParse(
+                        copia?.AtacanteId,
+                        out Guid unidadId))
+                {
+                    return ResultadoAccion.Fallido(
+                        "El ID del atacante debe tener formato Guid válido.");
+                }
 
-                return estadoPartida.Atacar(
-                    copia);
+                Unidad? unidad =
+                    estadoPartida.ObtenerUnidad(
+                        unidadId);
+
+                if (unidad == null)
+                {
+                    return ResultadoAccion.Fallido(
+                        "No existe la unidad atacante indicada.");
+                }
+
+                ResultadoAproximacionAtaque aproximacion =
+                    estadoPartida.PrepararAproximacionAtaque(
+                        copia);
+
+                if (!aproximacion.Exito)
+                {
+                    return ResultadoAccion.Fallido(
+                        aproximacion.Mensaje);
+                }
+
+                bool ordenIniciada = false;
+
+                try
+                {
+                    if (aproximacion.Pasos.Count > 0)
+                    {
+                        if (!estadoPartida.IntentarIniciarOrdenUnidad(
+                                unidadId,
+                                TipoAccionJuego.Mover))
+                        {
+                            return ResultadoAccion.Fallido(
+                                "La unidad atacante no está disponible.");
+                        }
+
+                        ordenIniciada = true;
+
+                        TimeSpan retardoPaso =
+                            CalcularRetardoPasoMovimiento(
+                                retardoMovimiento,
+                                unidad.VelocidadMovimiento);
+
+                        foreach (Coordenada paso in aproximacion.Pasos)
+                        {
+                            EsperarAntesDeAplicar(
+                                token,
+                                retardoPaso);
+
+                            token.ThrowIfCancellationRequested();
+
+                            ResultadoAccion movimiento =
+                                estadoPartida.AvanzarMovimiento(
+                                    unidadId,
+                                    paso);
+
+                            if (!movimiento.Exito)
+                            {
+                                return ResultadoAccion.Fallido(
+                                    $"No se pudo aproximar al objetivo: {movimiento.Mensaje}");
+                            }
+                        }
+
+                        if (!estadoPartida.IntentarReemplazarOrdenUnidad(
+                                unidadId,
+                                TipoAccionJuego.Atacar))
+                        {
+                            return ResultadoAccion.Fallido(
+                                "No se pudo cambiar de aproximación a ataque.");
+                        }
+                    }
+                    else
+                    {
+                        if (!estadoPartida.IntentarIniciarOrdenUnidad(
+                                unidadId,
+                                TipoAccionJuego.Atacar))
+                        {
+                            return ResultadoAccion.Fallido(
+                                "La unidad atacante no está disponible.");
+                        }
+
+                        ordenIniciada = true;
+                    }
+
+                    TimeSpan esperaAtaque =
+                        usarIntervaloCombateConfigurado
+                            ? TimeSpan.FromSeconds(
+                                estadoPartida.ObtenerIntervaloAtaqueSegundos(
+                                    unidadId))
+                            : retardoAtaque;
+
+                    EsperarAntesDeAplicar(
+                        token,
+                        esperaAtaque);
+
+                    return estadoPartida.Atacar(
+                        copia);
+                }
+                finally
+                {
+                    if (ordenIniciada)
+                    {
+                        estadoPartida.CompletarOrdenUnidad(
+                            unidadId);
+                    }
+                }
             });
     }
 

@@ -17,7 +17,12 @@ public static class PartidaEstadoMapper
 
         return new EstadoPartidaResponse
         {
-            Estado = "activa",
+            Estado = partida.Finalizada
+                ? "finalizada"
+                : "activa",
+            Ganador = partida.Ganador?.Tipo.ToString(),
+            GanadorNombre = partida.Ganador?.Nombre,
+            MotivoFinalizacion = partida.MotivoFinalizacion,
             Mapa = new MapaEstadoResponse
             {
                 Ancho = mapa.Ancho,
@@ -100,7 +105,10 @@ public static class PartidaEstadoMapper
             },
             Edificios = jugador.Edificios.Select(edificio => new EdificioEstadoResponse
             {
+                Id = edificio.Id.ToString("D"),
                 Tipo = edificio.GetType().Name,
+                VidaActual = edificio.VidaActual,
+                VidaMaxima = edificio.VidaMaxima,
                 Coordenada = ConvertirCoordenada(edificio.Coordenada),
                 ColaEntrenamiento = edificio is CentroUrbano centro
                     ? centro.ColaEntrenamiento.Select(p => new EntrenamientoEstadoResponse
@@ -126,6 +134,10 @@ public static class PartidaEstadoMapper
                     ? null
                     : ConvertirCoordenada(unidad.Coordenada),
                 Disponible = unidad.Disponible,
+                VidaActual = unidad.VidaActual,
+                VidaMaxima = unidad.VidaMaxima,
+                Danio = unidad.DanioAtaque,
+                Alcance = unidad.AlcanceAtaque,
                 Estado = unidad.Estado.ToString(),
                 OrdenActiva = unidad.OrdenActiva?.ToString(),
                 CapacidadCarga = unidad is Aldeano aldeano

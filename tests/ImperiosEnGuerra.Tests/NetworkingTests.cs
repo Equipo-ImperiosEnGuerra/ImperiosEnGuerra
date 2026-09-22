@@ -29,7 +29,7 @@ public class NetworkingTests
                         new
                         {
                             x = 2,
-                            y = 1
+                            y = 0
                         }
                 });
 
@@ -240,7 +240,11 @@ public class NetworkingTests
 
         Assert.That(
             resultado.Resultado?.Mensaje,
-            Does.Contain("pendiente"));
+            Does.Contain("vida"));
+
+        Assert.That(
+            entorno.GuerreroMaquina.VidaActual,
+            Is.EqualTo(90));
     }
 
     [TestCase("{esto-no-es-json")]
@@ -369,7 +373,7 @@ public class NetworkingTests
 
         var guerreroMaquina =
             new Guerrero(
-                new Coordenada(6, 6));
+                new Coordenada(2, 1));
 
         humano.AgregarUnidad(
             aldeano);

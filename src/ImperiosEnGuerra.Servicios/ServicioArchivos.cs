@@ -185,5 +185,55 @@ namespace ImperiosEnGuerra.Servicios
 
             File.WriteAllText(Path.Combine(directorioBase, ArchivoResultadoFinal), contenido);
         }
+
+        /// <summary>
+        /// Guarda el resultado estructurado de una partida ya finalizada.
+        /// </summary>
+        public void GuardarResultadoPartidaFinalizada(Partida partida)
+        {
+            if (partida == null)
+                throw new ArgumentNullException(nameof(partida));
+
+            if (!partida.Finalizada ||
+                partida.Ganador == null)
+            {
+                throw new InvalidOperationException(
+                    "La partida debe estar finalizada y tener un ganador antes de guardar el resultado.");
+            }
+
+            Jugador perdedor =
+                partida.ObtenerOponente(
+                    partida.Ganador);
+
+            StringBuilder texto =
+                new StringBuilder();
+
+            texto.Append("RESULTADO_FINAL\n");
+            texto.Append("Estado=Finalizada\n");
+            texto.Append("ReglaVictoria=AND\n");
+            texto.Append("GanadorTipo=")
+                .Append(partida.Ganador.Tipo)
+                .Append('\n');
+            texto.Append("GanadorNombre=")
+                .Append(partida.Ganador.Nombre)
+                .Append('\n');
+
+            if (perdedor != null)
+            {
+                texto.Append("PerdedorTipo=")
+                    .Append(perdedor.Tipo)
+                    .Append('\n');
+                texto.Append("PerdedorNombre=")
+                    .Append(perdedor.Nombre)
+                    .Append('\n');
+            }
+
+            texto.Append("Motivo=")
+                .Append(partida.MotivoFinalizacion)
+                .Append('\n');
+
+            GuardarResultadoFinal(
+                texto.ToString());
+        }
     }
 }

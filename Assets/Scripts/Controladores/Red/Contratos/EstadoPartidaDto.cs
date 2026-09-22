@@ -6,6 +6,9 @@ namespace ImperiosEnGuerra.Controladores.Red.Contratos
     public class EstadoPartidaDto
     {
         public string estado;
+        public string ganador;
+        public string ganadorNombre;
+        public string motivoFinalizacion;
         public MapaEstadoDto mapa;
         public JugadorEstadoDto jugadorHumano;
         public JugadorEstadoDto jugadorMaquina;
@@ -69,7 +72,10 @@ namespace ImperiosEnGuerra.Controladores.Red.Contratos
     [Serializable]
     public class EdificioEstadoDto
     {
+        public string id;
         public string tipo;
+        public int vidaActual;
+        public int vidaMaxima;
         public CoordenadaEstadoDto coordenada;
         public EntrenamientoEstadoDto[] colaEntrenamiento;
     }
@@ -98,6 +104,10 @@ namespace ImperiosEnGuerra.Controladores.Red.Contratos
         public string tipo;
         public CoordenadaEstadoDto coordenada;
         public bool disponible;
+        public int vidaActual;
+        public int vidaMaxima;
+        public int danio;
+        public int alcance;
 
         public string estado;
         public string ordenActiva;

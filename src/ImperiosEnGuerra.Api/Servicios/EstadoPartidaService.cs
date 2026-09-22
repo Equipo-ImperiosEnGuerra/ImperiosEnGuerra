@@ -1,7 +1,9 @@
+using System;
 using System.IO;
 using ImperiosEnGuerra.Api.Contratos;
 using ImperiosEnGuerra.Api.Mapeadores;
 using ImperiosEnGuerra.Modelo.Acciones;
+using ImperiosEnGuerra.Modelo.Combate;
 using ImperiosEnGuerra.Modelo.Core;
 using ImperiosEnGuerra.Modelo.Unidades;
 using ImperiosEnGuerra.Servicios;
@@ -22,6 +24,9 @@ public sealed class EstadoPartidaService
     private readonly ConfiguracionEconomia configuracionEconomia =
         new ConfiguracionEconomia();
     private Partida? partidaActiva;
+    private bool finalizacionNotificada;
+
+    public event Action? PartidaFinalizada;
 
     public EstadoPartidaService()
     {
@@ -41,6 +46,11 @@ public sealed class EstadoPartidaService
                 return RegistrarResultado(
                     "MOVER",
                     ResultadoAccion.Fallido("No hay una partida activa."));
+
+            if (partidaActiva.Finalizada)
+                return RegistrarResultado(
+                    "MOVER",
+                    ResultadoAccion.Fallido("La partida ya finalizó."));
 
             if (request == null)
                 return RegistrarResultado(
@@ -107,13 +117,56 @@ public sealed class EstadoPartidaService
         }
     }
 
+    public ResultadoAproximacionAtaque PrepararAproximacionAtaque(
+        AtacarRequest? request)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+            {
+                return ResultadoAproximacionAtaque.Fallido(
+                    "No hay una partida activa.");
+            }
+
+            if (request == null)
+            {
+                return ResultadoAproximacionAtaque.Fallido(
+                    "La solicitud de ataque es obligatoria.");
+            }
+
+            if (!Guid.TryParse(
+                    request.AtacanteId,
+                    out Guid atacanteId))
+            {
+                return ResultadoAproximacionAtaque.Fallido(
+                    "El ID del atacante debe tener formato Guid válido.");
+            }
+
+            if (!Guid.TryParse(
+                    request.ObjetivoId,
+                    out Guid objetivoId))
+            {
+                return ResultadoAproximacionAtaque.Fallido(
+                    "El ID del objetivo debe tener formato Guid válido.");
+            }
+
+            return new PlanificadorAproximacionAtaque()
+                .Preparar(
+                    partidaActiva,
+                    new SolicitudAtaque(
+                        atacanteId,
+                        objetivoId));
+        }
+    }
+
     public bool IntentarIniciarOrdenUnidad(
         Guid unidadId,
         TipoAccionJuego tipo)
     {
         lock (sincronizacion)
         {
-            if (partidaActiva == null)
+            if (partidaActiva == null ||
+                partidaActiva.Finalizada)
                 return false;
 
             Jugador? propietario =
@@ -136,7 +189,8 @@ public sealed class EstadoPartidaService
     {
         lock (sincronizacion)
         {
-            if (partidaActiva == null)
+            if (partidaActiva == null ||
+                partidaActiva.Finalizada)
                 return false;
 
             Jugador? propietario =
@@ -405,6 +459,11 @@ public sealed class EstadoPartidaService
                     "RECOLECTAR",
                     ResultadoAccion.Fallido("No hay una partida activa."));
 
+            if (partidaActiva.Finalizada)
+                return RegistrarResultado(
+                    "RECOLECTAR",
+                    ResultadoAccion.Fallido("La partida ya finalizó."));
+
             if (request == null)
                 return RegistrarResultado(
                     "RECOLECTAR",
@@ -445,6 +504,12 @@ public sealed class EstadoPartidaService
                     "No hay una partida activa.");
             }
 
+            if (partidaActiva.Finalizada)
+            {
+                return ResultadoAccion.Fallido(
+                    "La partida ya finalizó.");
+            }
+
             if (!configuracionEconomia
                 .IntentarObtenerCostoEdificio(
                     tipoEdificio,
@@ -468,7 +533,7 @@ public sealed class EstadoPartidaService
                 .IntentarGastar(costo))
             {
                 return ResultadoAccion.Fallido(
-                    $"Recursos insuficientes. Costo: {costo}.");
+                    $"Recursos insuficientes. Costo: {costo}. Disponibles: {DescribirSaldo(propietario.Recursos)}.");
             }
 
             return ResultadoAccion.Exitoso(
@@ -490,6 +555,12 @@ public sealed class EstadoPartidaService
                     "No hay una partida activa.");
             }
 
+            if (partidaActiva.Finalizada)
+            {
+                return ResultadoAccion.Fallido(
+                    "La partida ya finalizó.");
+            }
+
             if (!configuracionEconomia
                 .IntentarObtenerCostoUnidad(
                     tipoUnidad,
@@ -503,7 +574,7 @@ public sealed class EstadoPartidaService
                 .IntentarGastar(costo))
             {
                 return ResultadoAccion.Fallido(
-                    $"Recursos insuficientes. Costo: {costo}.");
+                    $"Recursos insuficientes. Costo: {costo}. Disponibles: {DescribirSaldo(partidaActiva.JugadorHumano.Recursos)}.");
             }
 
             return ResultadoAccion.Exitoso(
@@ -525,6 +596,12 @@ public sealed class EstadoPartidaService
             {
                 return ResultadoAccion.Fallido(
                     "No hay una partida activa.");
+            }
+
+            if (partidaActiva.Finalizada)
+            {
+                return ResultadoAccion.Fallido(
+                    "La partida ya finalizó.");
             }
 
             if (request == null)
@@ -568,7 +645,7 @@ public sealed class EstadoPartidaService
                 .IntentarGastar(costo))
             {
                 return ResultadoAccion.Fallido(
-                    $"Recursos insuficientes. Costo: {costo}.");
+                    $"Recursos insuficientes. Costo: {costo}. Disponibles: {DescribirSaldo(propietario.Recursos)}.");
             }
 
             propietarioTipo =
@@ -870,6 +947,11 @@ public sealed class EstadoPartidaService
                     "CONSTRUIR",
                     ResultadoAccion.Fallido("No hay una partida activa."));
 
+            if (partidaActiva.Finalizada)
+                return RegistrarResultado(
+                    "CONSTRUIR",
+                    ResultadoAccion.Fallido("La partida ya finalizó."));
+
             if (request == null)
                 return RegistrarResultado(
                     "CONSTRUIR",
@@ -918,7 +1000,7 @@ public sealed class EstadoPartidaService
                 return RegistrarResultado(
                     "CONSTRUIR",
                     ResultadoAccion.Fallido(
-                        $"Recursos insuficientes. Costo: {costo}."));
+                        $"Recursos insuficientes. Costo: {costo}. Disponibles: {DescribirSaldo(propietario.Recursos)}."));
             }
 
             ResultadoAccion resultado =
@@ -1356,6 +1438,11 @@ public sealed class EstadoPartidaService
                     "ENTRENAR",
                     ResultadoAccion.Fallido("No hay una partida activa."));
 
+            if (partidaActiva.Finalizada)
+                return RegistrarResultado(
+                    "ENTRENAR",
+                    ResultadoAccion.Fallido("La partida ya finalizó."));
+
             if (request == null)
                 return RegistrarResultado(
                     "ENTRENAR",
@@ -1414,7 +1501,7 @@ public sealed class EstadoPartidaService
                 return RegistrarResultado(
                     "ENTRENAR",
                     ResultadoAccion.Fallido(
-                        $"Recursos insuficientes. Costo: {costo}."));
+                        $"Recursos insuficientes. Costo: {costo}. Disponibles: {DescribirSaldo(propietario.Recursos)}."));
             }
 
             ResultadoAccion resultado =
@@ -1446,6 +1533,11 @@ public sealed class EstadoPartidaService
                     "ATACAR",
                     ResultadoAccion.Fallido("No hay una partida activa."));
 
+            if (partidaActiva.Finalizada)
+                return RegistrarResultado(
+                    "ATACAR",
+                    ResultadoAccion.Fallido("La partida ya finalizó."));
+
             if (request == null)
                 return RegistrarResultado(
                     "ATACAR",
@@ -1465,9 +1557,21 @@ public sealed class EstadoPartidaService
                 atacanteId,
                 objetivoId);
 
-            return RegistrarResultado(
-                "ATACAR",
-                new OperacionAtaque().Ejecutar(partidaActiva, solicitud));
+            ResultadoAccion resultado =
+                new OperacionAtaque()
+                    .Ejecutar(
+                        partidaActiva,
+                        solicitud);
+
+            ResultadoAccion registrado =
+                RegistrarResultado(
+                    "ATACAR",
+                    resultado);
+
+            if (partidaActiva.Finalizada)
+                RegistrarFinalizacionSeguro();
+
+            return registrado;
         }
     }
 
@@ -1488,6 +1592,7 @@ public sealed class EstadoPartidaService
         lock (sincronizacion)
         {
             partidaActiva = partida;
+            finalizacionNotificada = false;
             RegistrarEventoSeguro("PARTIDA|EXITO|Partida establecida.");
         }
     }
@@ -1535,6 +1640,86 @@ public sealed class EstadoPartidaService
         {
             return partidaActiva != null;
         }
+    }
+
+    public bool EstaFinalizada()
+    {
+        lock (sincronizacion)
+        {
+            return partidaActiva?.Finalizada ?? false;
+        }
+    }
+
+    public double ObtenerIntervaloAtaqueSegundos(
+        Guid unidadId)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+                return 4d;
+
+            Jugador propietario =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    unidadId);
+
+            Unidad unidad =
+                propietario?.Unidades
+                    .FirstOrDefault(
+                        u => u.Id == unidadId);
+
+            return unidad == null ||
+                   unidad.IntervaloAtaqueSegundos <= 0d
+                ? 4d
+                : unidad.IntervaloAtaqueSegundos;
+        }
+    }
+
+    private void RegistrarFinalizacionSeguro()
+    {
+        if (partidaActiva == null ||
+            !partidaActiva.Finalizada ||
+            finalizacionNotificada)
+        {
+            return;
+        }
+
+        finalizacionNotificada = true;
+
+        if (servicioArchivos != null)
+        {
+            try
+            {
+                servicioArchivos.GuardarResultadoPartidaFinalizada(
+                    partidaActiva);
+            }
+            catch (IOException ex)
+            {
+                Console.Error.WriteLine(
+                    $"No se pudo escribir resultado_final.txt: {ex.Message}");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                Console.Error.WriteLine(
+                    $"No se pudo escribir resultado_final.txt: {ex.Message}");
+            }
+        }
+
+        RegistrarEventoSeguro(
+            $"PARTIDA|FINALIZADA|Ganador={partidaActiva.Ganador?.Nombre}; Motivo={partidaActiva.MotivoFinalizacion}");
+
+        PartidaFinalizada?.Invoke();
+    }
+
+    private static string DescribirSaldo(
+        RecursosJugador recursos)
+    {
+        if (recursos == null)
+            return "sin datos";
+
+        return
+            $"Oro {recursos.ObtenerCantidad(TipoRecurso.Oro)}, " +
+            $"Madera {recursos.ObtenerCantidad(TipoRecurso.Madera)}, " +
+            $"Comida {recursos.ObtenerCantidad(TipoRecurso.Comida)}";
     }
 
     private ResultadoAccion RegistrarResultado(

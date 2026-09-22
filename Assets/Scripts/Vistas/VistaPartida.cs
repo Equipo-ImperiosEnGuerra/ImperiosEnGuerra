@@ -236,6 +236,8 @@ namespace ImperiosEnGuerra.Vistas
             if (datos == null)
                 return;
 
+            OcultarEdificiosAusentes(datos, propietario);
+
             foreach (EdificioEstadoDto edificio in datos)
             {
                 if (edificio == null ||
@@ -248,14 +250,24 @@ namespace ImperiosEnGuerra.Vistas
                 EntidadSeleccionableVista existente =
                     BuscarEntidad(
                         CategoriaEntidadVisual.Edificio,
-                        string.Empty,
+                        edificio.id,
                         edificio.tipo,
                         propietario,
                         edificio.coordenada.x,
                         edificio.coordenada.y);
 
                 if (existente != null)
+                {
+                    existente.ActualizarDatosLogicos(
+                        existente.X,
+                        existente.Y,
+                        existente.EstadoLogico,
+                        existente.OrdenActiva,
+                        edificio.vidaActual,
+                        edificio.vidaMaxima);
+
                     continue;
+                }
 
                 GameObject objeto =
                     CrearSprite(
@@ -274,7 +286,12 @@ namespace ImperiosEnGuerra.Vistas
                     CategoriaEntidadVisual.Edificio,
                     edificio.tipo,
                     propietario,
-                    edificio.coordenada);
+                    edificio.coordenada,
+                    edificio.id,
+                    "",
+                    "",
+                    edificio.vidaActual,
+                    edificio.vidaMaxima);
             }
         }
 
@@ -346,6 +363,8 @@ namespace ImperiosEnGuerra.Vistas
             if (datos == null)
                 return;
 
+            OcultarUnidadesAusentes(datos, propietario);
+
             foreach (UnidadEstadoDto unidad in datos)
             {
                 if (unidad == null ||
@@ -372,7 +391,11 @@ namespace ImperiosEnGuerra.Vistas
                         unidad.coordenada.x,
                         unidad.coordenada.y,
                         unidad.estado,
-                        unidad.ordenActiva);
+                        unidad.ordenActiva,
+                        unidad.vidaActual,
+                        unidad.vidaMaxima,
+                        unidad.danio,
+                        unidad.alcance);
 
                     movimientosVisuales[unidad.id] =
                         new MovimientoVisualPendiente
@@ -412,7 +435,74 @@ namespace ImperiosEnGuerra.Vistas
                     unidad.coordenada,
                     unidad.id,
                     unidad.estado,
-                    unidad.ordenActiva);
+                    unidad.ordenActiva,
+                    unidad.vidaActual,
+                    unidad.vidaMaxima,
+                    unidad.danio,
+                    unidad.alcance);
+            }
+        }
+
+        private void OcultarEdificiosAusentes(
+            EdificioEstadoDto[] datos,
+            string propietario)
+        {
+            EntidadSeleccionableVista[] entidades =
+                GetComponentsInChildren<EntidadSeleccionableVista>(true);
+
+            foreach (EntidadSeleccionableVista entidad in entidades)
+            {
+                if (entidad == null ||
+                    entidad.Categoria != CategoriaEntidadVisual.Edificio ||
+                    entidad.Propietario != propietario)
+                    continue;
+
+                bool existe = false;
+                foreach (EdificioEstadoDto edificio in datos)
+                {
+                    if (edificio != null &&
+                        edificio.id == entidad.IdLogico)
+                    {
+                        existe = true;
+                        break;
+                    }
+                }
+
+                if (!existe)
+                    entidad.gameObject.SetActive(false);
+            }
+        }
+
+        private void OcultarUnidadesAusentes(
+            UnidadEstadoDto[] datos,
+            string propietario)
+        {
+            EntidadSeleccionableVista[] entidades =
+                GetComponentsInChildren<EntidadSeleccionableVista>(true);
+
+            foreach (EntidadSeleccionableVista entidad in entidades)
+            {
+                if (entidad == null ||
+                    entidad.Categoria != CategoriaEntidadVisual.Unidad ||
+                    entidad.Propietario != propietario)
+                    continue;
+
+                bool existe = false;
+                foreach (UnidadEstadoDto unidad in datos)
+                {
+                    if (unidad != null &&
+                        unidad.id == entidad.IdLogico)
+                    {
+                        existe = true;
+                        break;
+                    }
+                }
+
+                if (!existe)
+                {
+                    movimientosVisuales.Remove(entidad.IdLogico);
+                    entidad.gameObject.SetActive(false);
+                }
             }
         }
 
@@ -635,8 +725,17 @@ namespace ImperiosEnGuerra.Vistas
                         humano ? centroHumano : centroMaquina,
                         edificio.coordenada.x, edificio.coordenada.y, 20, edificios,
                         Vector3.one * escalaEdificios);
-                    ConfigurarSeleccionable(objeto, CategoriaEntidadVisual.Edificio,
-                        edificio.tipo, propietario, edificio.coordenada);
+                    ConfigurarSeleccionable(
+                        objeto,
+                        CategoriaEntidadVisual.Edificio,
+                        edificio.tipo,
+                        propietario,
+                        edificio.coordenada,
+                        edificio.id,
+                        "",
+                        "",
+                        edificio.vidaActual,
+                        edificio.vidaMaxima);
                 }
             }
 
@@ -729,7 +828,11 @@ namespace ImperiosEnGuerra.Vistas
                     unidad.coordenada,
                     unidad.id,
                     unidad.estado,
-                    unidad.ordenActiva);
+                    unidad.ordenActiva,
+                    unidad.vidaActual,
+                    unidad.vidaMaxima,
+                    unidad.danio,
+                    unidad.alcance);
             }
         }
 
@@ -871,7 +974,11 @@ namespace ImperiosEnGuerra.Vistas
             CoordenadaEstadoDto coordenada,
             string idLogico = "",
             string estadoLogico = "",
-            string ordenActiva = "")
+            string ordenActiva = "",
+            int vidaActual = 0,
+            int vidaMaxima = 0,
+            int danio = 0,
+            int alcance = 0)
         {
             if (objeto == null)
             {
@@ -888,7 +995,11 @@ namespace ImperiosEnGuerra.Vistas
                 coordenada.x,
                 coordenada.y,
                 estadoLogico,
-                ordenActiva);
+                ordenActiva,
+                vidaActual,
+                vidaMaxima,
+                danio,
+                alcance);
 
             var collider = objeto.AddComponent<BoxCollider2D>();
 

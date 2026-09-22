@@ -31,6 +31,12 @@ namespace ImperiosEnGuerra.Modelo.IA
                     "No hay una partida activa.");
             }
 
+            if (partida.Finalizada)
+            {
+                return DecisionMaquina.SinAccion(
+                    "La partida ya finalizó.");
+            }
+
             Jugador maquina =
                 partida.JugadorMaquina;
 
@@ -119,13 +125,13 @@ namespace ImperiosEnGuerra.Modelo.IA
                 }
             }
 
-            bool tieneMilitar =
-                maquina.Unidades.Any(
+            int militaresPropios =
+                maquina.Unidades.Count(
                     u =>
                         u is Soldado ||
                         u is Monje);
 
-            if (!tieneMilitar &&
+            if (militaresPropios < 2 &&
                 centroDisponible != null &&
                 PuedePagarUnidad(
                     maquina,
@@ -230,61 +236,98 @@ namespace ImperiosEnGuerra.Modelo.IA
                     .ThenBy(u => u.Id)
                     .ToArray();
 
-            Unidad[] enemigos =
+            Unidad[] militaresEnemigos =
                 partida.JugadorHumano.Unidades
+                    .Where(
+                        u =>
+                            u is Soldado ||
+                            u is Monje)
                     .OrderBy(u => u.Coordenada.X)
                     .ThenBy(u => u.Coordenada.Y)
                     .ThenBy(u => u.Id)
                     .ToArray();
 
+            Guid objetivoId =
+                Guid.Empty;
+
+            Coordenada objetivoCoordenada =
+                null;
+
+            if (militaresEnemigos.Length > 0)
+            {
+                Unidad objetivoMilitar =
+                    militaresEnemigos[0];
+
+                objetivoId =
+                    objetivoMilitar.Id;
+
+                objetivoCoordenada =
+                    objetivoMilitar.Coordenada;
+            }
+            else if (militares.Length >= 2)
+            {
+                CentroUrbano centroObjetivo =
+                    partida.JugadorHumano.Edificios
+                        .OfType<CentroUrbano>()
+                        .OrderBy(c => c.Coordenada.X)
+                        .ThenBy(c => c.Coordenada.Y)
+                        .FirstOrDefault();
+
+                if (centroObjetivo != null)
+                {
+                    objetivoId =
+                        centroObjetivo.Id;
+
+                    objetivoCoordenada =
+                        centroObjetivo.Coordenada;
+                }
+            }
+
             if (militares.Length == 0 ||
-                enemigos.Length == 0)
+                objetivoId == Guid.Empty ||
+                objetivoCoordenada == null)
             {
                 return DecisionMaquina.SinAccion(
-                    "No hay combate disponible.");
+                    "La Máquina mantiene postura defensiva mientras no exista un objetivo militar o fuerza suficiente para asaltar el Centro Urbano.");
             }
 
             Unidad atacante = null;
-            Unidad objetivo = null;
             int mejorDistancia = int.MaxValue;
 
             foreach (Unidad militar in militares)
             {
-                foreach (Unidad enemigo in enemigos)
-                {
-                    int distancia =
-                        Distancia(
-                            militar.Coordenada,
-                            enemigo.Coordenada);
+                int distancia =
+                    DistanciaCombate(
+                        militar.Coordenada,
+                        objetivoCoordenada);
 
-                    if (distancia >= mejorDistancia)
-                        continue;
+                if (distancia >= mejorDistancia)
+                    continue;
 
-                    mejorDistancia = distancia;
-                    atacante = militar;
-                    objetivo = enemigo;
-                }
+                mejorDistancia = distancia;
+                atacante = militar;
             }
 
-            if (atacante == null ||
-                objetivo == null)
+            if (atacante == null)
             {
                 return DecisionMaquina.SinAccion(
-                    "No se pudo seleccionar un objetivo militar.");
+                    "No se pudo seleccionar una unidad atacante.");
             }
 
-            if (mejorDistancia <= 1)
+            if (mejorDistancia <=
+                atacante.AlcanceAtaque)
             {
                 return DecisionMaquina.Atacar(
                     atacante.Id,
-                    objetivo.Id);
+                    objetivoId);
             }
 
             Coordenada aproximacion =
                 BuscarCasillaAproximacion(
                     partida,
                     atacante,
-                    objetivo.Coordenada);
+                    objetivoCoordenada,
+                    atacante.AlcanceAtaque);
 
             return aproximacion == null
                 ? DecisionMaquina.SinAccion(
@@ -292,29 +335,47 @@ namespace ImperiosEnGuerra.Modelo.IA
                 : DecisionMaquina.Mover(
                     atacante.Id,
                     aproximacion,
-                    objetivo.Id);
+                    objetivoId);
         }
 
         private static Coordenada BuscarCasillaAproximacion(
             Partida partida,
             Unidad atacante,
-            Coordenada objetivo)
+            Coordenada objetivo,
+            int alcance)
         {
             Mapa mapa =
                 partida.JugadorMaquina.Mapa;
 
-            Coordenada[] candidatas =
+            var candidatas =
+                new List<Coordenada>();
+
+            for (int x = 0; x < mapa.Ancho; x++)
             {
-                new Coordenada(objetivo.X - 1, objetivo.Y),
-                new Coordenada(objetivo.X + 1, objetivo.Y),
-                new Coordenada(objetivo.X, objetivo.Y - 1),
-                new Coordenada(objetivo.X, objetivo.Y + 1)
-            };
+                for (int y = 0; y < mapa.Alto; y++)
+                {
+                    var candidata =
+                        new Coordenada(x, y);
+
+                    int distanciaObjetivo =
+                        DistanciaCombate(
+                            candidata,
+                            objetivo);
+
+                    if (distanciaObjetivo <= 0 ||
+                        distanciaObjetivo > alcance)
+                    {
+                        continue;
+                    }
+
+                    candidatas.Add(
+                        candidata);
+                }
+            }
 
             return candidatas
                 .Where(
                     c =>
-                        mapa.EstaDentroDeLimites(c) &&
                         mapa.PuedeColocar(c) &&
                         !HayEntidadEn(
                             partida.JugadorHumano,
@@ -534,6 +595,19 @@ namespace ImperiosEnGuerra.Modelo.IA
                        e => Coincide(
                            e,
                            centro));
+        }
+
+        private static int DistanciaCombate(
+            Coordenada a,
+            Coordenada b)
+        {
+            return Math.Max(
+                Math.Abs(
+                    a.X -
+                    b.X),
+                Math.Abs(
+                    a.Y -
+                    b.Y));
         }
 
         private static int Distancia(

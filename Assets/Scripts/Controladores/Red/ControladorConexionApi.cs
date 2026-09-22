@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Text;
+using ImperiosEnGuerra.Controladores;
 using ImperiosEnGuerra.Controladores.Red.Contratos;
 using ImperiosEnGuerra.Vistas;
 using UnityEngine;
@@ -18,6 +19,9 @@ namespace ImperiosEnGuerra.Controladores.Red
         [SerializeField]
         private VistaHud vistaHud;
 
+        [SerializeField]
+        private ControladorSeleccion controladorSeleccion;
+
         private EconomiaEstadoDto economiaActual;
 
     public bool MovimientoEnCurso { get; private set; }
@@ -25,6 +29,26 @@ namespace ImperiosEnGuerra.Controladores.Red
     public bool ConstruccionEnCurso { get; private set; }
     public bool EntrenamientoEnCurso { get; private set; }
     public bool AtaqueEnCurso { get; private set; }
+    public bool PartidaFinalizada { get; private set; }
+    public bool ApiDisponible { get; private set; }
+
+    public string MensajeAccionNoDisponible
+    {
+        get
+        {
+            if (PartidaFinalizada)
+            {
+                return "La partida ya finalizó. Sal de Play y vuelve a entrar para iniciar una partida nueva.";
+            }
+
+            if (!ApiDisponible)
+            {
+                return "La conexión con la API no está disponible.";
+            }
+
+            return "La acción no está disponible en este momento.";
+        }
+    }
 
     private int movimientosActivos;
     private int recoleccionesActivas;
@@ -40,25 +64,35 @@ public bool AccionEnCurso =>
     AtaqueEnCurso;
 
 public bool PuedeIniciarMovimiento =>
-    isActiveAndEnabled;
+    isActiveAndEnabled &&
+    ApiDisponible &&
+    !PartidaFinalizada;
 
 public bool PuedeIniciarRecoleccion =>
-    isActiveAndEnabled;
+    isActiveAndEnabled &&
+    ApiDisponible &&
+    !PartidaFinalizada;
 
 public bool PuedeIniciarConstruccion =>
-    isActiveAndEnabled;
+    isActiveAndEnabled &&
+    ApiDisponible &&
+    !PartidaFinalizada;
 
 public bool PuedeIniciarEntrenamiento =>
-    isActiveAndEnabled;
+    isActiveAndEnabled &&
+    ApiDisponible &&
+    !PartidaFinalizada;
 
 public bool PuedeIniciarAtaque =>
-    isActiveAndEnabled;
+    isActiveAndEnabled &&
+    ApiDisponible &&
+    !PartidaFinalizada;
 
         public void MoverUnidad(string unidadId, int x, int y)
         {
             if (!PuedeIniciarMovimiento)
             {
-                MostrarError("La conexión con la API no está disponible.");
+                MostrarError(MensajeAccionNoDisponible);
                 return;
             }
 
@@ -73,7 +107,7 @@ public bool PuedeIniciarAtaque =>
         {
             if (!PuedeIniciarRecoleccion)
             {
-                MostrarError("La conexión con la API no está disponible.");
+                MostrarError(MensajeAccionNoDisponible);
                 return;
             }
 
@@ -117,7 +151,7 @@ public bool PuedeIniciarAtaque =>
             if (!PuedeIniciarEntrenamiento)
             {
                 MostrarError(
-                    "La conexión con la API no está disponible.");
+                    MensajeAccionNoDisponible);
                 return;
             }
 
@@ -146,7 +180,7 @@ public bool PuedeIniciarAtaque =>
             if (!PuedeIniciarAtaque)
             {
                 MostrarError(
-                    "La conexión con la API no está disponible.");
+                    MensajeAccionNoDisponible);
                 return;
             }
 
@@ -174,6 +208,7 @@ public bool PuedeIniciarAtaque =>
             ConstruccionEnCurso = false;
             EntrenamientoEnCurso = false;
             AtaqueEnCurso = false;
+            ApiDisponible = false;
         }
 
         private IEnumerator EnviarMovimiento(MoverUnidadDto movimiento)
@@ -1152,7 +1187,7 @@ public bool PuedeIniciarAtaque =>
             {
                 using var request =
                     new UnityWebRequest(
-                        $"{urlBaseApi}/api/partida/atacar",
+                        $"{urlBaseApi}/api/partida/atacar-concurrente",
                         UnityWebRequest.kHttpVerbPOST);
 
                 request.uploadHandler =
@@ -1171,39 +1206,31 @@ public bool PuedeIniciarAtaque =>
 
                 yield return request.SendWebRequest();
 
-                ResultadoAccionDto resultado =
-                    LeerResultado(
-                        request.downloadHandler.text);
-
                 if (request.result !=
                     UnityWebRequest.Result.Success)
                 {
                     MostrarError(
-                        MensajeError(
-                            resultado,
-                            $"No se pudo preparar el ataque. HTTP {request.responseCode}: {request.error}"));
+                        $"No se pudo iniciar el ataque concurrente. HTTP {request.responseCode}: {request.error}");
 
                     yield break;
                 }
 
-                if (resultado == null ||
-                    !resultado.exito)
+                ProcesoIniciadoDto proceso =
+                    LeerProcesoIniciado(
+                        request.downloadHandler.text);
+
+                if (proceso == null ||
+                    string.IsNullOrWhiteSpace(
+                        proceso.procesoId))
                 {
                     MostrarError(
-                        MensajeError(
-                            resultado,
-                            "La API no confirmó el ataque."));
+                        "La API no devolvió un identificador válido para el ataque concurrente.");
 
                     yield break;
                 }
 
-                yield return ObtenerPartidaActiva(
-                    string.IsNullOrWhiteSpace(
-                        resultado.mensaje)
-                        ? "Ataque preparado."
-                        : resultado.mensaje,
-                    "Ataque aceptado, pero no se pudo actualizar la vista. ",
-                    false);
+                yield return EsperarResultadoAtaque(
+                    proceso.procesoId);
             }
             finally
             {
@@ -1212,6 +1239,136 @@ public bool PuedeIniciarAtaque =>
 
                 AtaqueEnCurso =
                     ataquesActivos > 0;
+            }
+        }
+
+        private IEnumerator EsperarResultadoAtaque(
+            string procesoId)
+        {
+            const float intervaloConsulta = 0.1f;
+            const int consultasPorSincronizacion = 5;
+            int consultasPendientes = 0;
+
+            while (isActiveAndEnabled)
+            {
+                using UnityWebRequest request =
+                    UnityWebRequest.Get(
+                        $"{urlBaseApi}/api/procesos/{procesoId}/resultado");
+
+                request.timeout = 5;
+
+                yield return request.SendWebRequest();
+
+                if (request.result !=
+                    UnityWebRequest.Result.Success)
+                {
+                    Debug.LogWarning(
+                        $"Consulta temporal de ataque fallida. Se reintentará: " +
+                        $"HTTP {request.responseCode}: {request.error}",
+                        this);
+
+                    yield return new WaitForSecondsRealtime(
+                        0.5f);
+
+                    continue;
+                }
+
+                if (request.responseCode == 204 ||
+                    string.IsNullOrWhiteSpace(
+                        request.downloadHandler.text))
+                {
+                    consultasPendientes++;
+
+                    if (consultasPendientes >=
+                        consultasPorSincronizacion)
+                    {
+                        consultasPendientes = 0;
+
+                        yield return ObtenerPartidaActiva(
+                            "",
+                            "",
+                            false);
+                    }
+
+                    yield return new WaitForSecondsRealtime(
+                        intervaloConsulta);
+
+                    continue;
+                }
+
+                ResultadoProcesoDto resultado =
+                    LeerResultadoProceso(
+                        request.downloadHandler.text);
+
+                if (resultado == null)
+                {
+                    MostrarError(
+                        "La API devolvió un resultado concurrente inválido para el ataque.");
+
+                    yield return SincronizarEstadoDespuesDeProceso();
+                    yield break;
+                }
+
+                if (resultado.procesoId != procesoId)
+                {
+                    MostrarError(
+                        "Se recibió el resultado de un proceso distinto al ataque esperado.");
+
+                    yield return SincronizarEstadoDespuesDeProceso();
+                    yield break;
+                }
+
+                if (resultado.estado == "Cancelado")
+                {
+                    Debug.Log(
+                        "Ataque cancelado.");
+
+                    yield return SincronizarEstadoDespuesDeProceso();
+                    yield break;
+                }
+
+                if (resultado.estado == "Fallido")
+                {
+                    MostrarError(
+                        string.IsNullOrWhiteSpace(
+                            resultado.errorTecnico)
+                            ? "El worker de ataque finalizó con error."
+                            : resultado.errorTecnico);
+
+                    yield return SincronizarEstadoDespuesDeProceso();
+                    yield break;
+                }
+
+                if (resultado.estado != "Completado")
+                {
+                    MostrarError(
+                        $"Estado concurrente de ataque no reconocido: {resultado.estado}");
+
+                    yield return SincronizarEstadoDespuesDeProceso();
+                    yield break;
+                }
+
+                if (!resultado.exito)
+                {
+                    MostrarError(
+                        string.IsNullOrWhiteSpace(
+                            resultado.mensaje)
+                            ? "El ataque fue rechazado por el Modelo."
+                            : resultado.mensaje);
+
+                    yield return SincronizarEstadoDespuesDeProceso();
+                    yield break;
+                }
+
+                yield return ObtenerPartidaActiva(
+                    string.IsNullOrWhiteSpace(
+                        resultado.mensaje)
+                        ? "Ataque realizado."
+                        : resultado.mensaje,
+                    "Ataque completado, pero no se pudo actualizar la vista. ",
+                    false);
+
+                yield break;
             }
         }
 
@@ -1267,35 +1424,62 @@ public bool PuedeIniciarAtaque =>
         public string DescribirCostoUnidad(
             string tipoUnidad)
         {
+            return DescribirCosto(
+                ObtenerCostoUnidad(
+                    tipoUnidad));
+        }
+
+        public string DescribirCostoUnidadCompacto(
+            string tipoUnidad)
+        {
+            CostoEstadoDto costo =
+                ObtenerCostoUnidad(
+                    tipoUnidad);
+
+            if (costo == null)
+                return string.Empty;
+
+            var partes =
+                new System.Collections.Generic.List<string>();
+
+            if (costo.oro > 0)
+                partes.Add($"O{costo.oro}");
+
+            if (costo.madera > 0)
+                partes.Add($"M{costo.madera}");
+
+            if (costo.comida > 0)
+                partes.Add($"C{costo.comida}");
+
+            return partes.Count == 0
+                ? "Gratis"
+                : string.Join(" ", partes);
+        }
+
+        private CostoEstadoDto ObtenerCostoUnidad(
+            string tipoUnidad)
+        {
             if (economiaActual == null ||
                 string.IsNullOrWhiteSpace(tipoUnidad))
             {
-                return string.Empty;
+                return null;
             }
-
-            CostoEstadoDto costo = null;
 
             switch (tipoUnidad)
             {
                 case "Aldeano":
-                    costo = economiaActual.aldeano;
-                    break;
+                    return economiaActual.aldeano;
                 case "Guerrero":
-                    costo = economiaActual.guerrero;
-                    break;
+                    return economiaActual.guerrero;
                 case "Lancero":
-                    costo = economiaActual.lancero;
-                    break;
+                    return economiaActual.lancero;
                 case "Arquero":
-                    costo = economiaActual.arquero;
-                    break;
+                    return economiaActual.arquero;
                 case "Monje":
-                    costo = economiaActual.monje;
-                    break;
+                    return economiaActual.monje;
+                default:
+                    return null;
             }
-
-            return DescribirCosto(
-                costo);
         }
 
         private static string DescribirCosto(
@@ -1362,6 +1546,8 @@ public bool PuedeIniciarAtaque =>
 
         private IEnumerator ComprobarConexion()
         {
+            ApiDisponible = false;
+
             string url =
                 $"{urlBaseApi}/api/estado";
 
@@ -1377,6 +1563,8 @@ public bool PuedeIniciarAtaque =>
 
                 yield break;
             }
+
+            ApiDisponible = true;
 
             Debug.Log(
                 $"API conectada correctamente: " +
@@ -1427,6 +1615,18 @@ public bool PuedeIniciarAtaque =>
 
                 yield break;
             }
+
+            PartidaFinalizada = false;
+            ApiDisponible = true;
+
+            if (controladorSeleccion == null)
+            {
+                controladorSeleccion =
+                    FindFirstObjectByType<ControladorSeleccion>();
+            }
+
+            controladorSeleccion?.DesbloquearInteraccion();
+            vistaHud?.OcultarResultadoFinal();
 
             Debug.Log(
                 $"Partida iniciada correctamente: " +
@@ -1507,6 +1707,10 @@ public bool PuedeIniciarAtaque =>
                 yield break;
             }
 
+            PartidaFinalizada =
+                estadoPartida.estado ==
+                "finalizada";
+
             vistaPartida.Sincronizar(estadoPartida);
 
             if (vistaHud != null)
@@ -1521,7 +1725,22 @@ public bool PuedeIniciarAtaque =>
                         recursos.madera,
                         recursos.comida);
 
-                    if (mostrarMensaje)
+                    if (PartidaFinalizada)
+                    {
+                        if (controladorSeleccion == null)
+                        {
+                            controladorSeleccion =
+                                FindFirstObjectByType<ControladorSeleccion>();
+                        }
+
+                        controladorSeleccion?.BloquearInteraccion();
+
+                        vistaHud.MostrarResultadoFinal(
+                            estadoPartida.ganador,
+                            estadoPartida.ganadorNombre,
+                            estadoPartida.motivoFinalizacion);
+                    }
+                    else if (mostrarMensaje)
                     {
                         vistaHud.MostrarMensaje(
                             mensajeExito);
@@ -1552,40 +1771,84 @@ public bool PuedeIniciarAtaque =>
                 centroMaquina =
                     new CoordenadaDto(8, 8),
 
+                // Dos nodos por tipo alrededor de cada mitad del mapa.
+                // Se dejan corredores y varias casillas adyacentes libres para
+                // evitar que un recurso quede encerrado por el Centro Urbano
+                // u otros recursos físicos.
                 recursosHumano = new[]
                 {
                     new RecursoInicialDto(
                         "Oro",
-                        1,
-                        2),
+                        3,
+                        1),
+
+                    new RecursoInicialDto(
+                        "Oro",
+                        4,
+                        3),
 
                     new RecursoInicialDto(
                         "Madera",
-                        2,
+                        1,
+                        4),
+
+                    new RecursoInicialDto(
+                        "Madera",
+                        3,
+                        5),
+
+                    new RecursoInicialDto(
+                        "Comida",
+                        4,
                         1),
 
                     new RecursoInicialDto(
                         "Comida",
+                        1,
+                        5),
+
+                    new RecursoInicialDto(
+                        "Comida",
                         2,
-                        2)
+                        7)
                 },
 
                 recursosMaquina = new[]
                 {
                     new RecursoInicialDto(
                         "Oro",
-                        8,
-                        7),
+                        6,
+                        8),
+
+                    new RecursoInicialDto(
+                        "Oro",
+                        5,
+                        6),
 
                     new RecursoInicialDto(
                         "Madera",
-                        7,
+                        8,
+                        5),
+
+                    new RecursoInicialDto(
+                        "Madera",
+                        6,
+                        4),
+
+                    new RecursoInicialDto(
+                        "Comida",
+                        5,
                         8),
 
                     new RecursoInicialDto(
                         "Comida",
+                        8,
+                        4),
+
+                    new RecursoInicialDto(
+                        "Comida",
                         7,
-                        7)
+                        2)
                 }
             };
         }

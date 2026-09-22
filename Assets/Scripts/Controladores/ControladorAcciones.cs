@@ -23,6 +23,7 @@ namespace ImperiosEnGuerra.Controladores
         private string ultimaEntidadMostrada;
         private string ultimoEstadoMostrado;
         private string ultimaOrdenMostrada;
+        private int ultimaVidaMostrada = -1;
 
         private bool EsperandoObjetivo =>
             !string.IsNullOrEmpty(accionPendiente);
@@ -140,7 +141,8 @@ namespace ImperiosEnGuerra.Controladores
 
             if (identidad == ultimaEntidadMostrada &&
                 entidad.EstadoLogico == ultimoEstadoMostrado &&
-                entidad.OrdenActiva == ultimaOrdenMostrada)
+                entidad.OrdenActiva == ultimaOrdenMostrada &&
+                entidad.VidaActual == ultimaVidaMostrada)
             {
                 return;
             }
@@ -183,6 +185,9 @@ namespace ImperiosEnGuerra.Controladores
                 ultimaOrdenMostrada =
                     string.Empty;
 
+                ultimaVidaMostrada =
+                    -1;
+
                 return;
             }
 
@@ -197,6 +202,9 @@ namespace ImperiosEnGuerra.Controladores
 
             ultimaOrdenMostrada =
                 entidad.OrdenActiva ?? string.Empty;
+
+            ultimaVidaMostrada =
+                entidad.VidaActual;
         }
 
         private bool ConservaSeleccion()
@@ -286,7 +294,9 @@ namespace ImperiosEnGuerra.Controladores
                 if (vistaHud != null)
                 {
                     vistaHud.MostrarMensaje(
-                        "La conexión con la API no está disponible.",
+                        conexionApi == null
+                            ? "La conexión con la API no está disponible."
+                            : conexionApi.MensajeAccionNoDisponible,
                         true);
                 }
 
@@ -352,7 +362,7 @@ namespace ImperiosEnGuerra.Controladores
                 if (vistaHud != null)
                 {
                     vistaHud.MostrarMensaje(
-                        "Selecciona una unidad enemiga válida como objetivo.",
+                        "Selecciona una unidad o edificio enemigo válido como objetivo.",
                         true);
                 }
 
@@ -370,11 +380,20 @@ namespace ImperiosEnGuerra.Controladores
                 if (vistaHud != null)
                 {
                     vistaHud.MostrarMensaje(
-                        "La conexión con la API no está disponible.",
+                        conexionApi == null
+                            ? "La conexión con la API no está disponible."
+                            : conexionApi.MensajeAccionNoDisponible,
                         true);
                 }
 
                 return;
+            }
+
+            if (vistaHud != null)
+            {
+                vistaHud.MostrarMensaje(
+                    $"Atacando {objetivo.TipoLogico} enemigo... " +
+                    "La unidad se acercará automáticamente si está fuera de alcance.");
             }
 
             conexionApi.Atacar(
@@ -387,7 +406,8 @@ namespace ImperiosEnGuerra.Controladores
         {
             return objetivo != null &&
                 objetivo.isActiveAndEnabled &&
-                objetivo.Categoria == CategoriaEntidadVisual.Unidad &&
+                (objetivo.Categoria == CategoriaEntidadVisual.Unidad ||
+                 objetivo.Categoria == CategoriaEntidadVisual.Edificio) &&
                 objetivo.Propietario == "Maquina" &&
                 !string.IsNullOrWhiteSpace(objetivo.IdLogico);
         }
@@ -489,7 +509,9 @@ namespace ImperiosEnGuerra.Controladores
                 if (!PuedeIniciarAccion(accion))
                 {
                     vistaHud.MostrarMensaje(
-                        "La conexión con la API no está disponible.",
+                        conexionApi == null
+                            ? "La conexión con la API no está disponible."
+                            : conexionApi.MensajeAccionNoDisponible,
                         true);
 
                     return;
@@ -497,6 +519,16 @@ namespace ImperiosEnGuerra.Controladores
 
                 edificioPendiente = entidad;
                 accionPendiente = accion;
+
+                if (conexionApi != null)
+                {
+                    vistaHud.ConfigurarCostosEntrenamiento(
+                        conexionApi.DescribirCostoUnidadCompacto("Aldeano"),
+                        conexionApi.DescribirCostoUnidadCompacto("Guerrero"),
+                        conexionApi.DescribirCostoUnidadCompacto("Lancero"),
+                        conexionApi.DescribirCostoUnidadCompacto("Arquero"),
+                        conexionApi.DescribirCostoUnidadCompacto("Monje"));
+                }
 
                 vistaHud.MostrarSelectorEntrenamiento(true);
 
@@ -520,7 +552,9 @@ namespace ImperiosEnGuerra.Controladores
                 if (!PuedeIniciarAccion(accion))
                 {
                     vistaHud.MostrarMensaje(
-                        "La conexión con la API no está disponible.",
+                        conexionApi == null
+                            ? "La conexión con la API no está disponible."
+                            : conexionApi.MensajeAccionNoDisponible,
                         true);
 
                     return;
@@ -533,7 +567,7 @@ namespace ImperiosEnGuerra.Controladores
                 controladorSeleccion.IniciarCapturaObjetivoEntidad();
 
                 vistaHud.MostrarMensaje(
-                    "Selecciona una unidad enemiga como objetivo.");
+                    "Selecciona una unidad o edificio enemigo como objetivo.");
 
                 return;
             }
@@ -554,7 +588,9 @@ namespace ImperiosEnGuerra.Controladores
                 if (!PuedeIniciarAccion(accion))
                 {
                     vistaHud.MostrarMensaje(
-                        "La conexión con la API no está disponible.",
+                        conexionApi == null
+                            ? "La conexión con la API no está disponible."
+                            : conexionApi.MensajeAccionNoDisponible,
                         true);
 
                     return;

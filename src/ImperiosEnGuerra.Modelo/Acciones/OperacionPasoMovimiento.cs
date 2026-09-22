@@ -104,11 +104,65 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     "El paso contiene una unidad o un edificio.");
             }
 
+            Casilla origen =
+                mapa.ObtenerCasilla(
+                    unidad.Coordenada.X,
+                    unidad.Coordenada.Y);
+
+            // Las unidades entrenadas marcan temporalmente su casilla de
+            // aparición. La posición real de unidades se controla por las
+            // colecciones de Jugador, por lo que esa marca debe liberarse
+            // cuando la unidad abandona el spawn para no dejar obstáculos
+            // fantasma permanentes.
+            if (origen != null &&
+                origen.EstaOcupada &&
+                !HayEdificioEn(
+                    partida,
+                    mapa,
+                    unidad.Coordenada))
+            {
+                origen.Liberar();
+            }
+
             unidad.EstablecerDestino(
                 siguiente);
 
             return ResultadoAccion.Exitoso(
                 "Paso de movimiento realizado.");
+        }
+
+        private static bool HayEdificioEn(
+            Partida partida,
+            Mapa mapa,
+            Coordenada posicion)
+        {
+            return TieneEdificio(
+                       partida.JugadorHumano,
+                       mapa,
+                       posicion)
+                   ||
+                   TieneEdificio(
+                       partida.JugadorMaquina,
+                       mapa,
+                       posicion);
+        }
+
+        private static bool TieneEdificio(
+            Jugador jugador,
+            Mapa mapa,
+            Coordenada posicion)
+        {
+            if (!ReferenceEquals(
+                    jugador.Mapa,
+                    mapa))
+            {
+                return false;
+            }
+
+            return jugador.Edificios.Any(
+                e => Coincide(
+                    e.Coordenada,
+                    posicion));
         }
 
         private static bool TieneEntidadEn(

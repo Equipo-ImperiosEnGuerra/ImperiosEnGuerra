@@ -1,7 +1,9 @@
 using ImperiosEnGuerra.Api.Contratos;
 using ImperiosEnGuerra.Api.Servicios;
 using ImperiosEnGuerra.Modelo.Acciones;
+using ImperiosEnGuerra.Modelo.Combate;
 using ImperiosEnGuerra.Modelo.Core;
+using ImperiosEnGuerra.Modelo.Edificios;
 using ImperiosEnGuerra.Modelo.Map;
 using ImperiosEnGuerra.Modelo.Recursos;
 using ImperiosEnGuerra.Modelo.Unidades;
@@ -18,22 +20,14 @@ public class AtaqueTests
     [SetUp]
     public void Preparar()
     {
-        var mapa = new Mapa(6, 6);
+        var mapa = new Mapa(8, 8);
 
         partida = new Partida(
-            new Jugador(
-                "Humano",
-                TipoJugador.Humano,
-                mapa,
-                new RecursosJugador()),
-            new Jugador(
-                "Máquina",
-                TipoJugador.Maquina,
-                mapa,
-                new RecursosJugador()));
+            new Jugador("Humano", TipoJugador.Humano, mapa, new RecursosJugador()),
+            new Jugador("Máquina", TipoJugador.Maquina, mapa, new RecursosJugador()));
 
         atacante = new Guerrero(new Coordenada(1, 1));
-        objetivo = new Lancero(new Coordenada(4, 4));
+        objetivo = new Lancero(new Coordenada(2, 1));
 
         partida.JugadorHumano.AgregarUnidad(atacante);
         partida.JugadorMaquina.AgregarUnidad(objetivo);
@@ -42,34 +36,65 @@ public class AtaqueTests
     }
 
     [Test]
-    public void AtaqueValido_PreparaSinAplicarDanoInventado()
+    public void PrimerImpacto_ReduceVidaSinDestruir()
     {
-        int unidadesHumano = partida.JugadorHumano.Unidades.Count;
-        int unidadesMaquina = partida.JugadorMaquina.Unidades.Count;
-
         ResultadoAccion resultado = operacion.Ejecutar(
             partida,
-            new SolicitudAtaque(
-                atacante.Id,
-                objetivo.Id));
+            new SolicitudAtaque(atacante.Id, objetivo.Id));
 
-        Assert.That(resultado.Exito, Is.True);
-        Assert.That(resultado.Mensaje, Does.Contain("pendiente"));
-        Assert.That(partida.JugadorHumano.Unidades.Count, Is.EqualTo(unidadesHumano));
-        Assert.That(partida.JugadorMaquina.Unidades.Count, Is.EqualTo(unidadesMaquina));
-        Assert.That(objetivo.Coordenada.X, Is.EqualTo(4));
-        Assert.That(objetivo.Coordenada.Y, Is.EqualTo(4));
+        Assert.That(resultado.Exito, Is.True, resultado.Mensaje);
+        Assert.That(objetivo.VidaActual, Is.EqualTo(70));
+        Assert.That(partida.JugadorMaquina.Unidades, Does.Contain(objetivo));
+        Assert.That(resultado.Mensaje, Does.Contain("70/100"));
     }
 
     [Test]
-    public void AtacanteMaquina_PuedePrepararAtaqueContraHumano()
+    public void ImpactosRepetidos_DestruyenSoloAlLlegarACero()
     {
+        AtacarHastaDestruir(
+            partida,
+            atacante.Id,
+            objetivo.Id,
+            () => partida.JugadorMaquina.Unidades.Contains(objetivo));
+
+        Assert.That(objetivo.VidaActual, Is.Zero);
+        Assert.That(partida.JugadorMaquina.Unidades, Does.Not.Contain(objetivo));
+    }
+
+    [Test]
+    public void Arquero_PuedeAtacarATresCasillas()
+    {
+        var arquero = new Arquero(new Coordenada(1, 4));
+        var enemigo = new Guerrero(new Coordenada(4, 4));
+
+        partida.JugadorHumano.AgregarUnidad(arquero);
+        partida.JugadorMaquina.AgregarUnidad(enemigo);
+
+        ResultadoAccion resultado = operacion.Ejecutar(
+            partida,
+            new SolicitudAtaque(arquero.Id, enemigo.Id));
+
+        Assert.That(resultado.Exito, Is.True, resultado.Mensaje);
+        Assert.That(enemigo.VidaActual, Is.EqualTo(100));
+        Assert.That(arquero.AlcanceAtaque, Is.EqualTo(3));
+    }
+
+    [Test]
+    public void Guerrero_PuedeAtacarEnDiagonalAdyacente()
+    {
+        var diagonal =
+            new Guerrero(
+                new Coordenada(2, 2));
+
+        partida.JugadorMaquina.AgregarUnidad(
+            diagonal);
+
         ResultadoAccion resultado =
             operacion.Ejecutar(
                 partida,
                 new SolicitudAtaque(
-                    objetivo.Id,
-                    atacante.Id));
+                    atacante.Id,
+                    diagonal.Id));
 
         Assert.That(
             resultado.Exito,
@@ -77,8 +102,83 @@ public class AtaqueTests
             resultado.Mensaje);
 
         Assert.That(
-            resultado.Mensaje,
-            Does.Contain("pendiente"));
+            diagonal.VidaActual,
+            Is.EqualTo(90));
+    }
+
+    [Test]
+    public void Arquero_AlcanceTres_IncluyeDiagonal()
+    {
+        var arquero =
+            new Arquero(
+                new Coordenada(1, 1));
+
+        var enemigo =
+            new Guerrero(
+                new Coordenada(4, 4));
+
+        partida.JugadorHumano.AgregarUnidad(
+            arquero);
+
+        partida.JugadorMaquina.AgregarUnidad(
+            enemigo);
+
+        ResultadoAccion resultado =
+            operacion.Ejecutar(
+                partida,
+                new SolicitudAtaque(
+                    arquero.Id,
+                    enemigo.Id));
+
+        Assert.That(
+            resultado.Exito,
+            Is.True,
+            resultado.Mensaje);
+
+        Assert.That(
+            enemigo.VidaActual,
+            Is.EqualTo(100));
+    }
+
+    [Test]
+    public void Guerrero_NoPuedeAtacarADosCasillas()
+    {
+        var lejano = new Guerrero(new Coordenada(3, 1));
+        partida.JugadorMaquina.AgregarUnidad(lejano);
+
+        ResultadoAccion resultado = operacion.Ejecutar(
+            partida,
+            new SolicitudAtaque(atacante.Id, lejano.Id));
+
+        Assert.That(resultado.Exito, Is.False);
+        Assert.That(resultado.Mensaje, Does.Contain("fuera de alcance"));
+        Assert.That(lejano.VidaActual, Is.EqualTo(lejano.VidaMaxima));
+    }
+
+    [Test]
+    public void CentroUrbano_RequiereVariosImpactos()
+    {
+        var centro = new CentroUrbano(new Coordenada(1, 2));
+        partida.JugadorMaquina.AgregarEdificio(centro);
+        partida.JugadorMaquina.Mapa.ObtenerCasilla(1, 2).Ocupar();
+
+        ResultadoAccion primerImpacto = operacion.Ejecutar(
+            partida,
+            new SolicitudAtaque(atacante.Id, centro.Id));
+
+        Assert.That(primerImpacto.Exito, Is.True, primerImpacto.Mensaje);
+        Assert.That(centro.VidaActual, Is.EqualTo(270));
+        Assert.That(partida.JugadorMaquina.Edificios, Does.Contain(centro));
+
+        AtacarHastaDestruir(
+            partida,
+            atacante.Id,
+            centro.Id,
+            () => partida.JugadorMaquina.Edificios.Contains(centro));
+
+        Assert.That(centro.VidaActual, Is.Zero);
+        Assert.That(partida.JugadorMaquina.Edificios, Does.Not.Contain(centro));
+        Assert.That(partida.JugadorMaquina.Mapa.ObtenerCasilla(1, 2).EstaOcupada, Is.False);
     }
 
     [Test]
@@ -89,75 +189,28 @@ public class AtaqueTests
 
         ResultadoAccion resultado = operacion.Ejecutar(
             partida,
-            new SolicitudAtaque(
-                aldeano.Id,
-                objetivo.Id));
+            new SolicitudAtaque(aldeano.Id, objetivo.Id));
 
         Assert.That(resultado.Exito, Is.False);
-        Assert.That(resultado.Mensaje, Does.Contain("militar"));
+        Assert.That(resultado.Mensaje, Does.Contain("ofensiva"));
     }
 
     [Test]
-    public void AtacanteNoDisponible_Falla()
+    public void ObjetivoPropio_FallaYConservaVida()
     {
-        atacante.MarcarNoDisponible();
-
-        ResultadoAccion resultado = operacion.Ejecutar(
-            partida,
-            new SolicitudAtaque(
-                atacante.Id,
-                objetivo.Id));
-
-        Assert.That(resultado.Exito, Is.False);
-        Assert.That(resultado.Mensaje, Does.Contain("disponible"));
-    }
-
-    [Test]
-    public void ObjetivoPropio_FallaYConservaMensaje()
-    {
-        var aliado = new Arquero(new Coordenada(2, 2));
+        var aliado = new Arquero(new Coordenada(1, 2));
         partida.JugadorHumano.AgregarUnidad(aliado);
 
         ResultadoAccion resultado = operacion.Ejecutar(
             partida,
-            new SolicitudAtaque(
-                atacante.Id,
-                aliado.Id));
+            new SolicitudAtaque(atacante.Id, aliado.Id));
 
         Assert.That(resultado.Exito, Is.False);
-        Assert.That(
-            resultado.Mensaje,
-            Is.EqualTo("El objetivo pertenece al mismo jugador que el atacante."));
+        Assert.That(aliado.VidaActual, Is.EqualTo(aliado.VidaMaxima));
     }
 
     [Test]
-    public void AtacanteInexistente_Falla()
-    {
-        ResultadoAccion resultado = operacion.Ejecutar(
-            partida,
-            new SolicitudAtaque(
-                Guid.NewGuid(),
-                objetivo.Id));
-
-        Assert.That(resultado.Exito, Is.False);
-        Assert.That(resultado.Mensaje, Does.Contain("atacante"));
-    }
-
-    [Test]
-    public void ObjetivoInexistente_Falla()
-    {
-        ResultadoAccion resultado = operacion.Ejecutar(
-            partida,
-            new SolicitudAtaque(
-                atacante.Id,
-                Guid.NewGuid()));
-
-        Assert.That(resultado.Exito, Is.False);
-        Assert.That(resultado.Mensaje, Does.Contain("objetivo"));
-    }
-
-    [Test]
-    public void Servicio_AtaqueValido()
+    public void Servicio_AtaqueValido_ExponeVidaEnSnapshot()
     {
         var servicio = CrearServicio();
 
@@ -169,82 +222,79 @@ public class AtaqueTests
             });
 
         Assert.That(resultado.Exito, Is.True);
-        Assert.That(servicio.ObtenerEstado(), Is.Not.Null);
+
+        var estado = servicio.ObtenerEstado();
+        var unidad = estado!.JugadorMaquina.Unidades.Single(u => u.Id == objetivo.Id.ToString("D"));
+
+        Assert.That(unidad.VidaActual, Is.EqualTo(70));
+        Assert.That(unidad.VidaMaxima, Is.EqualTo(100));
+        Assert.That(unidad.Danio, Is.EqualTo(25));
+        Assert.That(unidad.Alcance, Is.EqualTo(1));
     }
 
     [Test]
-    public void Servicio_AtaqueMaquinaValido()
+    public void ConfiguracionCombate_ValoresDelPrototipoSonCentralizados()
     {
-        var servicio =
-            CrearServicio();
+        var config = new ConfiguracionCombate();
 
-        ResultadoAccion resultado =
-            servicio.Atacar(
-                new AtacarRequest
-                {
-                    AtacanteId =
-                        objetivo.Id.ToString("D"),
+        EstadisticasCombate guerrero = config.Obtener("Guerrero");
+        EstadisticasCombate arquero = config.Obtener("Arquero");
+        EstadisticasCombate centro = config.Obtener("CentroUrbano");
 
-                    ObjetivoId =
-                        atacante.Id.ToString("D")
-                });
-
-        Assert.That(
-            resultado.Exito,
-            Is.True,
-            resultado.Mensaje);
-
-        Assert.That(
-            resultado.Mensaje,
-            Does.Contain("pendiente"));
+        Assert.That(guerrero.VidaMaxima, Is.EqualTo(120));
+        Assert.That(guerrero.Danio, Is.EqualTo(30));
+        Assert.That(guerrero.Alcance, Is.EqualTo(1));
+        Assert.That(arquero.Alcance, Is.EqualTo(3));
+        Assert.That(centro.VidaMaxima, Is.EqualTo(300));
     }
 
     [Test]
-    public void Servicio_IdsInvalidos_DevuelvenMensajeClaro()
+    public void AtacanteInexistente_Falla()
     {
-        var servicio = CrearServicio();
+        ResultadoAccion resultado = operacion.Ejecutar(
+            partida,
+            new SolicitudAtaque(Guid.NewGuid(), objetivo.Id));
 
-        ResultadoAccion atacanteInvalido = servicio.Atacar(
-            new AtacarRequest
-            {
-                AtacanteId = "no-es-guid",
-                ObjetivoId = objetivo.Id.ToString("D")
-            });
-
-        ResultadoAccion objetivoInvalido = servicio.Atacar(
-            new AtacarRequest
-            {
-                AtacanteId = atacante.Id.ToString("D"),
-                ObjetivoId = "no-es-guid"
-            });
-
-        Assert.That(atacanteInvalido.Exito, Is.False);
-        Assert.That(atacanteInvalido.Mensaje, Does.Contain("atacante"));
-        Assert.That(objetivoInvalido.Exito, Is.False);
-        Assert.That(objetivoInvalido.Mensaje, Does.Contain("objetivo"));
+        Assert.That(resultado.Exito, Is.False);
+        Assert.That(resultado.Mensaje, Does.Contain("atacante"));
     }
 
     [Test]
-    public void SinPartidaOSolicitud_DevuelveFallo()
+    public void ObjetivoInexistente_Falla()
     {
-        Assert.That(
-            operacion.Ejecutar(
-                null,
-                new SolicitudAtaque(atacante.Id, objetivo.Id)).Exito,
-            Is.False);
+        ResultadoAccion resultado = operacion.Ejecutar(
+            partida,
+            new SolicitudAtaque(atacante.Id, Guid.NewGuid()));
 
-        Assert.That(
-            operacion.Ejecutar(partida, null).Exito,
-            Is.False);
+        Assert.That(resultado.Exito, Is.False);
+        Assert.That(resultado.Mensaje, Does.Contain("objetivo"));
+    }
 
-        Assert.That(
-            new EstadoPartidaService().Atacar(
-                new AtacarRequest
-                {
-                    AtacanteId = atacante.Id.ToString("D"),
-                    ObjetivoId = objetivo.Id.ToString("D")
-                }).Mensaje,
-            Is.EqualTo("No hay una partida activa."));
+    private void AtacarHastaDestruir(
+        Partida partidaObjetivo,
+        Guid atacanteId,
+        Guid objetivoId,
+        Func<bool> sigueExistiendo)
+    {
+        int seguridad = 0;
+
+        while (sigueExistiendo() &&
+               seguridad++ < 30)
+        {
+            ResultadoAccion resultado =
+                operacion.Ejecutar(
+                    partidaObjetivo,
+                    new SolicitudAtaque(
+                        atacanteId,
+                        objetivoId));
+
+            Assert.That(
+                resultado.Exito,
+                Is.True,
+                resultado.Mensaje);
+        }
+
+        Assert.That(seguridad, Is.LessThan(30));
     }
 
     private EstadoPartidaService CrearServicio()

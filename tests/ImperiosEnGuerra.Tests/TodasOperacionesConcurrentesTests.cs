@@ -213,12 +213,14 @@ public class TodasOperacionesConcurrentesTests
             new Aldeano(new Coordenada(0,2));
 
 
+        // Mantener el combate en una zona independiente evita que esta
+        // prueba de convivencia dependa de rutas de recolección/construcción.
         guerrero =
-            new Guerrero(new Coordenada(1,2));
+            new Guerrero(new Coordenada(4,4));
 
 
         enemigo =
-            new Lancero(new Coordenada(4,4));
+            new Lancero(new Coordenada(5,4));
 
 
         humano.AgregarUnidad(aldeanoMovimiento);
@@ -234,8 +236,15 @@ public class TodasOperacionesConcurrentesTests
             new CentroUrbano(
                 new Coordenada(1,1)));
 
+        // La Máquina conserva un Centro Urbano: destruir su última unidad
+        // militar no debe finalizar la partida con la regla AND.
+        maquina.AgregarEdificio(
+            new CentroUrbano(
+                new Coordenada(5,5)));
+
 
         mapa.ObtenerCasilla(1,1).Ocupar();
+        mapa.ObtenerCasilla(5,5).Ocupar();
 
 
         mapa.ColocarRecurso(
