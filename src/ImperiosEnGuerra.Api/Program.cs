@@ -20,6 +20,7 @@ builder.Services.AddSingleton<EstadoPartidaService>();
 builder.Services.AddSingleton<GestorProcesosConcurrentes>();
 builder.Services.AddSingleton<ServicioOrdenesUnidad>();
 builder.Services.AddSingleton<ServicioAccionesConcurrentes>();
+builder.Services.AddSingleton<ServicioJugadorMaquina>();
 
 
 var app = builder.Build();
@@ -59,10 +60,12 @@ app.MapPost(
         IniciarPartidaRequest request,
         EstadoPartidaService estadoPartida,
         ServicioAccionesConcurrentes accionesConcurrentes,
+        ServicioJugadorMaquina jugadorMaquina,
         ServicioArchivos servicioArchivos) =>
 {
     try
     {
+        jugadorMaquina.Detener();
         accionesConcurrentes.CancelarTodos();
 
         Mapa mapa = new Mapa(
@@ -101,6 +104,7 @@ app.MapPost(
             partida);
 
         estadoPartida.EstablecerPartida(partida);
+        jugadorMaquina.Iniciar();
 
         return Results.Ok(new
         {
@@ -392,5 +396,64 @@ app.MapPost(
         });
 })
 .WithName("IniciarAtaqueConcurrente");
+
+
+app.MapGet(
+    "/api/maquina/estado",
+    (ServicioJugadorMaquina jugadorMaquina) =>
+{
+    return Results.Ok(new
+    {
+        activo = jugadorMaquina.Activo,
+        unidadesAsignadas = jugadorMaquina.UnidadesAsignadas
+    });
+})
+.WithName("ObtenerEstadoJugadorMaquina");
+
+app.MapPost(
+    "/api/maquina/iniciar",
+    (ServicioJugadorMaquina jugadorMaquina) =>
+{
+    return Results.Ok(new
+    {
+        iniciado = jugadorMaquina.Iniciar(),
+        activo = jugadorMaquina.Activo
+    });
+})
+.WithName("IniciarJugadorMaquina");
+
+app.MapPost(
+    "/api/maquina/detener",
+    (ServicioJugadorMaquina jugadorMaquina) =>
+{
+    return Results.Ok(new
+    {
+        cancelacionSolicitada = jugadorMaquina.Detener()
+    });
+})
+.WithName("DetenerJugadorMaquina");
+
+app.MapPost(
+    "/api/maquina/paso",
+    (ServicioJugadorMaquina jugadorMaquina) =>
+{
+    ProcesoConcurrente? proceso =
+        jugadorMaquina.EjecutarPaso();
+
+    return proceso == null
+        ? Results.Ok(new
+        {
+            estado = "sin_accion"
+        })
+        : Results.Accepted(
+            $"/api/procesos/{proceso.Id}",
+            new
+            {
+                procesoId = proceso.Id,
+                nombre = proceso.Nombre,
+                estado = "iniciado"
+            });
+})
+.WithName("EjecutarPasoJugadorMaquina");
 
 app.Run();

@@ -434,8 +434,12 @@ public sealed class ServicioAccionesConcurrentes
 
                         if (!planInicial.Exito)
                         {
-                            if (estadoPartida.RecursoExiste(objetivo) &&
-                                !estadoPartida.RecursoDisponible(objetivo))
+                            if (estadoPartida.RecursoExiste(
+                                    unidadId,
+                                    objetivo) &&
+                                !estadoPartida.RecursoDisponible(
+                                    unidadId,
+                                    objetivo))
                             {
                                 return ResultadoAccion.Exitoso(
                                     $"La carga pendiente fue depositada ({totalDepositado}). " +
@@ -608,6 +612,7 @@ public sealed class ServicioAccionesConcurrentes
 
                         if (recursoAgotado ||
                             !estadoPartida.RecursoDisponible(
+                                unidadId,
                                 objetivo))
                         {
                             return ResultadoAccion.Exitoso(
@@ -632,6 +637,7 @@ public sealed class ServicioAccionesConcurrentes
                         if (!nuevoPlan.Exito)
                         {
                             if (!estadoPartida.RecursoDisponible(
+                                    unidadId,
                                     objetivo))
                             {
                                 return ResultadoAccion.Exitoso(

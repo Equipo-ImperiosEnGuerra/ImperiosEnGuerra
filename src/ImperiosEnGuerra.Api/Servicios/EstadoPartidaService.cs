@@ -10,6 +10,7 @@ using ImperiosEnGuerra.Modelo.Map;
 using ImperiosEnGuerra.Modelo.Movimiento;
 using ImperiosEnGuerra.Modelo.Recoleccion;
 using ImperiosEnGuerra.Modelo.Recursos;
+using ImperiosEnGuerra.Modelo.IA;
 using System.Linq; // para usar FirstOrDefault()
 
 namespace ImperiosEnGuerra.Api.Servicios;
@@ -293,6 +294,27 @@ public sealed class EstadoPartidaService
         }
     }
 
+    public bool RecursoExiste(
+        Guid unidadId,
+        Coordenada objetivo)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null ||
+                objetivo == null)
+            {
+                return false;
+            }
+
+            Jugador? propietario =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    unidadId);
+
+            return propietario?.Mapa
+                .ObtenerRecursoEn(objetivo) != null;
+        }
+    }
+
     public bool RecursoDisponible(
         Coordenada objetivo)
     {
@@ -304,12 +326,49 @@ public sealed class EstadoPartidaService
                 return false;
             }
 
-            var recurso =
+            Recurso? recurso =
                 partidaActiva.JugadorHumano.Mapa
                     .ObtenerRecursoEn(objetivo);
 
             return recurso != null &&
                    !recurso.Agotado;
+        }
+    }
+
+    public bool RecursoDisponible(
+        Guid unidadId,
+        Coordenada objetivo)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null ||
+                objetivo == null)
+            {
+                return false;
+            }
+
+            Jugador? propietario =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    unidadId);
+
+            Recurso? recurso =
+                propietario?.Mapa
+                    .ObtenerRecursoEn(objetivo);
+
+            return recurso != null &&
+                   !recurso.Agotado;
+        }
+    }
+
+    public DecisionMaquina PrepararDecisionMaquina(
+        IReadOnlyCollection<Guid>? unidadesExcluidas = null)
+    {
+        lock (sincronizacion)
+        {
+            return new PlanificadorDecisionMaquina()
+                .Preparar(
+                    partidaActiva,
+                    unidadesExcluidas);
         }
     }
 
