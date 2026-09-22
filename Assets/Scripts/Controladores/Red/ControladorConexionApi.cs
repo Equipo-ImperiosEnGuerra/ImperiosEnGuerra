@@ -1158,7 +1158,7 @@ public bool PuedeIniciarAtaque =>
             {
                 using var request =
                     new UnityWebRequest(
-                        $"{urlBaseApi}/api/partida/atacar",
+                        $"{urlBaseApi}/api/partida/atacar-concurrente",
                         UnityWebRequest.kHttpVerbPOST);
 
                 request.uploadHandler =
@@ -1177,39 +1177,31 @@ public bool PuedeIniciarAtaque =>
 
                 yield return request.SendWebRequest();
 
-                ResultadoAccionDto resultado =
-                    LeerResultado(
-                        request.downloadHandler.text);
-
                 if (request.result !=
                     UnityWebRequest.Result.Success)
                 {
                     MostrarError(
-                        MensajeError(
-                            resultado,
-                            $"No se pudo preparar el ataque. HTTP {request.responseCode}: {request.error}"));
+                        $"No se pudo iniciar el ataque concurrente. HTTP {request.responseCode}: {request.error}");
 
                     yield break;
                 }
 
-                if (resultado == null ||
-                    !resultado.exito)
+                ProcesoIniciadoDto proceso =
+                    LeerProcesoIniciado(
+                        request.downloadHandler.text);
+
+                if (proceso == null ||
+                    string.IsNullOrWhiteSpace(
+                        proceso.procesoId))
                 {
                     MostrarError(
-                        MensajeError(
-                            resultado,
-                            "La API no confirmó el ataque."));
+                        "La API no devolvió un identificador válido para el ataque concurrente.");
 
                     yield break;
                 }
 
-                yield return ObtenerPartidaActiva(
-                    string.IsNullOrWhiteSpace(
-                        resultado.mensaje)
-                        ? "Ataque preparado."
-                        : resultado.mensaje,
-                    "Ataque aceptado, pero no se pudo actualizar la vista. ",
-                    false);
+                yield return EsperarResultadoAtaque(
+                    proceso.procesoId);
             }
             finally
             {
@@ -1218,6 +1210,121 @@ public bool PuedeIniciarAtaque =>
 
                 AtaqueEnCurso =
                     ataquesActivos > 0;
+            }
+        }
+
+        private IEnumerator EsperarResultadoAtaque(
+            string procesoId)
+        {
+            const float intervaloConsulta = 0.1f;
+
+            while (isActiveAndEnabled)
+            {
+                using UnityWebRequest request =
+                    UnityWebRequest.Get(
+                        $"{urlBaseApi}/api/procesos/{procesoId}/resultado");
+
+                request.timeout = 5;
+
+                yield return request.SendWebRequest();
+
+                if (request.result !=
+                    UnityWebRequest.Result.Success)
+                {
+                    Debug.LogWarning(
+                        $"Consulta temporal de ataque fallida. Se reintentará: " +
+                        $"HTTP {request.responseCode}: {request.error}",
+                        this);
+
+                    yield return new WaitForSecondsRealtime(
+                        0.5f);
+
+                    continue;
+                }
+
+                if (request.responseCode == 204 ||
+                    string.IsNullOrWhiteSpace(
+                        request.downloadHandler.text))
+                {
+                    yield return new WaitForSecondsRealtime(
+                        intervaloConsulta);
+
+                    continue;
+                }
+
+                ResultadoProcesoDto resultado =
+                    LeerResultadoProceso(
+                        request.downloadHandler.text);
+
+                if (resultado == null)
+                {
+                    MostrarError(
+                        "La API devolvió un resultado concurrente inválido para el ataque.");
+
+                    yield return SincronizarEstadoDespuesDeProceso();
+                    yield break;
+                }
+
+                if (resultado.procesoId != procesoId)
+                {
+                    MostrarError(
+                        "Se recibió el resultado de un proceso distinto al ataque esperado.");
+
+                    yield return SincronizarEstadoDespuesDeProceso();
+                    yield break;
+                }
+
+                if (resultado.estado == "Cancelado")
+                {
+                    Debug.Log(
+                        "Ataque cancelado.");
+
+                    yield return SincronizarEstadoDespuesDeProceso();
+                    yield break;
+                }
+
+                if (resultado.estado == "Fallido")
+                {
+                    MostrarError(
+                        string.IsNullOrWhiteSpace(
+                            resultado.errorTecnico)
+                            ? "El worker de ataque finalizó con error."
+                            : resultado.errorTecnico);
+
+                    yield return SincronizarEstadoDespuesDeProceso();
+                    yield break;
+                }
+
+                if (resultado.estado != "Completado")
+                {
+                    MostrarError(
+                        $"Estado concurrente de ataque no reconocido: {resultado.estado}");
+
+                    yield return SincronizarEstadoDespuesDeProceso();
+                    yield break;
+                }
+
+                if (!resultado.exito)
+                {
+                    MostrarError(
+                        string.IsNullOrWhiteSpace(
+                            resultado.mensaje)
+                            ? "El ataque fue rechazado por el Modelo."
+                            : resultado.mensaje);
+
+                    yield return SincronizarEstadoDespuesDeProceso();
+                    yield break;
+                }
+
+                yield return ObtenerPartidaActiva(
+                    string.IsNullOrWhiteSpace(
+                        resultado.mensaje)
+                        ? "Ataque realizado."
+                        : resultado.mensaje,
+                    "Ataque completado, pero no se pudo actualizar la vista. ",
+                    false);
+
+                yield break;
             }
         }
 

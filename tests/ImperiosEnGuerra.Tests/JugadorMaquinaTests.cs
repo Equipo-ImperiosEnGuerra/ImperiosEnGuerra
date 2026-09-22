@@ -448,6 +448,113 @@ public class JugadorMaquinaTests
             Does.Contain("destruido"));
     }
 
+    [Test]
+    public void Planificador_NoPersigueAldeanosConUnSoloMilitar()
+    {
+        var mapa =
+            new Mapa(10, 10);
+
+        var humano =
+            new Jugador(
+                "Humano",
+                TipoJugador.Humano,
+                mapa,
+                new RecursosJugador());
+
+        var maquina =
+            new Jugador(
+                "CPU",
+                TipoJugador.Maquina,
+                mapa,
+                new RecursosJugador());
+
+        maquina.AgregarUnidad(
+            new Guerrero(
+                new Coordenada(1, 1)));
+
+        humano.AgregarUnidad(
+            new Aldeano(
+                new Coordenada(5, 1)));
+
+        Partida partida =
+            new Partida(
+                humano,
+                maquina);
+
+        DecisionMaquina decision =
+            new PlanificadorDecisionMaquina()
+                .Preparar(
+                    partida);
+
+        Assert.That(
+            decision.Tipo,
+            Is.Not.EqualTo(
+                TipoDecisionMaquina.Mover));
+
+        Assert.That(
+            decision.Tipo,
+            Is.Not.EqualTo(
+                TipoDecisionMaquina.Atacar));
+    }
+
+    [Test]
+    public void Planificador_ConDosMilitaresYSinMilitaresEnemigos_AsaltaCentro()
+    {
+        var mapa =
+            new Mapa(10, 10);
+
+        var humano =
+            new Jugador(
+                "Humano",
+                TipoJugador.Humano,
+                mapa,
+                new RecursosJugador());
+
+        var maquina =
+            new Jugador(
+                "CPU",
+                TipoJugador.Maquina,
+                mapa,
+                new RecursosJugador());
+
+        var centro =
+            new CentroUrbano(
+                new Coordenada(8, 8));
+
+        humano.AgregarEdificio(
+            centro);
+
+        maquina.AgregarUnidad(
+            new Guerrero(
+                new Coordenada(1, 1)));
+
+        maquina.AgregarUnidad(
+            new Guerrero(
+                new Coordenada(2, 1)));
+
+        mapa.ObtenerCasilla(8, 8).Ocupar();
+
+        Partida partida =
+            new Partida(
+                humano,
+                maquina);
+
+        DecisionMaquina decision =
+            new PlanificadorDecisionMaquina()
+                .Preparar(
+                    partida);
+
+        Assert.That(
+            decision.Tipo,
+            Is.EqualTo(
+                TipoDecisionMaquina.Mover));
+
+        Assert.That(
+            decision.ObjetivoUnidadId,
+            Is.EqualTo(
+                centro.Id));
+    }
+
     private static Partida CrearPartidaCombate(
         out Guerrero maquina,
         out Guerrero humano)

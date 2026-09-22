@@ -490,7 +490,7 @@ public sealed class EstadoPartidaService
                 .IntentarGastar(costo))
             {
                 return ResultadoAccion.Fallido(
-                    $"Recursos insuficientes. Costo: {costo}.");
+                    $"Recursos insuficientes. Costo: {costo}. Disponibles: {DescribirSaldo(propietario.Recursos)}.");
             }
 
             return ResultadoAccion.Exitoso(
@@ -531,7 +531,7 @@ public sealed class EstadoPartidaService
                 .IntentarGastar(costo))
             {
                 return ResultadoAccion.Fallido(
-                    $"Recursos insuficientes. Costo: {costo}.");
+                    $"Recursos insuficientes. Costo: {costo}. Disponibles: {DescribirSaldo(partidaActiva.JugadorHumano.Recursos)}.");
             }
 
             return ResultadoAccion.Exitoso(
@@ -602,7 +602,7 @@ public sealed class EstadoPartidaService
                 .IntentarGastar(costo))
             {
                 return ResultadoAccion.Fallido(
-                    $"Recursos insuficientes. Costo: {costo}.");
+                    $"Recursos insuficientes. Costo: {costo}. Disponibles: {DescribirSaldo(propietario.Recursos)}.");
             }
 
             propietarioTipo =
@@ -957,7 +957,7 @@ public sealed class EstadoPartidaService
                 return RegistrarResultado(
                     "CONSTRUIR",
                     ResultadoAccion.Fallido(
-                        $"Recursos insuficientes. Costo: {costo}."));
+                        $"Recursos insuficientes. Costo: {costo}. Disponibles: {DescribirSaldo(propietario.Recursos)}."));
             }
 
             ResultadoAccion resultado =
@@ -1458,7 +1458,7 @@ public sealed class EstadoPartidaService
                 return RegistrarResultado(
                     "ENTRENAR",
                     ResultadoAccion.Fallido(
-                        $"Recursos insuficientes. Costo: {costo}."));
+                        $"Recursos insuficientes. Costo: {costo}. Disponibles: {DescribirSaldo(propietario.Recursos)}."));
             }
 
             ResultadoAccion resultado =
@@ -1641,6 +1641,18 @@ public sealed class EstadoPartidaService
             $"PARTIDA|FINALIZADA|Ganador={partidaActiva.Ganador?.Nombre}; Motivo={partidaActiva.MotivoFinalizacion}");
 
         PartidaFinalizada?.Invoke();
+    }
+
+    private static string DescribirSaldo(
+        RecursosJugador recursos)
+    {
+        if (recursos == null)
+            return "sin datos";
+
+        return
+            $"Oro {recursos.ObtenerCantidad(TipoRecurso.Oro)}, " +
+            $"Madera {recursos.ObtenerCantidad(TipoRecurso.Madera)}, " +
+            $"Comida {recursos.ObtenerCantidad(TipoRecurso.Comida)}";
     }
 
     private ResultadoAccion RegistrarResultado(
