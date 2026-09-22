@@ -1,11 +1,11 @@
-# FASE 6 — COMBATE, VICTORIA Y ARCHIVOS FINALES
+# FASE 6 — COMBATE, VICTORIA Y ESTABILIZACIÓN FINAL
 
 **Proyecto:** Imperios en Guerra  
 **Modalidad:** Humano vs Máquina  
 **Rama:** `feature/fase6-combate-victoria`  
-**Estado técnico:** TERMINADO Y VALIDADO EN .NET  
-**Integración:** pendiente de Pull Request hacia `develop`  
-**Validación final supervisada:** 320/320 pruebas correctas
+**Estado técnico:** TERMINADA Y VALIDADA  
+**Integración:** PR #75 listo para merge hacia `develop`  
+**Validación final supervisada:** suite completa local con 0 errores
 
 ---
 
@@ -19,95 +19,145 @@ inicio
 → movimiento
 → construcción/entrenamiento
 → combate
+→ daño
 → destrucción
 → condición terminal
 → ganador
 → resultado_final.txt
 ```
 
-Se mantuvo MVC y la regla arquitectónica del proyecto: el Modelo contiene reglas/estado, los servicios/controladores coordinan y Unity representa la Vista.
+Se mantuvo MVC y la regla arquitectónica del proyecto: el Modelo contiene estado/reglas, los servicios/controladores coordinan y Unity representa la Vista.
 
 ---
 
-## 2. Análisis previo de combate
+## 2. Decisión explícita sobre estadísticas de combate
 
-La documentación disponible exige ataques, destrucción y condición de victoria, pero no fija valores numéricos para:
+La guía disponible exige ataques, destrucción y condición de victoria, pero no define valores numéricos de:
 
-- puntos de vida;
+- vida;
 - daño;
 - armadura;
-- alcance específico por unidad;
-- bonificaciones entre tipos de tropa.
+- alcance;
+- intervalos de ataque.
 
-Por esa razón no se introdujeron números arbitrarios.
+Después del smoke test se comprobó que la regla inicial de “un impacto = destrucción” hacía el combate demasiado agresivo.
 
-La regla actual del prototipo es:
+Por decisión explícita del equipo se definió un **balance propio del prototipo**, centralizado en `ConfiguracionCombate`. Estos valores no se presentan como requisitos del profesor ni como valores oficiales de Age of Empires.
 
-```text
-ataque válido
-+ objetivo enemigo ortogonalmente adyacente
-= impacto destructivo
-```
+| Entidad | Vida | Daño | Alcance | Intervalo |
+|---|---:|---:|---:|---:|
+| Aldeano | 60 | 0 | 0 | — |
+| Guerrero | 120 | 30 | 1 | 4 s |
+| Lancero | 100 | 25 | 1 | 3.5 s |
+| Arquero | 80 | 20 | 3 | 3 s |
+| Monje | 70 | 15 | 2 | 5 s |
+| Centro Urbano | 300 | — | — | — |
 
-Esta decisión mantiene el combate funcional sin presentar estadísticas inventadas como requisitos del profesor.
-
----
-
-## 3. Identidad de edificios
-
-`Edificio` recibió un `Guid Id` estable.
-
-Esto permite que el mismo contrato de ataque pueda identificar:
-
-- unidades;
-- Centros Urbanos.
-
-El ID de edificios se expone por API y llega a Unity para selección/ataque.
+Las subclases técnicas usadas por pruebas reciben un perfil neutral no ofensivo para no convertir infraestructura de testing en entidades de balance real.
 
 ---
 
-## 4. Ataque real
+## 3. Combate real
 
-`OperacionAtaque` ahora valida:
+`Unidad` y `Edificio` conservan vida sincronizada. El acceso/modificación de vida se protege con `lock`.
 
-- partida existente/no finalizada;
+`OperacionAtaque` valida:
+
+- partida existente y no finalizada;
 - atacante existente;
-- atacante disponible o con orden de ataque activa;
-- atacante militar;
+- atacante militar ofensivo;
 - objetivo enemigo;
 - mapa lógico compartido;
 - objetivo existente como Unidad o Edificio;
-- adyacencia ortogonal.
+- alcance real según tipo de atacante.
 
-Cuando el impacto es válido:
+El alcance usa distancia Chebyshev:
 
-1. la entidad objetivo se elimina de su jugador;
-2. se libera su casilla del mapa;
-3. se evalúa el estado de victoria;
-4. Unity puede ocultar la entidad ausente en el siguiente snapshot.
+```text
+max(|dx|, |dy|)
+```
 
-Los workers de ataque usan la misma infraestructura concurrente y una orden activa por unidad.
+Por tanto una diagonal inmediata cuenta como una casilla. El movimiento/pathfinding continúa ortogonal y no fue sustituido.
+
+Flujo:
+
+```text
+ataque
+→ aplicar daño
+→ VidaActual disminuye
+→ si VidaActual > 0, objetivo continúa
+→ si VidaActual = 0, eliminar entidad
+→ liberar casilla
+→ evaluar victoria
+```
 
 ---
 
-## 5. Regla de victoria AND
+## 4. Aproximación automática para atacar
 
-La guía utiliza la expresión “Centro Urbano y/o unidades militares”. Como esa semántica no estaba fijada, el equipo tomó una decisión explícita antes de programarla:
+Se añadió `PlanificadorAproximacionAtaque` en el Modelo.
+
+Cuando el usuario selecciona **Atacar** y el objetivo está lejos:
+
+1. se localizan casillas libres dentro del alcance del atacante;
+2. se calcula una ruta válida usando el pathfinding existente;
+3. la unidad se mueve progresivamente hasta la posición de ataque;
+4. la orden cambia de `Mover` a `Atacar`;
+5. se espera el intervalo configurado;
+6. se aplica un impacto.
+
+La unidad nunca intenta ocupar la casilla del Centro Urbano.
+
+Unity sincroniza el snapshot durante el proceso para mostrar `Moviendo` y luego `Atacando`.
+
+---
+
+## 5. Identidad y objetivos
+
+`Edificio` posee `Guid Id` estable.
+
+El mismo flujo de ataque puede identificar:
+
+- unidades enemigas;
+- Centros Urbanos enemigos.
+
+La API y los DTO de Unity transportan IDs, vida y datos de combate.
+
+---
+
+## 6. Máquina y combate
+
+La Máquina utiliza los mismos servicios y validaciones que el Humano.
+
+Ajustes realizados durante Fase 6:
+
+- no persigue Aldeanos como objetivo militar prioritario;
+- prioriza unidades militares humanas;
+- utiliza el alcance real de su atacante;
+- puede aproximarse antes de atacar;
+- intenta formar una fuerza militar antes del asalto a base;
+- mantiene **un único frente de combate activo** para evitar bajas simultáneas excesivas;
+- economía, recolección, construcción y entrenamiento continúan concurrentes.
+
+---
+
+## 7. Regla de victoria AND
+
+La guía usa la expresión “Centro Urbano y/o unidades militares”. El equipo fijó explícitamente la semántica terminal como:
 
 **AND**
 
-Un jugador pierde solamente cuando se cumplen simultáneamente:
-
 ```text
-no queda ningún Centro Urbano
+sin Centros Urbanos
 Y
-no queda ninguna unidad militar
+sin unidades militares
+= derrota
 ```
 
 Por lo tanto:
 
-- sin militares pero con Centro Urbano → la partida continúa;
-- sin Centro Urbano pero con militares → la partida continúa;
+- sin militares pero con Centro Urbano → continúa;
+- sin Centro Urbano pero con militares → continúa;
 - sin ambos → derrota.
 
 `Partida` conserva:
@@ -116,143 +166,187 @@ Por lo tanto:
 - `Ganador`;
 - `MotivoFinalizacion`.
 
+La victoria solo se evalúa después de una destrucción real, no después de un impacto que deje vida restante.
+
 ---
 
-## 6. Finalización y concurrencia
+## 8. Finalización y concurrencia
 
 `EstadoPartidaService` publica un evento de finalización.
 
-Cuando se alcanza la condición terminal:
+Cuando se cumple la regla terminal:
 
-- `ServicioAccionesConcurrentes` solicita la cancelación de todos los workers activos;
-- `ServicioJugadorMaquina` detiene su ciclo de decisiones;
-- nuevas órdenes se rechazan;
-- la cancelación sigue siendo cooperativa mediante `CancellationToken`.
+- se rechazan nuevas órdenes;
+- `ServicioAccionesConcurrentes` cancela workers activos;
+- `ServicioJugadorMaquina` detiene su ciclo;
+- la cancelación sigue siendo cooperativa mediante `CancellationToken`;
+- se escribe el resultado final;
+- Unity bloquea interacción.
 
-Se añadió una prueba específica para evitar una race condition entre finalización y un worker de movimiento ya activo.
+También se estabilizó una race condition entre finalización de partida y un worker de movimiento ya iniciado.
 
 ---
 
-## 7. resultado_final.txt
+## 9. resultado_final.txt
 
-`ServicioArchivos` sigue siendo el único responsable de la escritura de archivos del juego.
+`ServicioArchivos` sigue centralizando `System.IO`.
 
-Al finalizar, genera `resultado_final.txt` con estructura similar a:
+Se generan:
+
+- `configuracion.txt`;
+- `log_partida.txt`;
+- `resultado_final.txt`.
+
+`resultado_final.txt` incluye:
 
 ```text
 RESULTADO_FINAL
 Estado=Finalizada
 ReglaVictoria=AND
-GanadorTipo=Humano
-GanadorNombre=Humano
-PerdedorTipo=Maquina
-PerdedorNombre=CPU
+GanadorTipo=...
+GanadorNombre=...
+PerdedorTipo=...
+PerdedorNombre=...
 Motivo=...
 ```
 
-Se conserva además la generación previa de:
-
-- `configuracion.txt`;
-- `log_partida.txt`.
-
-Los errores de IO se manejan sin dispersar `System.IO` por MonoBehaviours.
+Los errores de IO se manejan sin dispersar acceso a archivos dentro de MonoBehaviours.
 
 ---
 
-## 8. API y Unity
+## 10. Vista y HUD
 
-El snapshot de partida expone:
+El snapshot expone:
 
-- estado activa/finalizada;
-- tipo de ganador;
-- nombre del ganador;
-- motivo;
-- IDs de edificios.
+- estado de partida;
+- ganador/motivo;
+- vida actual/máxima;
+- daño;
+- alcance;
+- IDs de unidades/edificios.
 
 Unity:
 
-- elimina visualmente unidades/edificios que ya no existen en el snapshot;
-- permite seleccionar edificio enemigo como objetivo;
-- bloquea nuevas acciones al recibir estado final;
-- muestra VICTORIA si gana el Humano;
-- muestra DERROTA si gana la Máquina.
+- oculta entidades destruidas;
+- muestra vida de entidades;
+- muestra daño/alcance de combatientes;
+- muestra estados `Moviendo` y `Atacando`;
+- tiñe de rojo las entidades con **25% de vida o menos**;
+- bloquea clics/selección al finalizar;
+- muestra una pantalla completa de VICTORIA/DERROTA;
+- deja únicamente el botón **SALIR** en la pantalla final.
 
-La lógica terminal sigue estando en C#; el HUD únicamente representa el resultado recibido.
+El feedback de vida crítica es puramente visual y no modifica reglas.
 
 ---
 
-## 9. Pruebas
+## 11. Spawn y economía visibles
 
-Baselines de Fase 6:
+El spawn de entrenamiento se estabilizó:
+
+- evita bordes si existe alternativa interior;
+- prioriza posiciones con más salidas ortogonales;
+- libera la marca temporal de ocupación al abandonar el spawn;
+- evita obstáculos fantasma.
+
+La escena de prueba contiene:
 
 ```text
-314/314
-319/320 durante estabilización de cancelación
-320/320 final
+Oro:    4 nodos
+Madera: 4 nodos
+Comida: 6 nodos
+Total: 14 nodos físicos
 ```
 
-El resultado final supervisado fue:
+El selector de entrenamiento muestra costos compactos por unidad:
 
 ```text
-Total: 320
-Correctas: 320
-Errores: 0
-Omitidas: 0
+O = Oro
+M = Madera
+C = Comida
 ```
 
-Las pruebas nuevas/revisadas cubren:
+---
 
-- ataque adyacente válido;
-- objetivo lejano inválido;
-- ataque Humano → Máquina;
-- ataque Máquina → Humano;
-- destrucción de unidad;
-- destrucción de Centro Urbano;
-- liberación de casilla;
-- objetivo propio inválido;
-- IDs inválidos;
+## 12. Networking y ataque
+
+Unity usa el endpoint concurrente de ataque:
+
+```text
+POST /api/partida/atacar-concurrente
+```
+
+y consulta:
+
+```text
+GET /api/procesos/{id}/resultado
+```
+
+Esto corrigió el 404 detectado en smoke test y mantiene ataque dentro del mismo patrón concurrente usado por el resto de acciones.
+
+WebSocket + JSON continúa soportando:
+
+- MOVER;
+- RECOLECTAR;
+- CONSTRUIR;
+- ENTRENAR;
+- ATACAR.
+
+---
+
+## 13. Pruebas y correcciones
+
+Durante Fase 6 se cubrieron, entre otros:
+
+- impacto con vida restante;
+- destrucción al llegar a 0 HP;
+- Guerrero melee;
+- Arquero a distancia;
+- ataque diagonal;
+- aproximación automática;
+- ataque a Centro Urbano;
 - ataque concurrente;
 - cancelación de ataque;
-- regla AND parcial;
-- regla AND completa;
-- ganador Humano;
-- ganador Máquina;
-- generación de `resultado_final.txt`;
+- IA sin persecución prioritaria de Aldeanos;
+- un solo frente militar de IA;
+- regla AND parcial/completa;
+- ganador Humano/Máquina;
+- archivo final;
 - rechazo de órdenes tras finalizar;
-- cancelación global de worker pendiente;
-- regresiones de networking/IA/concurrencia.
+- cancelación global;
+- acceso a recursos;
+- spawn seguro;
+- networking;
+- feedback visual crítico;
+- bloqueo de interacción final.
+
+Históricamente Fase 6 pasó por varias estabilizaciones. El cierre definitivo fue validado localmente por el equipo con la **suite completa en verde y 0 errores**.
+
+Las advertencias intencionales de acceso denegado a `log_partida.txt` pertenecen a una prueba de manejo de errores de IO.
 
 ---
 
-## 10. Race condition corregida
-
-Durante la prueba final apareció una carrera entre:
-
-```text
-worker de movimiento iniciándose
-vs.
-partida finalizando
-```
-
-Se corrigió haciendo que el worker vuelva a observar su `CancellationToken` después de planificar y antes de convertir un fallo de inicio de orden en resultado normal.
-
-La prueba también espera a que la orden de movimiento esté realmente activa antes de provocar el final, por lo que valida una cancelación real y no el scheduling del ThreadPool.
-
----
-
-## 11. Commits principales
+## 14. Commits principales de Fase 6
 
 ```text
 90ffe44 feat: agregar destrucción de entidades y evaluación de victoria
 3bfa3ea test: adaptar regresiones al ataque adyacente
 6be14b9 feat: cerrar victoria AND y resultado final
-ff0dccc fix: resolver ambigüedad al guardar resultado final
 be2b245 fix: estabilizar cancelación global al finalizar partida
+1ca44d2 fix: mejorar acceso a recursos y compactar HUD
+3580af2 fix: corregir ataque Unity y agresividad de la maquina
+1280abc fix: serializar ofensiva de la maquina
+cabe6d8 fix: distinguir partida finalizada de desconexion API
+5a6181a feat: agregar vida daño y alcance al combate
+46e31ea fix: permitir alcance de combate en diagonal
+42fd391 feat: aproximar ataques y mostrar estado en vivo
+2e2b48d fix: evitar spawns atrapados y mejorar economia visible
+db4e08a feat: agregar vida critica y pantalla final bloqueante
 ```
 
 ---
 
-## 12. Estado de cierre
+## 15. Estado de cierre
 
 ```text
 FASE 0      TERMINADA
@@ -262,16 +356,16 @@ FASE 3      TERMINADA
 FASE 4      TERMINADA
 ETAPA 4.5   TERMINADA
 FASE 5      TERMINADA / DEVELOP
-FASE 6      TERMINADA TÉCNICAMENTE / FEATURE
+FASE 6      TERMINADA Y VALIDADA / PR #75
 ```
 
-Siguiente paso:
+No quedan nuevas mecánicas pendientes dentro de Fase 6.
+
+Siguiente paso de proceso:
 
 ```text
-Pull Request
-→ revisión
+PR #75
 → merge a develop
-→ estabilización/entrega/documentación final
+→ verificar develop
+→ etapa final de entrega/documentación general
 ```
-
-La suite .NET está verde. Antes de la entrega final sigue siendo recomendable un smoke test visual completo en Unity de victoria/derrota, destrucción y bloqueo de controles.

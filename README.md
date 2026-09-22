@@ -47,7 +47,7 @@ Se utilizan `Task.Run`, ThreadPool, `CancellationToken`, `lock`, `ConcurrentDict
 
 Los workers modifican el **Modelo C#**, nunca directamente `UnityEngine`. Unity consume estados/resultados desde su Main Thread.
 
-Los tiempos actuales del prototipo son configurables. En la API se usan como valores de demostración aproximadamente: movimiento 1 s, recolección 1 s, entrenamiento 5 s, construcción 7 s y ataque 1 s.
+Los tiempos del prototipo se mantienen configurables y el combate usa intervalos propios por tipo de unidad.
 
 ## Jugabilidad RTS
 
@@ -61,12 +61,28 @@ Actualmente están implementados:
 - entrenamiento con costo, cola, progreso y spawn seguro;
 - acciones concurrentes de varias unidades;
 - una orden activa por unidad;
+- combate con vida, daño, alcance e intervalo configurables;
+- aproximación automática antes de atacar cuando el objetivo está fuera de alcance;
 - ataque contra unidades y edificios enemigos;
 - destrucción lógica y liberación de casillas;
+- feedback visual de vida crítica;
 - condición de victoria/derrota;
 - costos económicos del prototipo centralizados en `ConfiguracionEconomia`.
 
-La guía disponible no fija valores numéricos de vida, daño, armadura o alcance por tipo de unidad. Por eso la Fase 6 no inventa estadísticas numéricas: un impacto válido sobre una entidad enemiga ortogonalmente adyacente destruye esa entidad. Esta es la regla funcional actual del prototipo.
+La guía disponible no fija valores numéricos de vida, daño, armadura ni alcance por tipo de unidad. Por decisión explícita del equipo, Fase 6 incorpora un **balance propio del prototipo**, centralizado y documentado como tal.
+
+## Balance de combate del prototipo
+
+| Entidad | Vida | Daño | Alcance | Intervalo |
+|---|---:|---:|---:|---:|
+| Aldeano | 60 | 0 | 0 | — |
+| Guerrero | 120 | 30 | 1 | 4 s |
+| Lancero | 100 | 25 | 1 | 3.5 s |
+| Arquero | 80 | 20 | 3 | 3 s |
+| Monje | 70 | 15 | 2 | 5 s |
+| Centro Urbano | 300 | — | — | — |
+
+El combate usa distancia de cuadrícula de 8 vecinos para el alcance, por lo que una diagonal inmediata cuenta como una casilla. El pathfinding continúa usando su movimiento ortogonal original.
 
 ## Combate y victoria
 
@@ -76,14 +92,17 @@ Flujo base:
 
 ```text
 unidad militar
-→ objetivo enemigo adyacente
+→ seleccionar unidad o edificio enemigo
+→ calcular si está en alcance
+→ si hace falta, aproximarse automáticamente a una casilla válida
 → worker de ataque
-→ validación en Modelo
-→ impacto
-→ destrucción
-→ liberación de casilla
-→ evaluación de victoria
+→ aplicar daño
+→ si Vida > 0, la entidad continúa viva
+→ si Vida = 0, destruir y liberar la casilla
+→ evaluar victoria
 ```
+
+La Máquina mantiene un único frente militar activo a la vez para evitar ofensivas simultáneas demasiado rápidas, mientras el resto de la economía continúa siendo concurrente.
 
 La regla terminal fue definida por el equipo como **AND**:
 
@@ -104,7 +123,10 @@ Cuando la partida finaliza:
 - se detiene el ciclo de IA;
 - se genera `resultado_final.txt`;
 - la API expone el estado final;
-- el HUD de Unity muestra VICTORIA o DERROTA y oculta las acciones disponibles.
+- Unity bloquea selección/clics sobre el mundo;
+- aparece una pantalla completa de VICTORIA o DERROTA con botón SALIR.
+
+Las entidades con **25% de vida o menos** se tiñen de rojo como feedback visual.
 
 ## Jugador Máquina
 
@@ -115,11 +137,30 @@ Su ciclo de decisiones puede:
 1. asignar Aldeanos a recursos;
 2. entrenar Aldeanos para crecimiento;
 3. construir un segundo Centro Urbano cuando dispone de recursos;
-4. entrenar una primera unidad militar;
-5. aproximar unidades militares al enemigo;
-6. atacar cuando está adyacente.
+4. entrenar fuerza militar;
+5. priorizar objetivos militares humanos;
+6. aproximarse según el alcance de la unidad;
+7. atacar;
+8. asaltar el Centro Urbano cuando ya no hay objetivos militares y dispone de fuerza suficiente.
 
-El ciclo se ejecuta concurrentemente y es cancelable. No modifica Unity directamente ni utiliza operaciones especiales que eviten las validaciones del Modelo.
+La Máquina no persigue Aldeanos como objetivo militar prioritario y mantiene un solo frente de combate activo.
+
+## Economía visible y spawn
+
+La escena de prueba distribuye recursos dejando corredores y casillas de interacción. Actualmente utiliza:
+
+- 4 nodos de Oro;
+- 4 nodos de Madera;
+- 6 nodos de Comida;
+- 14 recursos físicos en total.
+
+El selector de entrenamiento muestra costos compactos:
+
+- `O` = Oro;
+- `M` = Madera;
+- `C` = Comida.
+
+El spawn de unidades entrenadas evita bordes cuando existe una alternativa interior y prioriza casillas con más salidas libres. Las marcas temporales de ocupación del spawn se liberan al abandonar la casilla para no dejar obstáculos fantasma.
 
 ## Networking
 
@@ -144,23 +185,6 @@ Tipos de mensajes soportados:
 - `CONSTRUIR`
 - `ENTRENAR`
 - `ATACAR`
-
-Formato general:
-
-```json
-{
-  "tipo": "MOVER",
-  "emisorId": "instancia-1",
-  "mensajeId": "guid",
-  "datos": {
-    "unidadId": "guid",
-    "destino": {
-      "x": 4,
-      "y": 3
-    }
-  }
-}
-```
 
 El listener WebSocket es asíncrono, mantiene clientes en una colección concurrente, usa `SemaphoreSlim` para serializar envíos por conexión, maneja cierres/errores y despacha las acciones hacia `ServicioAccionesConcurrentes`.
 
@@ -192,7 +216,7 @@ Suite .NET:
 dotnet test tests/ImperiosEnGuerra.Tests/ImperiosEnGuerra.Tests.csproj
 ```
 
-Al cierre técnico de Fase 6 se validaron localmente **320/320 pruebas correctas**.
+La suite completa fue validada localmente por el equipo al cierre de Fase 6 con **0 errores** después de las últimas estabilizaciones de combate, spawn, economía y UI.
 
 Las advertencias de acceso denegado a `log_partida.txt` que aparecen en una prueba son intencionales: esa prueba verifica el manejo controlado de errores de IO.
 
@@ -217,7 +241,7 @@ Issue → Branch → Desarrollo → Pruebas → Commit → Pull Request → Deve
 - Fase 4: **TERMINADA**
 - Etapa 4.5: **TERMINADA**
 - Fase 5: **TERMINADA E INTEGRADA EN DEVELOP**
-- Fase 6: **IMPLEMENTADA Y VALIDADA EN FEATURE; PENDIENTE DE INTEGRACIÓN A DEVELOP**
+- Fase 6: **TERMINADA, VALIDADA Y LISTA PARA MERGE A DEVELOP**
 
 Documentación:
 - `docs/FASE_5_AVANCES_Y_ESTADO_CERRADA.md`
