@@ -113,12 +113,26 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
                     unidad,
                     propietario);
 
+            List<Coordenada> ocupacionesAliadas =
+                propietario.Unidades
+                    .Where(
+                        u =>
+                            !ReferenceEquals(
+                                u,
+                                unidad))
+                    .Select(
+                        u => u.Coordenada)
+                    .Where(
+                        c => c != null)
+                    .ToList();
+
             ResultadoRuta ruta =
                 buscador.Buscar(
                     mapa,
                     unidad.Coordenada,
                     destino,
-                    bloqueos);
+                    bloqueos,
+                    ocupacionesAliadas);
 
             if (!ruta.Encontrada)
             {
