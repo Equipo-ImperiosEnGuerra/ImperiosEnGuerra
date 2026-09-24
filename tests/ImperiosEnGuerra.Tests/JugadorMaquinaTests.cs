@@ -445,7 +445,15 @@ public class JugadorMaquinaTests
 
         Assert.That(
             resultado.Resultado?.Mensaje,
-            Does.Contain("vida"));
+            Does.Contain("destruido"));
+
+        Assert.That(
+            humano.VidaActual,
+            Is.EqualTo(0));
+
+        Assert.That(
+            partida.JugadorHumano.Unidades,
+            Does.Not.Contain(humano));
     }
 
     [Test]
