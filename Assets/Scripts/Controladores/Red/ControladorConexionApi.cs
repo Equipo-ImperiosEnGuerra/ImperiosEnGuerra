@@ -199,6 +199,37 @@ public bool PuedeIniciarAtaque =>
                     }));
         }
 
+        public void PrepararRegresoAlMenu()
+        {
+            // El menú puede mostrarse sin recargar la escena. Así Play Mode
+            // continúa activo y una nueva partida puede iniciarse después.
+            StopAllCoroutines();
+
+            iniciandoPartidaDesdeMenu = false;
+            ultimoInicioPartidaExitoso = false;
+            ultimoEstadoPartidaValido = false;
+            economiaActual = null;
+
+            movimientosActivos = 0;
+            recoleccionesActivas = 0;
+            construccionesActivas = 0;
+            entrenamientosActivos = 0;
+            ataquesActivos = 0;
+
+            MovimientoEnCurso = false;
+            RecoleccionEnCurso = false;
+            ConstruccionEnCurso = false;
+            EntrenamientoEnCurso = false;
+            AtaqueEnCurso = false;
+
+            PartidaFinalizada = false;
+            ApiDisponible = false;
+
+            controladorSeleccion?.BloquearInteraccion();
+            vistaHud?.OcultarResultadoFinal();
+            vistaHud?.MostrarMensaje("");
+        }
+
         private void OnDisable()
         {
             StopAllCoroutines();
