@@ -75,6 +75,33 @@ public class PlanificadorMovimientoTests
     }
 
     [Test]
+    public void UnidadAliadaIntermedia_NoBloqueaLaRuta()
+    {
+        partida.JugadorHumano.AgregarUnidad(
+            new Guerrero(
+                new Coordenada(2, 1)));
+
+        ResultadoPlanMovimiento resultado =
+            planificador.Preparar(
+                partida,
+                new SolicitudMovimiento(
+                    unidad.Id,
+                    new Coordenada(3, 1)));
+
+        Assert.That(
+            resultado.Exito,
+            Is.True,
+            resultado.Mensaje);
+
+        Assert.That(
+            resultado.Pasos.Any(
+                paso =>
+                    paso.X == 2 &&
+                    paso.Y == 1),
+            Is.True);
+    }
+
+    [Test]
     public void UnidadEnemigaIntermedia_SeRodea()
     {
         partida.JugadorMaquina.AgregarUnidad(
