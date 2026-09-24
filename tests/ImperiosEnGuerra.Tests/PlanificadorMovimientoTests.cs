@@ -81,6 +81,11 @@ public class PlanificadorMovimientoTests
             new Guerrero(
                 new Coordenada(2, 1)));
 
+        mapa.ObtenerCasilla(
+            2,
+            1)
+            .Ocupar();
+
         ResultadoPlanMovimiento resultado =
             planificador.Preparar(
                 partida,
