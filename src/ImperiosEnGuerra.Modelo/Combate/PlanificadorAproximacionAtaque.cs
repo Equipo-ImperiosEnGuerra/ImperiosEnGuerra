@@ -94,6 +94,19 @@ namespace ImperiosEnGuerra.Modelo.Combate
                     atacante,
                     propietario);
 
+            List<Coordenada> ocupacionesAliadas =
+                propietario.Unidades
+                    .Where(
+                        u =>
+                            !ReferenceEquals(
+                                u,
+                                atacante))
+                    .Select(
+                        u => u.Coordenada)
+                    .Where(
+                        c => c != null)
+                    .ToList();
+
             var candidatas =
                 new List<(Coordenada Punto, IReadOnlyList<Coordenada> Pasos)>();
 
@@ -130,7 +143,8 @@ namespace ImperiosEnGuerra.Modelo.Combate
                             mapa,
                             atacante.Coordenada,
                             candidata,
-                            bloqueos);
+                            bloqueos,
+                            ocupacionesAliadas);
 
                     if (!ruta.Encontrada)
                         continue;
