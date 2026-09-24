@@ -117,6 +117,36 @@ public class OperacionPasoMovimientoTests
     }
 
     [Test]
+    public void PasoConUnidadAliada_Avanza()
+    {
+        unidad.IntentarIniciarOrden(
+            TipoAccionJuego.Mover);
+
+        partida.JugadorHumano.AgregarUnidad(
+            new Guerrero(
+                new Coordenada(2, 1)));
+
+        ResultadoAccion resultado =
+            operacion.Ejecutar(
+                partida,
+                unidad.Id,
+                new Coordenada(2, 1));
+
+        Assert.That(
+            resultado.Exito,
+            Is.True,
+            resultado.Mensaje);
+
+        Assert.That(
+            unidad.Coordenada.X,
+            Is.EqualTo(2));
+
+        Assert.That(
+            unidad.Coordenada.Y,
+            Is.EqualTo(1));
+    }
+
+    [Test]
     public void PasoBloqueadoPorEntidad_NoAvanza()
     {
         unidad.IntentarIniciarOrden(
