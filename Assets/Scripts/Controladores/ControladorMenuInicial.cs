@@ -1,7 +1,6 @@
 using ImperiosEnGuerra.Controladores.Red;
 using ImperiosEnGuerra.Vistas;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace ImperiosEnGuerra.Controladores
 {
@@ -162,11 +161,20 @@ namespace ImperiosEnGuerra.Controladores
 
         private void VolverAlMenu()
         {
-            Scene escena =
-                SceneManager.GetActiveScene();
+            // No se recarga la escena: en Editor eso podía dejar el flujo de
+            // Play Mode en un estado inesperado. Se restablece únicamente la
+            // presentación y el controlador de conexión.
+            controladorSeleccion?.BloquearInteraccion();
+            conexionApi?.PrepararRegresoAlMenu();
 
-            SceneManager.LoadScene(
-                escena.name);
+            vistaHud?.OcultarResultadoFinal();
+
+            if (vistaMenu != null)
+            {
+                vistaMenu.EstablecerCargando(false);
+                vistaMenu.MostrarPrincipal();
+                vistaMenu.MostrarEstado("");
+            }
         }
 
         private static void Salir()
