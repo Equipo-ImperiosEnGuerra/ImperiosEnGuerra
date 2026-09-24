@@ -126,6 +126,11 @@ public class OperacionPasoMovimientoTests
             new Guerrero(
                 new Coordenada(2, 1)));
 
+        mapa.ObtenerCasilla(
+            2,
+            1)
+            .Ocupar();
+
         ResultadoAccion resultado =
             operacion.Ejecutar(
                 partida,
