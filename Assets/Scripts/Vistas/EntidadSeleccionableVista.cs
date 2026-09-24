@@ -29,6 +29,9 @@ namespace ImperiosEnGuerra.Vistas
         public SpriteRenderer Renderer { get; private set; }
 
         private const float UmbralVidaCritica = 0.25f;
+        private const float VelocidadPulsoAtaque = 5f;
+        private const float IntensidadMinimaAtaque = 0.28f;
+        private const float IntensidadMaximaAtaque = 0.72f;
 
         private Color colorOriginal;
         private bool seleccionada;
@@ -113,6 +116,17 @@ namespace ImperiosEnGuerra.Vistas
             AplicarColorVisual();
         }
 
+        private void Update()
+        {
+            // Feedback puramente visual. El estado autoritativo sigue
+            // llegando desde el Modelo mediante los snapshots de la API.
+            if (Renderer != null &&
+                EsAtacando())
+            {
+                AplicarColorVisual();
+            }
+        }
+
         public void MostrarSeleccion()
         {
             if (Renderer == null || seleccionada)
@@ -146,6 +160,32 @@ namespace ImperiosEnGuerra.Vistas
                         0.72f);
             }
 
+            if (EsAtacando())
+            {
+                float pulso =
+                    (Mathf.Sin(
+                         Time.unscaledTime *
+                         VelocidadPulsoAtaque) +
+                     1f) *
+                    0.5f;
+
+                float intensidad =
+                    Mathf.Lerp(
+                        IntensidadMinimaAtaque,
+                        IntensidadMaximaAtaque,
+                        pulso);
+
+                visual =
+                    Color.Lerp(
+                        visual,
+                        new Color(
+                            1f,
+                            0.62f,
+                            0.08f,
+                            visual.a),
+                        intensidad);
+            }
+
             if (seleccionada)
             {
                 visual *=
@@ -157,6 +197,14 @@ namespace ImperiosEnGuerra.Vistas
             }
 
             Renderer.color = visual;
+        }
+
+        private bool EsAtacando()
+        {
+            return Categoria ==
+                       CategoriaEntidadVisual.Unidad &&
+                   (EstadoLogico == "Atacando" ||
+                    OrdenActiva == "Atacar");
         }
 
         private bool EsVidaCritica()

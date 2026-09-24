@@ -77,10 +77,6 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                 return ResultadoAccion.Fallido(
                     "El paso no es transitable.");
 
-            if (casilla.EstaOcupada)
-                return ResultadoAccion.Fallido(
-                    "El paso está ocupado.");
-
             if (mapa.ObtenerRecursoEn(
                     siguiente) != null)
             {
@@ -88,20 +84,50 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     "El paso contiene un recurso físico.");
             }
 
-            if (TieneEntidadEn(
-                    partida.JugadorHumano,
+            Jugador oponente =
+                partida.ObtenerOponente(
+                    propietario);
+
+            bool hayUnidadAliada =
+                TieneUnidadEn(
+                    propietario,
                     unidad,
-                    siguiente) ||
-                (ReferenceEquals(
-                     mapa,
-                     partida.JugadorMaquina.Mapa) &&
-                 TieneEntidadEn(
-                     partida.JugadorMaquina,
-                     unidad,
-                     siguiente)))
+                    siguiente);
+
+            bool hayUnidadEnemiga =
+                oponente != null &&
+                ReferenceEquals(
+                    oponente.Mapa,
+                    mapa) &&
+                TieneUnidadEn(
+                    oponente,
+                    unidad,
+                    siguiente);
+
+            if (HayEdificioEn(
+                    partida,
+                    mapa,
+                    siguiente))
             {
                 return ResultadoAccion.Fallido(
-                    "El paso contiene una unidad o un edificio.");
+                    "El paso contiene un edificio.");
+            }
+
+            if (hayUnidadEnemiga)
+            {
+                return ResultadoAccion.Fallido(
+                    "El paso contiene una unidad enemiga.");
+            }
+
+            // Una unidad aliada puede ser atravesada de forma temporal.
+            // El destino final sigue validándose como libre en el planificador.
+            // Esto evita que formaciones propias conviertan el mapa en un
+            // laberinto imposible sin permitir atravesar enemigos/edificios.
+            if (casilla.EstaOcupada &&
+                !hayUnidadAliada)
+            {
+                return ResultadoAccion.Fallido(
+                    "El paso está ocupado.");
             }
 
             Casilla origen =
@@ -165,24 +191,19 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     posicion));
         }
 
-        private static bool TieneEntidadEn(
+        private static bool TieneUnidadEn(
             Jugador jugador,
             Unidad unidadMovil,
             Coordenada destino)
         {
             return jugador.Unidades.Any(
-                       u =>
-                           !ReferenceEquals(
-                               u,
-                               unidadMovil) &&
-                           Coincide(
-                               u.Coordenada,
-                               destino))
-                ||
-                   jugador.Edificios.Any(
-                       e => Coincide(
-                           e.Coordenada,
-                           destino));
+                u =>
+                    !ReferenceEquals(
+                        u,
+                        unidadMovil) &&
+                    Coincide(
+                        u.Coordenada,
+                        destino));
         }
 
         private static bool Coincide(

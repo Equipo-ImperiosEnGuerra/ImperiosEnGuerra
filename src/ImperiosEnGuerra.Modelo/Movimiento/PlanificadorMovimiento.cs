@@ -110,14 +110,29 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
                 ObtenerBloqueos(
                     partida,
                     mapa,
-                    unidad);
+                    unidad,
+                    propietario);
+
+            List<Coordenada> ocupacionesAliadas =
+                propietario.Unidades
+                    .Where(
+                        u =>
+                            !ReferenceEquals(
+                                u,
+                                unidad))
+                    .Select(
+                        u => u.Coordenada)
+                    .Where(
+                        c => c != null)
+                    .ToList();
 
             ResultadoRuta ruta =
                 buscador.Buscar(
                     mapa,
                     unidad.Coordenada,
                     destino,
-                    bloqueos);
+                    bloqueos,
+                    ocupacionesAliadas);
 
             if (!ruta.Encontrada)
             {
@@ -132,7 +147,8 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
         private static List<Coordenada> ObtenerBloqueos(
             Partida partida,
             Mapa mapa,
-            Unidad unidadMovil)
+            Unidad unidadMovil,
+            Jugador propietario)
         {
             var bloqueos =
                 new List<Coordenada>();
@@ -141,12 +157,18 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
                 partida.JugadorHumano,
                 mapa,
                 unidadMovil,
+                ReferenceEquals(
+                    partida.JugadorHumano,
+                    propietario),
                 bloqueos);
 
             AgregarBloqueos(
                 partida.JugadorMaquina,
                 mapa,
                 unidadMovil,
+                ReferenceEquals(
+                    partida.JugadorMaquina,
+                    propietario),
                 bloqueos);
 
             return bloqueos;
@@ -156,6 +178,7 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
             Jugador jugador,
             Mapa mapa,
             Unidad unidadMovil,
+            bool esPropietario,
             List<Coordenada> bloqueos)
         {
             if (!ReferenceEquals(
@@ -165,17 +188,25 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
                 return;
             }
 
-            foreach (Unidad unidad in jugador.Unidades)
+            // Las unidades aliadas son obstáculos dinámicos: no deben cerrar
+            // permanentemente una ruta de A*. La aplicación paso a paso
+            // mantiene las reglas de colisión con enemigos y estructuras.
+            if (!esPropietario)
             {
-                if (!ReferenceEquals(
-                    unidad,
-                    unidadMovil))
+                foreach (Unidad unidad in jugador.Unidades)
                 {
-                    bloqueos.Add(
-                        unidad.Coordenada);
+                    if (!ReferenceEquals(
+                        unidad,
+                        unidadMovil))
+                    {
+                        bloqueos.Add(
+                            unidad.Coordenada);
+                    }
                 }
             }
 
+            // Los edificios continúan siendo obstáculos duros,
+            // independientemente del propietario.
             foreach (var edificio in jugador.Edificios)
             {
                 bloqueos.Add(

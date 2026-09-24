@@ -1620,6 +1620,28 @@ public sealed class EstadoPartidaService
         }
     }
 
+    public bool ExisteEntidad(Guid id)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+                return false;
+
+            return
+                partidaActiva.JugadorHumano.Unidades.Any(
+                    u => u.Id == id)
+                ||
+                partidaActiva.JugadorMaquina.Unidades.Any(
+                    u => u.Id == id)
+                ||
+                partidaActiva.JugadorHumano.Edificios.Any(
+                    e => e.Id == id)
+                ||
+                partidaActiva.JugadorMaquina.Edificios.Any(
+                    e => e.Id == id);
+        }
+    }
+
     public CentroUrbano? ObtenerCentroUrbano(Coordenada coordenada)
     {
         lock (sincronizacion)

@@ -23,6 +23,12 @@ namespace ImperiosEnGuerra.Controladores.Red
         private ControladorSeleccion controladorSeleccion;
 
         private EconomiaEstadoDto economiaActual;
+        private bool iniciandoPartidaDesdeMenu;
+        private bool ultimoInicioPartidaExitoso;
+        private bool ultimoEstadoPartidaValido;
+
+        public event System.Action PartidaIniciadaDesdeMenu;
+        public event System.Action<string> InicioPartidaFallido;
 
     public bool MovimientoEnCurso { get; private set; }
     public bool RecoleccionEnCurso { get; private set; }
@@ -38,7 +44,7 @@ namespace ImperiosEnGuerra.Controladores.Red
         {
             if (PartidaFinalizada)
             {
-                return "La partida ya finalizó. Sal de Play y vuelve a entrar para iniciar una partida nueva.";
+                return "La partida ya finalizó.";
             }
 
             if (!ApiDisponible)
@@ -191,6 +197,37 @@ public bool PuedeIniciarAtaque =>
                         atacanteId = atacanteId,
                         objetivoId = objetivoId
                     }));
+        }
+
+        public void PrepararRegresoAlMenu()
+        {
+            // El menú puede mostrarse sin recargar la escena. Así Play Mode
+            // continúa activo y una nueva partida puede iniciarse después.
+            StopAllCoroutines();
+
+            iniciandoPartidaDesdeMenu = false;
+            ultimoInicioPartidaExitoso = false;
+            ultimoEstadoPartidaValido = false;
+            economiaActual = null;
+
+            movimientosActivos = 0;
+            recoleccionesActivas = 0;
+            construccionesActivas = 0;
+            entrenamientosActivos = 0;
+            ataquesActivos = 0;
+
+            MovimientoEnCurso = false;
+            RecoleccionEnCurso = false;
+            ConstruccionEnCurso = false;
+            EntrenamientoEnCurso = false;
+            AtaqueEnCurso = false;
+
+            PartidaFinalizada = false;
+            ApiDisponible = false;
+
+            controladorSeleccion?.BloquearInteraccion();
+            vistaHud?.OcultarResultadoFinal();
+            vistaHud?.MostrarMensaje("");
         }
 
         private void OnDisable()
@@ -1541,12 +1578,33 @@ public bool PuedeIniciarAtaque =>
 
         private void Start()
         {
-            StartCoroutine(ComprobarConexion());
+            ApiDisponible = false;
+            PartidaFinalizada = false;
+
+            if (controladorSeleccion == null)
+            {
+                controladorSeleccion =
+                    FindFirstObjectByType<ControladorSeleccion>();
+            }
+
+            controladorSeleccion?.BloquearInteraccion();
+        }
+
+        public void IniciarPartidaDesdeMenu()
+        {
+            if (iniciandoPartidaDesdeMenu)
+                return;
+
+            StartCoroutine(
+                ComprobarConexion());
         }
 
         private IEnumerator ComprobarConexion()
         {
+            iniciandoPartidaDesdeMenu = true;
             ApiDisponible = false;
+            ultimoInicioPartidaExitoso = false;
+            ultimoEstadoPartidaValido = false;
 
             string url =
                 $"{urlBaseApi}/api/estado";
@@ -1558,8 +1616,15 @@ public bool PuedeIniciarAtaque =>
 
             if (request.result != UnityWebRequest.Result.Success)
             {
+                string mensaje =
+                    $"No se pudo conectar con la API: {request.error}";
+
                 Debug.LogError(
-                    $"No se pudo conectar con la API: {request.error}");
+                    mensaje);
+
+                iniciandoPartidaDesdeMenu = false;
+                InicioPartidaFallido?.Invoke(
+                    mensaje);
 
                 yield break;
             }
@@ -1572,11 +1637,37 @@ public bool PuedeIniciarAtaque =>
 
             yield return IniciarPartidaPrueba();
 
-            yield return ObtenerPartidaActiva();
+            if (!ultimoInicioPartidaExitoso)
+            {
+                iniciandoPartidaDesdeMenu = false;
+                InicioPartidaFallido?.Invoke(
+                    "La API respondió, pero no fue posible crear la partida.");
+
+                yield break;
+            }
+
+            yield return ObtenerPartidaActiva(
+                "",
+                "",
+                false);
+
+            iniciandoPartidaDesdeMenu = false;
+
+            if (!ultimoEstadoPartidaValido)
+            {
+                InicioPartidaFallido?.Invoke(
+                    "La partida fue creada, pero no fue posible cargar su estado inicial.");
+
+                yield break;
+            }
+
+            PartidaIniciadaDesdeMenu?.Invoke();
         }
 
         private IEnumerator IniciarPartidaPrueba()
         {
+            ultimoInicioPartidaExitoso = false;
+
             IniciarPartidaDto partida =
                 CrearPartidaPrueba();
 
@@ -1618,6 +1709,7 @@ public bool PuedeIniciarAtaque =>
 
             PartidaFinalizada = false;
             ApiDisponible = true;
+            ultimoInicioPartidaExitoso = true;
 
             if (controladorSeleccion == null)
             {
@@ -1638,6 +1730,8 @@ public bool PuedeIniciarAtaque =>
             string contextoError = "",
             bool mostrarMensaje = true)
         {
+            ultimoEstadoPartidaValido = false;
+
             string url =
                 $"{urlBaseApi}/api/partida";
 
@@ -1712,6 +1806,7 @@ public bool PuedeIniciarAtaque =>
                 "finalizada";
 
             vistaPartida.Sincronizar(estadoPartida);
+            ultimoEstadoPartidaValido = true;
 
             if (vistaHud != null)
             {

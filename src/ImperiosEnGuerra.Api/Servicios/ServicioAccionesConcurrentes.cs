@@ -1023,6 +1023,14 @@ public sealed class ServicioAccionesConcurrentes
                         "El ID del atacante debe tener formato Guid válido.");
                 }
 
+                if (!Guid.TryParse(
+                        copia?.ObjetivoId,
+                        out Guid objetivoId))
+                {
+                    return ResultadoAccion.Fallido(
+                        "El ID del objetivo debe tener formato Guid válido.");
+                }
+
                 Unidad? unidad =
                     estadoPartida.ObtenerUnidad(
                         unidadId);
@@ -1112,12 +1120,43 @@ public sealed class ServicioAccionesConcurrentes
                                     unidadId))
                             : retardoAtaque;
 
-                    EsperarAntesDeAplicar(
-                        token,
-                        esperaAtaque);
+                    ResultadoAccion ultimoImpacto =
+                        ResultadoAccion.Exitoso(
+                            "Ataque iniciado.");
 
-                    return estadoPartida.Atacar(
-                        copia);
+                    while (true)
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        if (estadoPartida.EstaFinalizada() ||
+                            !estadoPartida.ExisteEntidad(
+                                objetivoId))
+                        {
+                            return ultimoImpacto;
+                        }
+
+                        EsperarAntesDeAplicar(
+                            token,
+                            esperaAtaque);
+
+                        token.ThrowIfCancellationRequested();
+
+                        ultimoImpacto =
+                            estadoPartida.Atacar(
+                                copia);
+
+                        if (!ultimoImpacto.Exito)
+                        {
+                            return ultimoImpacto;
+                        }
+
+                        if (estadoPartida.EstaFinalizada() ||
+                            !estadoPartida.ExisteEntidad(
+                                objetivoId))
+                        {
+                            return ultimoImpacto;
+                        }
+                    }
                 }
                 finally
                 {

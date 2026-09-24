@@ -12,7 +12,7 @@ namespace ImperiosEnGuerra.Tests;
 public class AtaqueConcurrenteTests
 {
     [Test]
-    public async Task AtaqueConcurrente_AplicaUnImpactoYLiberaOrden()
+    public async Task AtaqueConcurrente_ContinuaHastaDestruirObjetivo()
     {
         Partida partida = CrearPartida(out Guerrero atacante, out Lancero objetivo);
 
@@ -37,13 +37,13 @@ public class AtaqueConcurrenteTests
 
         Assert.That(resultado.Estado, Is.EqualTo(EstadoProcesoConcurrente.Completado));
         Assert.That(resultado.Resultado?.Exito, Is.True, resultado.Resultado?.Mensaje);
-        Assert.That(objetivo.VidaActual, Is.EqualTo(70));
-        Assert.That(partida.JugadorMaquina.Unidades, Does.Contain(objetivo));
+        Assert.That(objetivo.VidaActual, Is.EqualTo(0));
+        Assert.That(partida.JugadorMaquina.Unidades, Does.Not.Contain(objetivo));
         Assert.That(atacante.Disponible, Is.True);
     }
 
     [Test]
-    public async Task AtaqueConcurrente_FueraDeAlcance_SeAproximaYAplicaImpacto()
+    public async Task AtaqueConcurrente_FueraDeAlcance_SeAproximaYDestruyeObjetivo()
     {
         var mapa = new Mapa(8, 8);
 
@@ -115,7 +115,11 @@ public class AtaqueConcurrenteTests
 
         Assert.That(
             centro.VidaActual,
-            Is.EqualTo(270));
+            Is.EqualTo(0));
+
+        Assert.That(
+            partida.JugadorMaquina.Edificios,
+            Does.Not.Contain(centro));
 
         Assert.That(
             Math.Max(

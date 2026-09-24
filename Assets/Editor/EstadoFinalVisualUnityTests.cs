@@ -56,6 +56,51 @@ public class EstadoFinalVisualUnityTests
     }
 
     [Test]
+    public void Atacando_AplicaResaltadoVisual()
+    {
+        var objeto =
+            new GameObject(
+                "EntidadAtaquePrueba",
+                typeof(SpriteRenderer),
+                typeof(EntidadSeleccionableVista));
+
+        try
+        {
+            SpriteRenderer renderer =
+                objeto.GetComponent<SpriteRenderer>();
+
+            renderer.color =
+                Color.white;
+
+            EntidadSeleccionableVista entidad =
+                objeto.GetComponent<EntidadSeleccionableVista>();
+
+            entidad.Configurar(
+                CategoriaEntidadVisual.Unidad,
+                "id-ataque",
+                "Guerrero",
+                "Humano",
+                1,
+                1,
+                "Atacando",
+                "Atacar",
+                100,
+                120,
+                30,
+                1);
+
+            Assert.That(
+                renderer.color,
+                Is.Not.EqualTo(Color.white));
+        }
+        finally
+        {
+            Object.DestroyImmediate(
+                objeto);
+        }
+    }
+
+    [Test]
     public void BloqueoFinal_ControladorSeleccion_QuedaInactivoParaClicks()
     {
         var objeto =

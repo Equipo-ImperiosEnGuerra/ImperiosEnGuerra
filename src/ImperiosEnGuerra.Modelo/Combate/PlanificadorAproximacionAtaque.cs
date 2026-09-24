@@ -91,7 +91,21 @@ namespace ImperiosEnGuerra.Modelo.Combate
                 ObtenerBloqueos(
                     partida,
                     mapa,
-                    atacante);
+                    atacante,
+                    propietario);
+
+            List<Coordenada> ocupacionesAliadas =
+                propietario.Unidades
+                    .Where(
+                        u =>
+                            !ReferenceEquals(
+                                u,
+                                atacante))
+                    .Select(
+                        u => u.Coordenada)
+                    .Where(
+                        c => c != null)
+                    .ToList();
 
             var candidatas =
                 new List<(Coordenada Punto, IReadOnlyList<Coordenada> Pasos)>();
@@ -129,7 +143,8 @@ namespace ImperiosEnGuerra.Modelo.Combate
                             mapa,
                             atacante.Coordenada,
                             candidata,
-                            bloqueos);
+                            bloqueos,
+                            ocupacionesAliadas);
 
                     if (!ruta.Encontrada)
                         continue;
@@ -163,7 +178,8 @@ namespace ImperiosEnGuerra.Modelo.Combate
         private static List<Coordenada> ObtenerBloqueos(
             Partida partida,
             Mapa mapa,
-            Unidad atacante)
+            Unidad atacante,
+            Jugador propietario)
         {
             var bloqueos =
                 new List<Coordenada>();
@@ -172,12 +188,18 @@ namespace ImperiosEnGuerra.Modelo.Combate
                 partida.JugadorHumano,
                 mapa,
                 atacante,
+                ReferenceEquals(
+                    partida.JugadorHumano,
+                    propietario),
                 bloqueos);
 
             AgregarBloqueos(
                 partida.JugadorMaquina,
                 mapa,
                 atacante,
+                ReferenceEquals(
+                    partida.JugadorMaquina,
+                    propietario),
                 bloqueos);
 
             return bloqueos;
@@ -187,6 +209,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
             Jugador jugador,
             Mapa mapa,
             Unidad atacante,
+            bool esPropietario,
             List<Coordenada> bloqueos)
         {
             if (!ReferenceEquals(
@@ -196,14 +219,19 @@ namespace ImperiosEnGuerra.Modelo.Combate
                 return;
             }
 
-            foreach (Unidad unidad in jugador.Unidades)
+            // Los compañeros de equipo no cierran la ruta de aproximación.
+            // En cambio las unidades enemigas continúan siendo obstáculos.
+            if (!esPropietario)
             {
-                if (!ReferenceEquals(
-                        unidad,
-                        atacante))
+                foreach (Unidad unidad in jugador.Unidades)
                 {
-                    bloqueos.Add(
-                        unidad.Coordenada);
+                    if (!ReferenceEquals(
+                            unidad,
+                            atacante))
+                    {
+                        bloqueos.Add(
+                            unidad.Coordenada);
+                    }
                 }
             }
 
