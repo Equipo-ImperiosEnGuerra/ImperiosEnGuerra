@@ -240,11 +240,16 @@ public class NetworkingTests
 
         Assert.That(
             resultado.Resultado?.Mensaje,
-            Does.Contain("vida"));
+            Does.Contain("destruido"));
 
         Assert.That(
             entorno.GuerreroMaquina.VidaActual,
-            Is.EqualTo(90));
+            Is.EqualTo(0));
+
+        Assert.That(
+            entorno.Partida.JugadorMaquina.Unidades,
+            Does.Not.Contain(
+                entorno.GuerreroMaquina));
     }
 
     [TestCase("{esto-no-es-json")]
