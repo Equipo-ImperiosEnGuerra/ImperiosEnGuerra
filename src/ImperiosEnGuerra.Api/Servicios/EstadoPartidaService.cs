@@ -159,6 +159,48 @@ public sealed class EstadoPartidaService
         }
     }
 
+    public ResultadoAproximacionCuracion PrepararAproximacionCuracion(
+        CurarRequest? request)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+            {
+                return ResultadoAproximacionCuracion.Fallido(
+                    "No hay una partida activa.");
+            }
+
+            if (request == null)
+            {
+                return ResultadoAproximacionCuracion.Fallido(
+                    "La solicitud de curación es obligatoria.");
+            }
+
+            if (!Guid.TryParse(
+                    request.CuradorId,
+                    out Guid curadorId))
+            {
+                return ResultadoAproximacionCuracion.Fallido(
+                    "El ID del Monje debe tener formato Guid válido.");
+            }
+
+            if (!Guid.TryParse(
+                    request.ObjetivoId,
+                    out Guid objetivoId))
+            {
+                return ResultadoAproximacionCuracion.Fallido(
+                    "El ID del objetivo debe tener formato Guid válido.");
+            }
+
+            return new PlanificadorAproximacionCuracion()
+                .Preparar(
+                    partidaActiva,
+                    new SolicitudCuracion(
+                        curadorId,
+                        objetivoId));
+        }
+    }
+
     public bool IntentarIniciarOrdenUnidad(
         Guid unidadId,
         TipoAccionJuego tipo)
