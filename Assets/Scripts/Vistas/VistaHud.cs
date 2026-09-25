@@ -342,10 +342,20 @@ namespace ImperiosEnGuerra.Vistas
                 return;
             }
 
+            string nombre =
+                entidad.TipoLogico == "CentroUrbano"
+                    ? "Centro Urbano"
+                    : entidad.TipoLogico;
+
+            string bando =
+                entidad.Propietario == "Maquina"
+                    ? "Enemigo"
+                    : "Tu bando";
+
             string texto =
-                $"{entidad.TipoLogico}\n" +
-                $"Propietario: {entidad.Propietario}\n" +
-                $"Coordenada: ({entidad.X},{entidad.Y})";
+                $"{nombre}\n" +
+                $"Bando: {bando}\n" +
+                $"Posición: ({entidad.X},{entidad.Y})";
 
             if (entidad.VidaMaxima > 0)
             {
@@ -356,18 +366,22 @@ namespace ImperiosEnGuerra.Vistas
             if (entidad.Categoria == CategoriaEntidadVisual.Unidad)
             {
                 string estado =
-                    string.IsNullOrWhiteSpace(entidad.EstadoLogico)
-                        ? "Desconocido"
-                        : entidad.EstadoLogico;
+                    TraducirEstado(
+                        entidad.EstadoLogico);
 
                 string orden =
-                    string.IsNullOrWhiteSpace(entidad.OrdenActiva)
-                        ? "Ninguna"
-                        : entidad.OrdenActiva;
+                    TraducirOrden(
+                        entidad.OrdenActiva);
 
                 texto +=
-                    $"\nEstado: {estado}" +
-                    $"\nOrden: {orden}";
+                    $"\nEstado: {estado}";
+
+                if (!string.IsNullOrWhiteSpace(
+                        orden))
+                {
+                    texto +=
+                        $"\nOrden: {orden}";
+                }
 
                 if (entidad.Danio > 0)
                 {
@@ -377,10 +391,55 @@ namespace ImperiosEnGuerra.Vistas
                 }
             }
 
-            if (entidad.Propietario == "Maquina")
-                texto += " — Enemigo";
-
             seleccion.text = texto;
+        }
+
+        private static string TraducirEstado(
+            string estado)
+        {
+            switch (estado)
+            {
+                case "Idle":
+                    return "En espera";
+                case "Moviendo":
+                    return "En movimiento";
+                case "Recolectando":
+                    return "Recolectando";
+                case "Construyendo":
+                    return "Construyendo";
+                case "Atacando":
+                    return "En combate";
+                case "Curando":
+                    return "Curando";
+                default:
+                    return string.IsNullOrWhiteSpace(
+                            estado)
+                        ? "En espera"
+                        : estado;
+            }
+        }
+
+        private static string TraducirOrden(
+            string orden)
+        {
+            switch (orden)
+            {
+                case "Mover":
+                    return "Mover";
+                case "Recolectar":
+                    return "Recolectar";
+                case "Construir":
+                    return "Construir";
+                case "Atacar":
+                    return "Atacar";
+                case "Curar":
+                    return "Curar";
+                default:
+                    return string.IsNullOrWhiteSpace(
+                            orden)
+                        ? string.Empty
+                        : orden;
+            }
         }
 
         public void ConfigurarCostosEntrenamiento(
@@ -489,12 +548,6 @@ namespace ImperiosEnGuerra.Vistas
             MostrarSelectorEntrenamiento(
                 false);
 
-            string nombre =
-                string.IsNullOrWhiteSpace(
-                    ganadorNombre)
-                    ? ganador
-                    : ganadorNombre;
-
             bool victoriaHumana =
                 ganador == "Humano";
 
@@ -503,8 +556,32 @@ namespace ImperiosEnGuerra.Vistas
                     ? "VICTORIA"
                     : "DERROTA";
 
+            string detalle;
+
+            if (victoriaHumana)
+            {
+                detalle =
+                    "Has derrotado al ejército enemigo.\n" +
+                    "El rival ya no conserva Centros Urbanos ni unidades militares.";
+            }
+            else if (!string.IsNullOrWhiteSpace(
+                         ganador))
+            {
+                detalle =
+                    "Tu imperio ha caído.\n" +
+                    "Ya no conservas Centros Urbanos ni unidades militares.";
+            }
+            else
+            {
+                detalle =
+                    string.IsNullOrWhiteSpace(
+                        motivo)
+                        ? "La batalla ha terminado."
+                        : motivo;
+            }
+
             MostrarMensaje(
-                $"{titulo} — Ganador: {nombre}\n{motivo}",
+                detalle,
                 !victoriaHumana);
 
             CrearPantallaResultadoFinal();
@@ -515,7 +592,7 @@ namespace ImperiosEnGuerra.Vistas
             if (detalleResultadoFinal != null)
             {
                 detalleResultadoFinal.text =
-                    $"Ganador: {nombre}\n{motivo}";
+                    detalle;
             }
 
             if (pantallaResultadoFinal != null)
