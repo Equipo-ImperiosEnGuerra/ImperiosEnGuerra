@@ -428,6 +428,18 @@ public sealed class EstadoPartidaService
         }
     }
 
+
+    public IReadOnlyList<ReaccionAutomatica>
+        PrepararReaccionesAutomaticas()
+    {
+        lock (sincronizacion)
+        {
+            return new PlanificadorReaccionAutomatica()
+                .Preparar(
+                    partidaActiva);
+        }
+    }
+
     public ResultadoPasoRecoleccion RecolectarPaso(
         Guid aldeanoId,
         Coordenada objetivo,
