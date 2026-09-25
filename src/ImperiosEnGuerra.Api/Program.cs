@@ -21,6 +21,7 @@ builder.Services.AddSingleton<EstadoPartidaService>();
 builder.Services.AddSingleton<GestorProcesosConcurrentes>();
 builder.Services.AddSingleton<ServicioOrdenesUnidad>();
 builder.Services.AddSingleton<ServicioAccionesConcurrentes>();
+builder.Services.AddSingleton<ServicioReaccionesAutomaticas>();
 builder.Services.AddSingleton<ServicioJugadorMaquina>();
 builder.Services.AddSingleton<DespachadorMensajesRed>();
 builder.Services.AddSingleton<ServicioRedPartida>();
@@ -65,12 +66,14 @@ app.MapPost(
         IniciarPartidaRequest request,
         EstadoPartidaService estadoPartida,
         ServicioAccionesConcurrentes accionesConcurrentes,
+        ServicioReaccionesAutomaticas reaccionesAutomaticas,
         ServicioJugadorMaquina jugadorMaquina,
         ServicioArchivos servicioArchivos) =>
 {
     try
     {
         jugadorMaquina.Detener();
+        reaccionesAutomaticas.Detener();
         accionesConcurrentes.CancelarTodos();
 
         Mapa mapa = new Mapa(
@@ -109,6 +112,7 @@ app.MapPost(
             partida);
 
         estadoPartida.EstablecerPartida(partida);
+        reaccionesAutomaticas.Iniciar();
         jugadorMaquina.Iniciar();
 
         return Results.Ok(new
@@ -422,6 +426,24 @@ app.MapPost(
         });
 })
 .WithName("IniciarCuracionConcurrente");
+
+
+app.MapGet(
+    "/api/reacciones/estado",
+    (ServicioReaccionesAutomaticas reacciones) =>
+{
+    return Results.Ok(new
+    {
+        activo = reacciones.Activo,
+        unidadesAsignadas =
+            reacciones.UnidadesAsignadas,
+        radioDeteccionMilitar =
+            ImperiosEnGuerra.Modelo.Combate
+                .PlanificadorReaccionAutomatica
+                .RadioDeteccionMilitarPredeterminado
+    });
+})
+.WithName("ObtenerEstadoReaccionesAutomaticas");
 
 
 app.MapGet(
