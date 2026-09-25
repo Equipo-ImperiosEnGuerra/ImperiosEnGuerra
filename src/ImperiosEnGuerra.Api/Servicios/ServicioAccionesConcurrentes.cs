@@ -1171,6 +1171,121 @@ public sealed class ServicioAccionesConcurrentes
 
 
     // ============================================================
+    // CURACIÓN
+    // ============================================================
+
+    public ProcesoConcurrente IniciarCuracion(
+        CurarRequest? request)
+    {
+        CurarRequest? copia =
+            Copiar(request);
+
+        return gestorProcesos.Iniciar(
+            "CURAR",
+            token =>
+            {
+                if (!Guid.TryParse(
+                        copia?.CuradorId,
+                        out Guid curadorId))
+                {
+                    return ResultadoAccion.Fallido(
+                        "El ID del Monje debe tener formato Guid válido.");
+                }
+
+                if (!Guid.TryParse(
+                        copia?.ObjetivoId,
+                        out Guid objetivoId))
+                {
+                    return ResultadoAccion.Fallido(
+                        "El ID del objetivo debe tener formato Guid válido.");
+                }
+
+                Unidad? unidad =
+                    estadoPartida.ObtenerUnidad(
+                        curadorId);
+
+                if (unidad is not Monje)
+                {
+                    return ResultadoAccion.Fallido(
+                        "Solo un Monje puede ejecutar la acción Curar.");
+                }
+
+                if (!estadoPartida.UnidadNecesitaCuracion(
+                        objetivoId))
+                {
+                    return ResultadoAccion.Fallido(
+                        "La unidad aliada no necesita curación.");
+                }
+
+                bool ordenIniciada =
+                    estadoPartida.IntentarIniciarOrdenUnidad(
+                        curadorId,
+                        TipoAccionJuego.Curar);
+
+                if (!ordenIniciada)
+                {
+                    return ResultadoAccion.Fallido(
+                        "El Monje no está disponible.");
+                }
+
+                try
+                {
+                    TimeSpan esperaCuracion =
+                        usarIntervaloCombateConfigurado
+                            ? TimeSpan.FromSeconds(
+                                estadoPartida.ObtenerIntervaloCuracionSegundos(
+                                    curadorId))
+                            : retardoAtaque;
+
+                    ResultadoAccion ultimoPulso =
+                        ResultadoAccion.Exitoso(
+                            "Curación iniciada.");
+
+                    while (true)
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        if (estadoPartida.EstaFinalizada() ||
+                            !estadoPartida.ExisteEntidad(
+                                objetivoId) ||
+                            !estadoPartida.UnidadNecesitaCuracion(
+                                objetivoId))
+                        {
+                            return ultimoPulso;
+                        }
+
+                        EsperarAntesDeAplicar(
+                            token,
+                            esperaCuracion);
+
+                        token.ThrowIfCancellationRequested();
+
+                        ultimoPulso =
+                            estadoPartida.Curar(
+                                copia);
+
+                        if (!ultimoPulso.Exito)
+                        {
+                            return ultimoPulso;
+                        }
+
+                        if (!estadoPartida.UnidadNecesitaCuracion(
+                                objetivoId))
+                        {
+                            return ultimoPulso;
+                        }
+                    }
+                }
+                finally
+                {
+                    estadoPartida.CompletarOrdenUnidad(
+                        curadorId);
+                }
+            });
+    }
+
+
+    // ============================================================
     // CANCELACIÓN
     // ============================================================
 
@@ -1879,6 +1994,25 @@ public sealed class ServicioAccionesConcurrentes
         {
             AtacanteId =
                 request.AtacanteId,
+
+            ObjetivoId =
+                request.ObjetivoId
+        };
+    }
+
+
+    private static CurarRequest? Copiar(
+        CurarRequest? request)
+    {
+        if (request == null)
+        {
+            return null;
+        }
+
+        return new CurarRequest
+        {
+            CuradorId =
+                request.CuradorId,
 
             ObjetivoId =
                 request.ObjetivoId
