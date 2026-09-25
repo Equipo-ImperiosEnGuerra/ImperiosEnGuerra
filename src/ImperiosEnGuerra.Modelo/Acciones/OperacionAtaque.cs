@@ -196,8 +196,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
         private static bool EsUnidadMilitar(
             Unidad unidad)
         {
-            return unidad is Soldado ||
-                   unidad is Monje;
+            return unidad is Soldado;
         }
     }
 }
