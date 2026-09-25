@@ -192,6 +192,81 @@ public class CuracionTests
     }
 
     [Test]
+    public async Task CuracionConcurrente_FueraDeAlcance_MueveMonjeYLuegoCura()
+    {
+        var aliadoLejano =
+            new Guerrero(
+                new Coordenada(5, 1));
+
+        aliadoLejano.RecibirDanio(
+            30);
+
+        partida.JugadorHumano.AgregarUnidad(
+            aliadoLejano);
+
+        var estado =
+            new EstadoPartidaService();
+
+        estado.EstablecerPartida(
+            partida);
+
+        using var gestor =
+            new GestorProcesosConcurrentes();
+
+        var acciones =
+            new ServicioAccionesConcurrentes(
+                estado,
+                gestor,
+                TimeSpan.Zero);
+
+        var proceso =
+            acciones.IniciarCuracion(
+                new CurarRequest
+                {
+                    CuradorId =
+                        monje.Id.ToString("D"),
+                    ObjetivoId =
+                        aliadoLejano.Id.ToString("D")
+                });
+
+        await proceso.Finalizacion;
+
+        Assert.That(
+            acciones.IntentarObtenerResultado(
+                proceso.Id,
+                out ResultadoProcesoConcurrente resultado),
+            Is.True);
+
+        Assert.That(
+            resultado.Resultado?.Exito,
+            Is.True,
+            resultado.Resultado?.Mensaje);
+
+        int distancia =
+            Math.Max(
+                Math.Abs(
+                    monje.Coordenada.X -
+                    aliadoLejano.Coordenada.X),
+                Math.Abs(
+                    monje.Coordenada.Y -
+                    aliadoLejano.Coordenada.Y));
+
+        Assert.That(
+            distancia,
+            Is.LessThanOrEqualTo(
+                monje.AlcanceCuracion));
+
+        Assert.That(
+            aliadoLejano.VidaActual,
+            Is.EqualTo(
+                aliadoLejano.VidaMaxima));
+
+        Assert.That(
+            monje.OrdenActiva,
+            Is.Null);
+    }
+
+    [Test]
     public async Task CuracionConcurrente_RepiteHastaVidaCompleta()
     {
         aliado.RecibirDanio(30);
