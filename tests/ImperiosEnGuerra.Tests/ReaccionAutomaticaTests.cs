@@ -242,6 +242,105 @@ public class ReaccionAutomaticaTests
     }
 
     [Test]
+    public void AldeanoIdle_PreparaMovimientoLigero()
+    {
+        var aldeano =
+            new Aldeano(
+                new Coordenada(5, 5));
+
+        humano.AgregarUnidad(
+            aldeano);
+
+        var reacciones =
+            planificador.Preparar(
+                partida);
+
+        Assert.That(
+            reacciones.Count,
+            Is.EqualTo(1));
+
+        Assert.That(
+            reacciones[0].Tipo,
+            Is.EqualTo(
+                TipoReaccionAutomatica.MoverIdle));
+
+        Assert.That(
+            reacciones[0].UnidadId,
+            Is.EqualTo(
+                aldeano.Id));
+
+        Assert.That(
+            reacciones[0].Destino,
+            Is.Not.Null);
+
+        int distancia =
+            Math.Max(
+                Math.Abs(
+                    aldeano.Coordenada.X -
+                    reacciones[0].Destino.X),
+                Math.Abs(
+                    aldeano.Coordenada.Y -
+                    reacciones[0].Destino.Y));
+
+        Assert.That(
+            distancia,
+            Is.InRange(1, 2));
+    }
+
+    [Test]
+    public async Task OrdenManual_CancelaDeambulacionAutomatica()
+    {
+        var aldeano =
+            new Aldeano(
+                new Coordenada(5, 5));
+
+        humano.AgregarUnidad(
+            aldeano);
+
+        var estado =
+            new EstadoPartidaService();
+
+        estado.EstablecerPartida(
+            partida);
+
+        using var gestor =
+            new GestorProcesosConcurrentes();
+
+        var acciones =
+            new ServicioAccionesConcurrentes(
+                estado,
+                gestor,
+                TimeSpan.FromSeconds(2));
+
+        using var reacciones =
+            new ServicioReaccionesAutomaticas(
+                estado,
+                acciones,
+                TimeSpan.FromMilliseconds(20));
+
+        int iniciadas =
+            reacciones.EjecutarPaso();
+
+        Assert.That(
+            iniciadas,
+            Is.EqualTo(1));
+
+        reacciones.PrepararOrdenManual(
+            aldeano.Id);
+
+        Assert.That(
+            SpinWait.SpinUntil(
+                () =>
+                    !aldeano.OrdenActiva.HasValue,
+                TimeSpan.FromSeconds(1)),
+            Is.True);
+
+        Assert.That(
+            aldeano.Disponible,
+            Is.True);
+    }
+
+    [Test]
     public void UnidadSuspendida_NoReiniciaReaccionAutomatica()
     {
         var guerrero =
