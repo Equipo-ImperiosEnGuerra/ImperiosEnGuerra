@@ -1239,7 +1239,10 @@ public sealed class ServicioAccionesConcurrentes
                     estadoPartida.ObtenerUnidad(
                         curadorId);
 
-                if (unidad is not Monje)
+                Monje? monje =
+                    unidad as Monje;
+
+                if (monje == null)
                 {
                     return ResultadoAccion.Fallido(
                         "Solo un Monje puede ejecutar la acción Curar.");
@@ -1253,18 +1256,123 @@ public sealed class ServicioAccionesConcurrentes
                 }
 
                 bool ordenIniciada =
-                    estadoPartida.IntentarIniciarOrdenUnidad(
-                        curadorId,
-                        TipoAccionJuego.Curar);
-
-                if (!ordenIniciada)
-                {
-                    return ResultadoAccion.Fallido(
-                        "El Monje no está disponible.");
-                }
+                    false;
 
                 try
                 {
+                    const int maximoReplanes = 12;
+                    int replanteos = 0;
+
+                    while (true)
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        ResultadoAproximacionCuracion aproximacion =
+                            estadoPartida.PrepararAproximacionCuracion(
+                                copia);
+
+                        if (!aproximacion.Exito)
+                        {
+                            return ResultadoAccion.Fallido(
+                                aproximacion.Mensaje);
+                        }
+
+                        if (aproximacion.Pasos.Count == 0)
+                            break;
+
+                        if (!ordenIniciada)
+                        {
+                            if (!estadoPartida.IntentarIniciarOrdenUnidad(
+                                    curadorId,
+                                    TipoAccionJuego.Mover))
+                            {
+                                return ResultadoAccion.Fallido(
+                                    "El Monje no está disponible.");
+                            }
+
+                            ordenIniciada = true;
+                        }
+                        else if (!estadoPartida.IntentarReemplazarOrdenUnidad(
+                                     curadorId,
+                                     TipoAccionJuego.Mover))
+                        {
+                            return ResultadoAccion.Fallido(
+                                "No se pudo activar la aproximación de curación.");
+                        }
+
+                        TimeSpan retardoPaso =
+                            CalcularRetardoPasoMovimiento(
+                                retardoMovimiento,
+                                monje.VelocidadMovimiento);
+
+                        bool requiereReplan =
+                            false;
+
+                        foreach (Coordenada paso
+                                 in aproximacion.Pasos)
+                        {
+                            EsperarAntesDeAplicar(
+                                token,
+                                retardoPaso);
+
+                            token.ThrowIfCancellationRequested();
+
+                            ResultadoAccion movimiento =
+                                estadoPartida.AvanzarMovimiento(
+                                    curadorId,
+                                    paso);
+
+                            if (!movimiento.Exito)
+                            {
+                                requiereReplan =
+                                    true;
+
+                                break;
+                            }
+
+                            Console.WriteLine(
+                                $"CURACION_MOVIMIENTO: {curadorId} -> " +
+                                $"({paso.X},{paso.Y})");
+                        }
+
+                        if (requiereReplan)
+                        {
+                            replanteos++;
+
+                            if (replanteos >
+                                maximoReplanes)
+                            {
+                                return ResultadoAccion.Fallido(
+                                    "No se encontró una ruta libre hasta el aliado tras varios cambios del mapa.");
+                            }
+
+                            EsperarCesionPaso(
+                                curadorId,
+                                token,
+                                replanteos);
+                        }
+                    }
+
+                    if (!ordenIniciada)
+                    {
+                        if (!estadoPartida.IntentarIniciarOrdenUnidad(
+                                curadorId,
+                                TipoAccionJuego.Curar))
+                        {
+                            return ResultadoAccion.Fallido(
+                                "El Monje no está disponible.");
+                        }
+
+                        ordenIniciada = true;
+                    }
+                    else if (!estadoPartida.IntentarReemplazarOrdenUnidad(
+                                 curadorId,
+                                 TipoAccionJuego.Curar))
+                    {
+                        return ResultadoAccion.Fallido(
+                            "No se pudo cambiar de aproximación a curación.");
+                    }
+
                     TimeSpan esperaCuracion =
                         usarIntervaloCombateConfigurado
                             ? TimeSpan.FromSeconds(
@@ -1287,6 +1395,57 @@ public sealed class ServicioAccionesConcurrentes
                                 objetivoId))
                         {
                             return ultimoPulso;
+                        }
+
+                        ResultadoAproximacionCuracion alcanceActual =
+                            estadoPartida.PrepararAproximacionCuracion(
+                                copia);
+
+                        if (!alcanceActual.Exito)
+                        {
+                            return ResultadoAccion.Fallido(
+                                alcanceActual.Mensaje);
+                        }
+
+                        if (alcanceActual.Pasos.Count > 0)
+                        {
+                            if (!estadoPartida.IntentarReemplazarOrdenUnidad(
+                                    curadorId,
+                                    TipoAccionJuego.Mover))
+                            {
+                                return ResultadoAccion.Fallido(
+                                    "No se pudo volver a aproximar al aliado.");
+                            }
+
+                            foreach (Coordenada paso
+                                     in alcanceActual.Pasos)
+                            {
+                                EsperarAntesDeAplicar(
+                                    token,
+                                    CalcularRetardoPasoMovimiento(
+                                        retardoMovimiento,
+                                        monje.VelocidadMovimiento));
+
+                                token.ThrowIfCancellationRequested();
+
+                                ResultadoAccion movimiento =
+                                    estadoPartida.AvanzarMovimiento(
+                                        curadorId,
+                                        paso);
+
+                                if (!movimiento.Exito)
+                                    break;
+                            }
+
+                            if (!estadoPartida.IntentarReemplazarOrdenUnidad(
+                                    curadorId,
+                                    TipoAccionJuego.Curar))
+                            {
+                                return ResultadoAccion.Fallido(
+                                    "No se pudo reanudar la curación.");
+                            }
+
+                            continue;
                         }
 
                         EsperarAntesDeAplicar(
@@ -1313,8 +1472,11 @@ public sealed class ServicioAccionesConcurrentes
                 }
                 finally
                 {
-                    estadoPartida.CompletarOrdenUnidad(
-                        curadorId);
+                    if (ordenIniciada)
+                    {
+                        estadoPartida.CompletarOrdenUnidad(
+                            curadorId);
+                    }
                 }
             });
 
