@@ -1308,12 +1308,21 @@ public sealed class ServicioAccionesConcurrentes
                         bool requiereReplan =
                             false;
 
+                        bool primerPasoCuracion =
+                            true;
+
                         foreach (Coordenada paso
                                  in aproximacion.Pasos)
                         {
-                            EsperarAntesDeAplicar(
-                                token,
-                                retardoPaso);
+                            if (!primerPasoCuracion)
+                            {
+                                EsperarAntesDeAplicar(
+                                    token,
+                                    retardoPaso);
+                            }
+
+                            primerPasoCuracion =
+                                false;
 
                             token.ThrowIfCancellationRequested();
 
@@ -1384,6 +1393,9 @@ public sealed class ServicioAccionesConcurrentes
                         ResultadoAccion.Exitoso(
                             "Curación iniciada.");
 
+                    bool primerPulso =
+                        true;
+
                     while (true)
                     {
                         token.ThrowIfCancellationRequested();
@@ -1448,9 +1460,15 @@ public sealed class ServicioAccionesConcurrentes
                             continue;
                         }
 
-                        EsperarAntesDeAplicar(
-                            token,
-                            esperaCuracion);
+                        if (!primerPulso)
+                        {
+                            EsperarAntesDeAplicar(
+                                token,
+                                esperaCuracion);
+                        }
+
+                        primerPulso =
+                            false;
 
                         token.ThrowIfCancellationRequested();
 
