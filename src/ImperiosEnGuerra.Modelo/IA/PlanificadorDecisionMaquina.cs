@@ -151,10 +151,19 @@ namespace ImperiosEnGuerra.Modelo.IA
             if (combate.Tipo != TipoDecisionMaquina.Ninguna)
                 return combate;
 
+            DecisionMaquina patrulla =
+                PrepararPatrulla(
+                    partida,
+                    maquina,
+                    excluidas);
+
             if (disponibles.Length == 0)
             {
-                return DecisionMaquina.SinAccion(
-                    "No hay Aldeanos de la Máquina disponibles.");
+                return patrulla.Tipo !=
+                       TipoDecisionMaquina.Ninguna
+                    ? patrulla
+                    : DecisionMaquina.SinAccion(
+                        "No hay unidades disponibles para una nueva decisión.");
             }
 
             Recurso[] recursos =
@@ -171,8 +180,11 @@ namespace ImperiosEnGuerra.Modelo.IA
 
             if (recursos.Length == 0)
             {
-                return DecisionMaquina.SinAccion(
-                    "No hay recursos físicos disponibles.");
+                return patrulla.Tipo !=
+                       TipoDecisionMaquina.Ninguna
+                    ? patrulla
+                    : DecisionMaquina.SinAccion(
+                        "No hay recursos físicos disponibles.");
             }
 
             Aldeano mejorAldeano = null;
@@ -209,6 +221,125 @@ namespace ImperiosEnGuerra.Modelo.IA
                 : DecisionMaquina.Recolectar(
                     mejorAldeano.Id,
                     mejorRecurso.Coordenada);
+        }
+
+        private static DecisionMaquina PrepararPatrulla(
+            Partida partida,
+            Jugador maquina,
+            HashSet<Guid> excluidas)
+        {
+            Unidad[] patrulleros =
+                maquina.Unidades
+                    .Where(
+                        u =>
+                            (u is Soldado || u is Monje) &&
+                            u.Disponible &&
+                            !excluidas.Contains(
+                                u.Id))
+                    .OrderBy(
+                        u => u.Coordenada.X)
+                    .ThenBy(
+                        u => u.Coordenada.Y)
+                    .ThenBy(
+                        u => u.Id)
+                    .ToArray();
+
+            foreach (Unidad patrullero
+                     in patrulleros)
+            {
+                Coordenada destino =
+                    BuscarCasillaPatrulla(
+                        partida,
+                        maquina,
+                        patrullero);
+
+                if (destino != null)
+                {
+                    return DecisionMaquina.Patrullar(
+                        patrullero.Id,
+                        destino);
+                }
+            }
+
+            return DecisionMaquina.SinAccion(
+                "No hay una casilla libre para patrullar.");
+        }
+
+        private static Coordenada BuscarCasillaPatrulla(
+            Partida partida,
+            Jugador maquina,
+            Unidad unidad)
+        {
+            Mapa mapa =
+                maquina.Mapa;
+
+            (int X, int Y)[] desplazamientos =
+            {
+                (2, 0),
+                (1, 1),
+                (0, 2),
+                (-1, 1),
+                (-2, 0),
+                (-1, -1),
+                (0, -2),
+                (1, -1),
+                (1, 0),
+                (0, 1),
+                (-1, 0),
+                (0, -1)
+            };
+
+            int inicio =
+                Math.Abs(
+                    unidad.Coordenada.X * 3 +
+                    unidad.Coordenada.Y * 5)
+                % desplazamientos.Length;
+
+            for (int i = 0;
+                 i < desplazamientos.Length;
+                 i++)
+            {
+                (int X, int Y) desplazamiento =
+                    desplazamientos[
+                        (inicio + i) %
+                        desplazamientos.Length];
+
+                Coordenada candidata =
+                    new Coordenada(
+                        unidad.Coordenada.X +
+                            desplazamiento.X,
+                        unidad.Coordenada.Y +
+                            desplazamiento.Y);
+
+                Casilla casilla =
+                    mapa.ObtenerCasilla(
+                        candidata.X,
+                        candidata.Y);
+
+                if (casilla == null ||
+                    !casilla.EsTransitable ||
+                    !mapa.PuedeColocar(
+                        candidata))
+                {
+                    continue;
+                }
+
+                if (HayEntidadEn(
+                        partida.JugadorHumano,
+                        mapa,
+                        candidata) ||
+                    HayEntidadEn(
+                        maquina,
+                        mapa,
+                        candidata))
+                {
+                    continue;
+                }
+
+                return candidata;
+            }
+
+            return null;
         }
 
         private static DecisionMaquina PrepararCombate(
