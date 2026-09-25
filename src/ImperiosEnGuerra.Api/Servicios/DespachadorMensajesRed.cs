@@ -115,6 +115,13 @@ public sealed class DespachadorMensajesRed
                             mensaje.Datos),
                         acciones.IniciarAtaque),
 
+                "CURAR" =>
+                    Iniciar(
+                        mensaje,
+                        Deserializar<CurarRequest>(
+                            mensaje.Datos),
+                        acciones.IniciarCuracion),
+
                 _ =>
                     ResultadoDespachoRed.Rechazado(
                         tipo,
