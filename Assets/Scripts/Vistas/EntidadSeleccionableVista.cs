@@ -180,11 +180,11 @@ namespace ImperiosEnGuerra.Vistas
                 objeto.transform.localPosition =
                     new Vector3(
                         0f,
-                        0.95f,
+                        1.55f,
                         -0.1f);
 
                 objeto.transform.localScale =
-                    Vector3.one * 0.12f;
+                    Vector3.one;
 
                 indicadorEntrenamiento =
                     objeto.AddComponent<TextMesh>();
