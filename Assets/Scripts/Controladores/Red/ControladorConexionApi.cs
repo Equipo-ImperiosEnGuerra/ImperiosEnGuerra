@@ -35,6 +35,7 @@ namespace ImperiosEnGuerra.Controladores.Red
     public bool ConstruccionEnCurso { get; private set; }
     public bool EntrenamientoEnCurso { get; private set; }
     public bool AtaqueEnCurso { get; private set; }
+    public bool CuracionEnCurso { get; private set; }
     public bool PartidaFinalizada { get; private set; }
     public bool ApiDisponible { get; private set; }
 
@@ -61,13 +62,15 @@ namespace ImperiosEnGuerra.Controladores.Red
     private int construccionesActivas;
     private int entrenamientosActivos;
     private int ataquesActivos;
+    private int curacionesActivas;
 
 public bool AccionEnCurso =>
     MovimientoEnCurso ||
     RecoleccionEnCurso ||
     ConstruccionEnCurso ||
     EntrenamientoEnCurso ||
-    AtaqueEnCurso;
+    AtaqueEnCurso ||
+    CuracionEnCurso;
 
 public bool PuedeIniciarMovimiento =>
     isActiveAndEnabled &&
@@ -90,6 +93,11 @@ public bool PuedeIniciarEntrenamiento =>
     !PartidaFinalizada;
 
 public bool PuedeIniciarAtaque =>
+    isActiveAndEnabled &&
+    ApiDisponible &&
+    !PartidaFinalizada;
+
+public bool PuedeIniciarCuracion =>
     isActiveAndEnabled &&
     ApiDisponible &&
     !PartidaFinalizada;
@@ -199,6 +207,26 @@ public bool PuedeIniciarAtaque =>
                     }));
         }
 
+        public void Curar(
+            string curadorId,
+            string objetivoId)
+        {
+            if (!PuedeIniciarCuracion)
+            {
+                MostrarError(
+                    MensajeAccionNoDisponible);
+                return;
+            }
+
+            StartCoroutine(
+                EnviarCuracion(
+                    new CuracionDto
+                    {
+                        curadorId = curadorId,
+                        objetivoId = objetivoId
+                    }));
+        }
+
         public void PrepararRegresoAlMenu()
         {
             // El menú puede mostrarse sin recargar la escena. Así Play Mode
@@ -215,12 +243,14 @@ public bool PuedeIniciarAtaque =>
             construccionesActivas = 0;
             entrenamientosActivos = 0;
             ataquesActivos = 0;
+            curacionesActivas = 0;
 
             MovimientoEnCurso = false;
             RecoleccionEnCurso = false;
             ConstruccionEnCurso = false;
             EntrenamientoEnCurso = false;
             AtaqueEnCurso = false;
+            CuracionEnCurso = false;
 
             PartidaFinalizada = false;
             ApiDisponible = false;
@@ -239,12 +269,14 @@ public bool PuedeIniciarAtaque =>
             construccionesActivas = 0;
             entrenamientosActivos = 0;
             ataquesActivos = 0;
+            curacionesActivas = 0;
 
             MovimientoEnCurso = false;
             RecoleccionEnCurso = false;
             ConstruccionEnCurso = false;
             EntrenamientoEnCurso = false;
             AtaqueEnCurso = false;
+            CuracionEnCurso = false;
             ApiDisponible = false;
         }
 
@@ -1403,6 +1435,201 @@ public bool PuedeIniciarAtaque =>
                         ? "Ataque realizado."
                         : resultado.mensaje,
                     "Ataque completado, pero no se pudo actualizar la vista. ",
+                    false);
+
+                yield break;
+            }
+        }
+
+        private IEnumerator EnviarCuracion(
+            CuracionDto curacion)
+        {
+            curacionesActivas++;
+            CuracionEnCurso = curacionesActivas > 0;
+
+            try
+            {
+                using var request =
+                    new UnityWebRequest(
+                        $"{urlBaseApi}/api/partida/curar-concurrente",
+                        UnityWebRequest.kHttpVerbPOST);
+
+                request.uploadHandler =
+                    new UploadHandlerRaw(
+                        Encoding.UTF8.GetBytes(
+                            JsonUtility.ToJson(curacion)));
+
+                request.downloadHandler =
+                    new DownloadHandlerBuffer();
+
+                request.SetRequestHeader(
+                    "Content-Type",
+                    "application/json");
+
+                request.timeout = 15;
+
+                yield return request.SendWebRequest();
+
+                if (request.result !=
+                    UnityWebRequest.Result.Success)
+                {
+                    MostrarError(
+                        $"No se pudo iniciar la curación concurrente. HTTP {request.responseCode}: {request.error}");
+
+                    yield break;
+                }
+
+                ProcesoIniciadoDto proceso =
+                    LeerProcesoIniciado(
+                        request.downloadHandler.text);
+
+                if (proceso == null ||
+                    string.IsNullOrWhiteSpace(
+                        proceso.procesoId))
+                {
+                    MostrarError(
+                        "La API no devolvió un identificador válido para la curación concurrente.");
+
+                    yield break;
+                }
+
+                yield return EsperarResultadoCuracion(
+                    proceso.procesoId);
+            }
+            finally
+            {
+                curacionesActivas =
+                    Mathf.Max(0, curacionesActivas - 1);
+
+                CuracionEnCurso =
+                    curacionesActivas > 0;
+            }
+        }
+
+        private IEnumerator EsperarResultadoCuracion(
+            string procesoId)
+        {
+            const float intervaloConsulta = 0.1f;
+            const int consultasPorSincronizacion = 5;
+            int consultasPendientes = 0;
+
+            while (isActiveAndEnabled)
+            {
+                using UnityWebRequest request =
+                    UnityWebRequest.Get(
+                        $"{urlBaseApi}/api/procesos/{procesoId}/resultado");
+
+                request.timeout = 5;
+
+                yield return request.SendWebRequest();
+
+                if (request.result !=
+                    UnityWebRequest.Result.Success)
+                {
+                    Debug.LogWarning(
+                        $"Consulta temporal de curación fallida. Se reintentará: " +
+                        $"HTTP {request.responseCode}: {request.error}",
+                        this);
+
+                    yield return new WaitForSecondsRealtime(
+                        0.5f);
+
+                    continue;
+                }
+
+                if (request.responseCode == 204 ||
+                    string.IsNullOrWhiteSpace(
+                        request.downloadHandler.text))
+                {
+                    consultasPendientes++;
+
+                    if (consultasPendientes >=
+                        consultasPorSincronizacion)
+                    {
+                        consultasPendientes = 0;
+
+                        yield return ObtenerPartidaActiva(
+                            "",
+                            "",
+                            false);
+                    }
+
+                    yield return new WaitForSecondsRealtime(
+                        intervaloConsulta);
+
+                    continue;
+                }
+
+                ResultadoProcesoDto resultado =
+                    LeerResultadoProceso(
+                        request.downloadHandler.text);
+
+                if (resultado == null)
+                {
+                    MostrarError(
+                        "La API devolvió un resultado concurrente inválido para la curación.");
+
+                    yield return SincronizarEstadoDespuesDeProceso();
+                    yield break;
+                }
+
+                if (resultado.procesoId != procesoId)
+                {
+                    MostrarError(
+                        "Se recibió el resultado de un proceso distinto a la curación esperada.");
+
+                    yield return SincronizarEstadoDespuesDeProceso();
+                    yield break;
+                }
+
+                if (resultado.estado == "Cancelado")
+                {
+                    Debug.Log(
+                        "Curación cancelada.");
+
+                    yield return SincronizarEstadoDespuesDeProceso();
+                    yield break;
+                }
+
+                if (resultado.estado == "Fallido")
+                {
+                    MostrarError(
+                        string.IsNullOrWhiteSpace(
+                            resultado.errorTecnico)
+                            ? "El worker de curación finalizó con error."
+                            : resultado.errorTecnico);
+
+                    yield return SincronizarEstadoDespuesDeProceso();
+                    yield break;
+                }
+
+                if (resultado.estado != "Completado")
+                {
+                    MostrarError(
+                        $"Estado concurrente de curación no reconocido: {resultado.estado}");
+
+                    yield return SincronizarEstadoDespuesDeProceso();
+                    yield break;
+                }
+
+                if (!resultado.exito)
+                {
+                    MostrarError(
+                        string.IsNullOrWhiteSpace(
+                            resultado.mensaje)
+                            ? "La curación fue rechazada por el Modelo."
+                            : resultado.mensaje);
+
+                    yield return SincronizarEstadoDespuesDeProceso();
+                    yield break;
+                }
+
+                yield return ObtenerPartidaActiva(
+                    string.IsNullOrWhiteSpace(
+                        resultado.mensaje)
+                        ? "Curación realizada."
+                        : resultado.mensaje,
+                    "Curación completada, pero no se pudo actualizar la vista. ",
                     false);
 
                 yield break;
