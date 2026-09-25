@@ -87,6 +87,24 @@ namespace ImperiosEnGuerra.Modelo.Unidades
             }
         }
 
+        public int RecuperarVida(
+            int cantidad)
+        {
+            if (cantidad < 0)
+                throw new ArgumentOutOfRangeException(
+                    nameof(cantidad));
+
+            lock (sincronizacionVida)
+            {
+                vidaActual =
+                    Math.Min(
+                        VidaMaxima,
+                        vidaActual + cantidad);
+
+                return vidaActual;
+            }
+        }
+
         public bool IntentarIniciarOrden(TipoAccionJuego tipo)
         {
             if (OrdenActiva.HasValue)
@@ -152,6 +170,8 @@ namespace ImperiosEnGuerra.Modelo.Unidades
                     return EstadoUnidad.Construyendo;
                 case TipoAccionJuego.Atacar:
                     return EstadoUnidad.Atacando;
+                case TipoAccionJuego.Curar:
+                    return EstadoUnidad.Curando;
                 default:
                     return null;
             }
