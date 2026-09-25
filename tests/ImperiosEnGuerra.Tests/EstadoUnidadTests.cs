@@ -20,6 +20,7 @@ namespace ImperiosEnGuerra.Tests.Editor
         [TestCase(TipoAccionJuego.Mover, EstadoUnidad.Moviendo)]
         [TestCase(TipoAccionJuego.Recolectar, EstadoUnidad.Recolectando)]
         [TestCase(TipoAccionJuego.Construir, EstadoUnidad.Construyendo)]
+        [TestCase(TipoAccionJuego.Curar, EstadoUnidad.Curando)]
         public void OrdenValida_CambiaEstado(
             TipoAccionJuego orden,
             EstadoUnidad estadoEsperado)
