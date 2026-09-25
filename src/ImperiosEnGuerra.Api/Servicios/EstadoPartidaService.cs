@@ -1575,6 +1575,46 @@ public sealed class EstadoPartidaService
         }
     }
 
+    public ResultadoAccion Curar(CurarRequest? request)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+                return RegistrarResultado(
+                    "CURAR",
+                    ResultadoAccion.Fallido("No hay una partida activa."));
+
+            if (partidaActiva.Finalizada)
+                return RegistrarResultado(
+                    "CURAR",
+                    ResultadoAccion.Fallido("La partida ya finalizó."));
+
+            if (request == null)
+                return RegistrarResultado(
+                    "CURAR",
+                    ResultadoAccion.Fallido("La solicitud de curación es obligatoria."));
+
+            if (!Guid.TryParse(request.CuradorId, out Guid curadorId))
+                return RegistrarResultado(
+                    "CURAR",
+                    ResultadoAccion.Fallido("El ID del Monje debe tener formato Guid válido."));
+
+            if (!Guid.TryParse(request.ObjetivoId, out Guid objetivoId))
+                return RegistrarResultado(
+                    "CURAR",
+                    ResultadoAccion.Fallido("El ID del objetivo debe tener formato Guid válido."));
+
+            return RegistrarResultado(
+                "CURAR",
+                new OperacionCuracion()
+                    .Ejecutar(
+                        partidaActiva,
+                        new SolicitudCuracion(
+                            curadorId,
+                            objetivoId)));
+        }
+    }
+
     public EstadoPartidaResponse? ObtenerEstado()
     {
         lock (sincronizacion)
@@ -1694,6 +1734,61 @@ public sealed class EstadoPartidaService
                 ? 4d
                 : unidad.IntervaloAtaqueSegundos;
         }
+    }
+
+    public double ObtenerIntervaloCuracionSegundos(
+        Guid unidadId)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+                return 5d;
+
+            Jugador propietario =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    unidadId);
+
+            Monje monje =
+                propietario?.Unidades
+                    .OfType<Monje>()
+                    .FirstOrDefault(
+                        u => u.Id == unidadId);
+
+            return monje == null ||
+                   monje.IntervaloCuracionSegundos <= 0d
+                ? 5d
+                : monje.IntervaloCuracionSegundos;
+        }
+    }
+
+    public bool UnidadNecesitaCuracion(
+        Guid unidadId)
+    {
+        lock (sincronizacion)
+        {
+            Unidad unidad =
+                ObtenerUnidadSinBloqueo(
+                    unidadId);
+
+            return unidad != null &&
+                   !unidad.Destruida &&
+                   unidad.VidaActual < unidad.VidaMaxima;
+        }
+    }
+
+    private Unidad? ObtenerUnidadSinBloqueo(
+        Guid id)
+    {
+        if (partidaActiva == null)
+            return null;
+
+        Jugador? propietario =
+            partidaActiva.BuscarJugadorPorUnidad(
+                id);
+
+        return propietario?.Unidades
+            .FirstOrDefault(
+                u => u.Id == id);
     }
 
     private void RegistrarFinalizacionSeguro()
