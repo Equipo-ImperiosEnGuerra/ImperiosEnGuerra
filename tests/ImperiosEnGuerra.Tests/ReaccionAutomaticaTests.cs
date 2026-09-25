@@ -288,6 +288,32 @@ public class ReaccionAutomaticaTests
     }
 
     [Test]
+    public void AldeanoConOrdenReal_NoRecibeMovimientoIdle()
+    {
+        var aldeano =
+            new Aldeano(
+                new Coordenada(5, 5));
+
+        humano.AgregarUnidad(
+            aldeano);
+
+        Assert.That(
+            aldeano.IntentarIniciarOrden(
+                TipoAccionJuego.Recolectar),
+            Is.True);
+
+        var reacciones =
+            planificador.Preparar(
+                partida);
+
+        Assert.That(
+            reacciones,
+            Is.Empty);
+
+        aldeano.CompletarOrden();
+    }
+
+    [Test]
     public async Task OrdenManual_CancelaDeambulacionAutomatica()
     {
         var aldeano =
@@ -324,6 +350,16 @@ public class ReaccionAutomaticaTests
         Assert.That(
             iniciadas,
             Is.EqualTo(1));
+
+        Assert.That(
+            aldeano.OrdenActiva,
+            Is.Null,
+            "La deambulación idle no debe mostrarse como una orden activa.");
+
+        Assert.That(
+            aldeano.Disponible,
+            Is.True,
+            "El paseo idle no debe bloquear Recolectar, Construir o Mover.");
 
         reacciones.PrepararOrdenManual(
             aldeano.Id);
