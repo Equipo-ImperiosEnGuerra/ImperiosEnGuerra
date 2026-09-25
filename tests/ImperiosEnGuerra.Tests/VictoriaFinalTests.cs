@@ -82,7 +82,13 @@ public class VictoriaFinalTests
 
         Assert.That(partida.Finalizada, Is.True);
         Assert.That(partida.Ganador, Is.SameAs(partida.JugadorHumano));
-        Assert.That(partida.MotivoFinalizacion, Does.Contain("Regla AND"));
+        Assert.That(
+            partida.MotivoFinalizacion,
+            Does.Not.Contain("AND"));
+
+        Assert.That(
+            partida.MotivoFinalizacion,
+            Does.Contain("Centros Urbanos"));
     }
 
     [Test]
