@@ -399,13 +399,28 @@ namespace ImperiosEnGuerra.Vistas
         }
 
         public void MostrarOpciones(bool puedeMover, bool puedeRecolectar, bool puedeConstruir,
-            bool puedeEntrenar, bool puedeAtacar)
+            bool puedeEntrenar, bool puedeAtacar, bool mostrarComoCurar = false)
         {
             if (mover != null) mover.gameObject.SetActive(puedeMover);
             if (recolectar != null) recolectar.gameObject.SetActive(puedeRecolectar);
             if (construir != null) construir.gameObject.SetActive(puedeConstruir);
             if (entrenar != null) entrenar.gameObject.SetActive(puedeEntrenar);
-            if (atacar != null) atacar.gameObject.SetActive(puedeAtacar);
+            if (atacar != null)
+            {
+                atacar.gameObject.SetActive(puedeAtacar);
+
+                Text etiqueta =
+                    atacar.GetComponentInChildren<Text>(
+                        true);
+
+                if (etiqueta != null)
+                {
+                    etiqueta.text =
+                        mostrarComoCurar
+                            ? "Curar"
+                            : "Atacar";
+                }
+            }
         }
 
         public void MostrarResultadoFinal(
