@@ -61,7 +61,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
             {
                 partida.IntentarFinalizar(
                     ganador,
-                    "Regla AND cumplida: el jugador perdió todos sus Centros Urbanos y todas sus unidades militares.");
+                    "El bando derrotado se quedó sin Centros Urbanos y sin unidades militares.");
             }
 
             return evaluacion;
