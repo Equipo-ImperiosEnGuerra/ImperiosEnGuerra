@@ -266,6 +266,11 @@ namespace ImperiosEnGuerra.Vistas
                         edificio.vidaActual,
                         edificio.vidaMaxima);
 
+                    ActualizarIndicadorEntrenamiento(
+                        existente,
+                        edificio.colaEntrenamiento,
+                        humano);
+
                     continue;
                 }
 
@@ -292,7 +297,41 @@ namespace ImperiosEnGuerra.Vistas
                     "",
                     edificio.vidaActual,
                     edificio.vidaMaxima);
+
+                ActualizarIndicadorEntrenamiento(
+                    objeto == null
+                        ? null
+                        : objeto.GetComponent<EntidadSeleccionableVista>(),
+                    edificio.colaEntrenamiento,
+                    humano);
             }
+        }
+
+        private static void ActualizarIndicadorEntrenamiento(
+            EntidadSeleccionableVista entidad,
+            EntrenamientoEstadoDto[] cola,
+            bool mostrar)
+        {
+            if (entidad == null)
+                return;
+
+            EntrenamientoEstadoDto actual =
+                cola != null &&
+                cola.Length > 0
+                    ? cola[0]
+                    : null;
+
+            entidad.ActualizarEntrenamientoVisual(
+                actual == null
+                    ? string.Empty
+                    : actual.tipoUnidad,
+                actual == null
+                    ? 0
+                    : actual.progreso,
+                cola == null
+                    ? 0
+                    : cola.Length,
+                mostrar);
         }
 
         private void SincronizarObras(
@@ -736,6 +775,13 @@ namespace ImperiosEnGuerra.Vistas
                         "",
                         edificio.vidaActual,
                         edificio.vidaMaxima);
+
+                    ActualizarIndicadorEntrenamiento(
+                        objeto == null
+                            ? null
+                            : objeto.GetComponent<EntidadSeleccionableVista>(),
+                        edificio.colaEntrenamiento,
+                        humano);
                 }
             }
 
