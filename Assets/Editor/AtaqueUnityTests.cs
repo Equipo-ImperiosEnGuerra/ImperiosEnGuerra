@@ -122,7 +122,7 @@ public class AtaqueUnityTests
         Assert.That(
             mensaje.text,
             Is.EqualTo(
-                "Selecciona una unidad enemiga como objetivo."));
+                "Selecciona una unidad o edificio enemigo como objetivo."));
     }
 
     [Test]
