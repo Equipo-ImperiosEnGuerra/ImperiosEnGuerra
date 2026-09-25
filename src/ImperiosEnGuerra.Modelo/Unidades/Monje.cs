@@ -15,7 +15,7 @@ namespace ImperiosEnGuerra.Modelo.Unidades
         /// Inicializa el Monje en la coordenada indicada.
         /// </summary>
         public Monje(Coordenada coordenada)
-            : base(coordenada, 0.80d)
+            : base(coordenada, 1.20d)
         {
         }
     }
