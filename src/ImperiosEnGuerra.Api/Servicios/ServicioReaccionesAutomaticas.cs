@@ -290,7 +290,7 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
                      TipoReaccionAutomatica.MoverIdle)
             {
                 proceso =
-                    acciones.IniciarMovimiento(
+                    acciones.IniciarMovimientoIdle(
                         new MoverUnidadRequest
                         {
                             UnidadId =
