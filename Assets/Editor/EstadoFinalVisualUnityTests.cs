@@ -1,5 +1,7 @@
 #if UNITY_EDITOR
+using System.Reflection;
 using ImperiosEnGuerra.Controladores;
+using ImperiosEnGuerra.Controladores.Red;
 using ImperiosEnGuerra.Vistas;
 using NUnit.Framework;
 using UnityEngine;
@@ -142,6 +144,45 @@ public class EstadoFinalVisualUnityTests
             Object.DestroyImmediate(
                 objeto);
         }
+    }
+
+    [Test]
+    public void ErrorTecnico_SeTraduceAntesDeLlegarAlJugador()
+    {
+        MethodInfo metodo =
+            typeof(ControladorConexionApi)
+                .GetMethod(
+                    "TraducirMensajeParaJugador",
+                    BindingFlags.Static |
+                    BindingFlags.NonPublic);
+
+        Assert.That(
+            metodo,
+            Is.Not.Null);
+
+        string mensaje =
+            (string)metodo.Invoke(
+                null,
+                new object[]
+                {
+                    "El worker concurrente falló con HTTP 500."
+                });
+
+        Assert.That(
+            mensaje,
+            Does.Not.Contain("worker"));
+
+        Assert.That(
+            mensaje,
+            Does.Not.Contain("HTTP"));
+
+        Assert.That(
+            mensaje,
+            Does.Not.Contain("concurrente"));
+
+        Assert.That(
+            mensaje,
+            Does.Contain("Inténtalo de nuevo"));
     }
 
     [Test]
