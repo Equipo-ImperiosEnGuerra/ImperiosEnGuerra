@@ -249,6 +249,16 @@ public class ReaccionAutomaticaTests
         Assert.That(
             iniciadas,
             Is.Zero);
+
+        reacciones.ReanudarUnidad(
+            guerrero.Id);
+
+        int reanudadas =
+            reacciones.EjecutarPaso();
+
+        Assert.That(
+            reanudadas,
+            Is.EqualTo(1));
     }
 
     [Test]
