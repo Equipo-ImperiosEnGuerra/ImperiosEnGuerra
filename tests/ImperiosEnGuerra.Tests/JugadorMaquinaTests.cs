@@ -496,13 +496,99 @@ public class JugadorMaquinaTests
 
         Assert.That(
             decision.Tipo,
-            Is.Not.EqualTo(
-                TipoDecisionMaquina.Mover));
+            Is.EqualTo(
+                TipoDecisionMaquina.Patrullar));
 
         Assert.That(
-            decision.Tipo,
-            Is.Not.EqualTo(
-                TipoDecisionMaquina.Atacar));
+            decision.Objetivo,
+            Is.Not.Null);
+
+        Assert.That(
+            decision.ObjetivoUnidadId,
+            Is.EqualTo(
+                Guid.Empty));
+    }
+
+    [Test]
+    public async Task EjecutarPaso_Patrulla_MueveMilitarSinObjetivoDeCombate()
+    {
+        var mapa =
+            new Mapa(10, 10);
+
+        var humano =
+            new Jugador(
+                "Humano",
+                TipoJugador.Humano,
+                mapa,
+                new RecursosJugador());
+
+        var maquina =
+            new Jugador(
+                "CPU",
+                TipoJugador.Maquina,
+                mapa,
+                new RecursosJugador());
+
+        var patrullero =
+            new Guerrero(
+                new Coordenada(3, 3));
+
+        maquina.AgregarUnidad(
+            patrullero);
+
+        humano.AgregarUnidad(
+            new Aldeano(
+                new Coordenada(8, 8)));
+
+        Partida partida =
+            new Partida(
+                humano,
+                maquina);
+
+        var estado =
+            new EstadoPartidaService();
+
+        estado.EstablecerPartida(
+            partida);
+
+        using var gestor =
+            new GestorProcesosConcurrentes();
+
+        var acciones =
+            new ServicioAccionesConcurrentes(
+                estado,
+                gestor,
+                TimeSpan.Zero);
+
+        using var ia =
+            new ServicioJugadorMaquina(
+                estado,
+                acciones,
+                TimeSpan.FromMilliseconds(10));
+
+        int origenX =
+            patrullero.Coordenada.X;
+
+        int origenY =
+            patrullero.Coordenada.Y;
+
+        ProcesoConcurrente? proceso =
+            ia.EjecutarPaso();
+
+        Assert.That(
+            proceso,
+            Is.Not.Null);
+
+        await proceso!.Finalizacion;
+
+        Assert.That(
+            patrullero.Coordenada.X != origenX ||
+            patrullero.Coordenada.Y != origenY,
+            Is.True);
+
+        Assert.That(
+            patrullero.OrdenActiva,
+            Is.Null);
     }
 
     [Test]
