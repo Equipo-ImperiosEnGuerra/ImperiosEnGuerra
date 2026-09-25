@@ -15,8 +15,8 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
     private readonly TimeSpan intervaloDeteccion;
     private readonly object sincronizacion = new();
     private readonly HashSet<Guid> unidadesAsignadas = new();
-    private readonly Dictionary<Guid, DateTime> unidadesSuspendidas =
-        new Dictionary<Guid, DateTime>();
+    private readonly HashSet<Guid> unidadesSuspendidas =
+        new HashSet<Guid>();
 
     private CancellationTokenSource? cancelacion;
     private bool dispuesto;
@@ -106,23 +106,28 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
     }
 
     public void SuspenderUnidad(
-        Guid unidadId,
-        TimeSpan duracion)
+        Guid unidadId)
     {
         if (unidadId == Guid.Empty)
             return;
 
-        if (duracion <= TimeSpan.Zero)
+        lock (sincronizacion)
         {
-            duracion =
-                TimeSpan.FromSeconds(3);
+            unidadesSuspendidas.Add(
+                unidadId);
         }
+    }
+
+    public void ReanudarUnidad(
+        Guid unidadId)
+    {
+        if (unidadId == Guid.Empty)
+            return;
 
         lock (sincronizacion)
         {
-            unidadesSuspendidas[unidadId] =
-                DateTime.UtcNow.Add(
-                    duracion);
+            unidadesSuspendidas.Remove(
+                unidadId);
         }
     }
 
@@ -175,22 +180,8 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
     {
         lock (sincronizacion)
         {
-            if (!unidadesSuspendidas.TryGetValue(
-                    unidadId,
-                    out DateTime hasta))
-            {
-                return false;
-            }
-
-            if (DateTime.UtcNow < hasta)
-            {
-                return true;
-            }
-
-            unidadesSuspendidas.Remove(
+            return unidadesSuspendidas.Contains(
                 unidadId);
-
-            return false;
         }
     }
 
