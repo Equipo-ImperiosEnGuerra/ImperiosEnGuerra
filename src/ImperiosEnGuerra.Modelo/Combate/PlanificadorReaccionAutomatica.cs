@@ -69,7 +69,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
                     continue;
                 }
 
-                if (unidad is not Soldado)
+                if (!(unidad is Soldado))
                     continue;
 
                 Guid objetivoId =
