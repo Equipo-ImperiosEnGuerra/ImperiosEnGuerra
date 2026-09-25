@@ -148,7 +148,7 @@ namespace ImperiosEnGuerra.Vistas
             CrearTexto(
                 panel.transform,
                 "Subtitulo",
-                "RTS académico — Humano vs Máquina",
+                "Construye, reúne recursos y conquista el campo de batalla",
                 22,
                 new Vector2(0f, 125f),
                 new Vector2(560f, 45f),
@@ -217,18 +217,17 @@ namespace ImperiosEnGuerra.Vistas
 
             const string instrucciones =
                 "OBJETIVO\n" +
-                "Ganas cuando el rival se queda SIN Centros Urbanos Y SIN unidades militares.\n\n" +
+                "Derrota al ejército enemigo destruyendo sus Centros Urbanos y eliminando sus unidades militares.\n\n" +
                 "ECONOMÍA\n" +
-                "Recolecta Oro, Madera y Comida con Aldeanos. Los recursos permiten construir y entrenar unidades.\n\n" +
-                "CONTROLES\n" +
-                "1. Haz clic sobre una unidad o Centro Urbano propio.\n" +
-                "2. Elige Mover, Recolectar, Construir, Entrenar o Atacar.\n" +
-                "3. Haz clic sobre la casilla, recurso o enemigo solicitado.\n\n" +
-                "COMBATE\n" +
-                "Cada tropa tiene Vida, Daño y Alcance. Si el enemigo está lejos, la unidad se aproxima automáticamente. " +
-                "Cuando una entidad queda con 25% de vida o menos se tiñe de rojo.\n\n" +
-                "CONCURRENCIA\n" +
-                "Varias unidades pueden moverse, recolectar, construir, entrenar o combatir al mismo tiempo.";
+                "Usa Aldeanos para reunir Oro, Madera y Comida. Necesitarás recursos para construir y entrenar nuevas unidades.\n\n" +
+                "ÓRDENES\n" +
+                "Selecciona una unidad o edificio propio y elige una acción. Si el objetivo está lejos, la unidad se acercará automáticamente. " +
+                "Puedes cancelar una orden activa desde el panel de la unidad.\n\n" +
+                "COMBATE Y APOYO\n" +
+                "Guerreros, Lanceros y Arqueros atacan enemigos cercanos. Los Monjes curan aliados heridos y se acercan si es necesario. " +
+                "Las unidades con poca vida se resaltan en rojo.\n\n" +
+                "ENTRENAMIENTO\n" +
+                "El Centro Urbano muestra qué unidad está entrenando, su progreso y cuántas órdenes quedan en la cola.";
 
             Text cuerpo =
                 CrearTexto(
