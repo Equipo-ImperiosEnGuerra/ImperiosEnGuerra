@@ -2,6 +2,7 @@
 using ImperiosEnGuerra.Vistas;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class MenuInicialUnityTests
 {
@@ -34,6 +35,50 @@ public class MenuInicialUnityTests
                 objeto.transform.Find(
                     "Fondo/Principal/Salir"),
                 Is.Not.Null);
+        }
+        finally
+        {
+            Object.DestroyImmediate(
+                objeto);
+        }
+    }
+
+    [Test]
+    public void Instrucciones_UsanLenguajeDeJuego_NoTecnico()
+    {
+        var objeto =
+            new GameObject(
+                "MenuPrueba");
+
+        try
+        {
+            objeto.AddComponent<VistaMenuInicial>();
+
+            Text cuerpo =
+                objeto.transform
+                    .Find(
+                        "Fondo/Instrucciones/Cuerpo")
+                    .GetComponent<Text>();
+
+            Assert.That(
+                cuerpo.text,
+                Does.Not.Contain("CONCURRENCIA"));
+
+            Assert.That(
+                cuerpo.text,
+                Does.Not.Contain("Regla AND"));
+
+            Assert.That(
+                cuerpo.text,
+                Does.Not.Contain("académico"));
+
+            Assert.That(
+                cuerpo.text,
+                Does.Contain("Monjes"));
+
+            Assert.That(
+                cuerpo.text,
+                Does.Contain("cancelar"));
         }
         finally
         {
