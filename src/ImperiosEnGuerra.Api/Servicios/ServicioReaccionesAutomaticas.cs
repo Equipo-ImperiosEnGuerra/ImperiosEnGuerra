@@ -17,6 +17,12 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
     private readonly HashSet<Guid> unidadesAsignadas = new();
     private readonly HashSet<Guid> unidadesSuspendidas =
         new HashSet<Guid>();
+    private readonly Dictionary<Guid, ProcesoConcurrente> procesosAsignados =
+        new Dictionary<Guid, ProcesoConcurrente>();
+    private readonly Dictionary<Guid, DateTime> proximoMovimientoIdle =
+        new Dictionary<Guid, DateTime>();
+    private static readonly TimeSpan IntervaloMovimientoIdle =
+        TimeSpan.FromSeconds(4);
 
     private CancellationTokenSource? cancelacion;
     private bool dispuesto;
@@ -131,6 +137,40 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
         }
     }
 
+    public void PrepararOrdenManual(
+        Guid unidadId)
+    {
+        if (unidadId == Guid.Empty)
+            return;
+
+        ProcesoConcurrente proceso = null;
+
+        lock (sincronizacion)
+        {
+            unidadesSuspendidas.Remove(
+                unidadId);
+
+            procesosAsignados.TryGetValue(
+                unidadId,
+                out proceso);
+        }
+
+        if (proceso == null)
+            return;
+
+        acciones.Cancelar(
+            proceso.Id);
+
+        try
+        {
+            proceso.Finalizacion.Wait(
+                TimeSpan.FromMilliseconds(500));
+        }
+        catch (AggregateException)
+        {
+        }
+    }
+
     public bool Detener()
     {
         CancellationTokenSource? actual;
@@ -160,7 +200,9 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
         foreach (ReaccionAutomatica reaccion in reacciones)
         {
             if (EstaSuspendida(
-                    reaccion.UnidadId))
+                    reaccion.UnidadId) ||
+                EnEnfriamientoIdle(
+                    reaccion))
             {
                 continue;
             }
@@ -185,6 +227,30 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
         }
     }
 
+    private bool EnEnfriamientoIdle(
+        ReaccionAutomatica reaccion)
+    {
+        if (reaccion == null ||
+            reaccion.Tipo !=
+                TipoReaccionAutomatica.MoverIdle)
+        {
+            return false;
+        }
+
+        lock (sincronizacion)
+        {
+            if (!proximoMovimientoIdle.TryGetValue(
+                    reaccion.UnidadId,
+                    out DateTime proximo))
+            {
+                return false;
+            }
+
+            return DateTime.UtcNow <
+                   proximo;
+        }
+    }
+
     private ProcesoConcurrente? EjecutarReaccion(
         ReaccionAutomatica reaccion)
     {
@@ -202,10 +268,13 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
 
         try
         {
-            ProcesoConcurrente proceso =
-                reaccion.Tipo ==
-                TipoReaccionAutomatica.Curar
-                    ? acciones.IniciarCuracion(
+            ProcesoConcurrente proceso;
+
+            if (reaccion.Tipo ==
+                TipoReaccionAutomatica.Curar)
+            {
+                proceso =
+                    acciones.IniciarCuracion(
                         new CurarRequest
                         {
                             CuradorId =
@@ -215,8 +284,34 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
                             ObjetivoId =
                                 reaccion.ObjetivoId
                                     .ToString("D")
-                        })
-                    : acciones.IniciarAtaque(
+                        });
+            }
+            else if (reaccion.Tipo ==
+                     TipoReaccionAutomatica.MoverIdle)
+            {
+                proceso =
+                    acciones.IniciarMovimiento(
+                        new MoverUnidadRequest
+                        {
+                            UnidadId =
+                                reaccion.UnidadId
+                                    .ToString("D"),
+
+                            Destino =
+                                new CoordenadaRequest
+                                {
+                                    X =
+                                        reaccion.Destino.X,
+
+                                    Y =
+                                        reaccion.Destino.Y
+                                }
+                        });
+            }
+            else
+            {
+                proceso =
+                    acciones.IniciarAtaque(
                         new AtacarRequest
                         {
                             AtacanteId =
@@ -227,6 +322,14 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
                                 reaccion.ObjetivoId
                                     .ToString("D")
                         });
+            }
+
+            lock (sincronizacion)
+            {
+                procesosAsignados[
+                    reaccion.UnidadId] =
+                    proceso;
+            }
 
             _ = proceso.Finalizacion
                 .ContinueWith(
@@ -236,6 +339,18 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
                         {
                             unidadesAsignadas.Remove(
                                 reaccion.UnidadId);
+
+                            procesosAsignados.Remove(
+                                reaccion.UnidadId);
+
+                            if (reaccion.Tipo ==
+                                TipoReaccionAutomatica.MoverIdle)
+                            {
+                                proximoMovimientoIdle[
+                                    reaccion.UnidadId] =
+                                    DateTime.UtcNow.Add(
+                                        IntervaloMovimientoIdle);
+                            }
                         }
                     },
                     CancellationToken.None,
@@ -249,6 +364,9 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
             lock (sincronizacion)
             {
                 unidadesAsignadas.Remove(
+                    reaccion.UnidadId);
+
+                procesosAsignados.Remove(
                     reaccion.UnidadId);
             }
 
