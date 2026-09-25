@@ -9,6 +9,7 @@ namespace ImperiosEnGuerra.Modelo.Unidades
         Moviendo,
         Recolectando,
         Construyendo,
-        Atacando
+        Atacando,
+        Curando
     }
 }
