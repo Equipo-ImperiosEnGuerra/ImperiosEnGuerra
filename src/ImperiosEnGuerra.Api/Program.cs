@@ -319,6 +319,36 @@ app.MapPost(
 })
 .WithName("CancelarProceso");
 
+
+app.MapPost(
+    "/api/partida/unidades/{unidadId:guid}/cancelar-accion",
+    (
+        Guid unidadId,
+        ServicioAccionesConcurrentes accionesConcurrentes,
+        ServicioReaccionesAutomaticas reaccionesAutomaticas) =>
+{
+    reaccionesAutomaticas.SuspenderUnidad(
+        unidadId,
+        TimeSpan.FromSeconds(3));
+
+    bool cancelada =
+        accionesConcurrentes.CancelarPorUnidad(
+            unidadId);
+
+    return cancelada
+        ? Results.Ok(new
+        {
+            unidadId,
+            estado = "cancelacion_solicitada"
+        })
+        : Results.NotFound(new
+        {
+            unidadId,
+            error = "La unidad no tiene una acción concurrente activa."
+        });
+})
+.WithName("CancelarAccionUnidad");
+
 app.MapPost(
     "/api/partida/recolectar-concurrente",
     (
