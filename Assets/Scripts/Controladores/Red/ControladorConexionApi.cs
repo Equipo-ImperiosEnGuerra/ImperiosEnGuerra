@@ -1819,7 +1819,7 @@ public bool PuedeCancelarAccion =>
                 vistaHud.MostrarMensaje(
                     TraducirMensajeParaJugador(
                         mensaje),
-                    tecnico);
+                    true);
             }
         }
 
