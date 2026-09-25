@@ -174,7 +174,8 @@ namespace ImperiosEnGuerra.Controladores
                 PermiteOpcion(entidad, "Construir"),
                 PermiteOpcion(entidad, "Entrenar"),
                 PermiteOpcion(entidad, "Atacar") || puedeCurar,
-                puedeCurar);
+                puedeCurar,
+                PermiteOpcion(entidad, "Cancelar"));
         }
 
         private void RegistrarEstadoMostrado(
@@ -513,6 +514,12 @@ namespace ImperiosEnGuerra.Controladores
             if (entidad.Categoria != CategoriaEntidadVisual.Unidad)
                 return false;
 
+            if (accion == "Cancelar")
+            {
+                return !string.IsNullOrWhiteSpace(
+                    entidad.OrdenActiva);
+            }
+
             // Una unidad mantiene una sola orden lógica a la vez. Esto no
             // bloquea a otras unidades: el jugador puede seleccionarlas y
             // ordenarles acciones concurrentes de forma independiente.
@@ -566,6 +573,45 @@ namespace ImperiosEnGuerra.Controladores
                 vistaHud.MostrarMensaje(
                     "Selecciona una entidad humana apropiada para esta opción.",
                     true);
+
+                return;
+            }
+
+            if (accion == "Cancelar")
+            {
+                if (string.IsNullOrWhiteSpace(
+                        entidad.IdLogico))
+                {
+                    vistaHud.MostrarMensaje(
+                        "La unidad seleccionada no tiene identidad disponible.",
+                        true);
+
+                    return;
+                }
+
+                if (conexionApi == null ||
+                    !conexionApi.PuedeCancelarAccion)
+                {
+                    vistaHud.MostrarMensaje(
+                        conexionApi == null
+                            ? "La conexión con la API no está disponible."
+                            : conexionApi.MensajeAccionNoDisponible,
+                        true);
+
+                    return;
+                }
+
+                string orden =
+                    string.IsNullOrWhiteSpace(
+                        entidad.OrdenActiva)
+                        ? "acción"
+                        : entidad.OrdenActiva;
+
+                conexionApi.CancelarAccionUnidad(
+                    entidad.IdLogico);
+
+                vistaHud.MostrarMensaje(
+                    $"Cancelando {orden}...");
 
                 return;
             }
