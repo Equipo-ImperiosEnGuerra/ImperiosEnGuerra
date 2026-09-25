@@ -302,7 +302,7 @@ namespace ImperiosEnGuerra.Controladores
                 {
                     vistaHud.MostrarMensaje(
                         conexionApi == null
-                            ? "La conexión con la API no está disponible."
+                            ? "Se perdió la conexión con la partida."
                             : conexionApi.MensajeAccionNoDisponible,
                         true);
                 }
@@ -348,7 +348,7 @@ namespace ImperiosEnGuerra.Controladores
             if (vistaHud != null)
             {
                 vistaHud.MostrarMensaje(
-                    "La acción preparada no reconoce un objetivo válido.",
+                    "Ese objetivo no es válido para esta acción.",
                     true);
             }
         }
@@ -384,8 +384,8 @@ namespace ImperiosEnGuerra.Controladores
                 {
                     vistaHud.MostrarMensaje(
                         curando
-                            ? "Selecciona una unidad humana aliada dañada como objetivo de curación."
-                            : "Selecciona una unidad o edificio enemigo válido como objetivo.",
+                            ? "Selecciona una unidad aliada herida."
+                            : "Selecciona una unidad o edificio enemigo.",
                         true);
                 }
 
@@ -404,7 +404,7 @@ namespace ImperiosEnGuerra.Controladores
                 {
                     vistaHud.MostrarMensaje(
                         conexionApi == null
-                            ? "La conexión con la API no está disponible."
+                            ? "Se perdió la conexión con la partida."
                             : conexionApi.MensajeAccionNoDisponible,
                         true);
                 }
@@ -417,7 +417,7 @@ namespace ImperiosEnGuerra.Controladores
                 if (vistaHud != null)
                 {
                     vistaHud.MostrarMensaje(
-                        $"Curando {objetivo.TipoLogico} aliado...");
+                        $"Curando a {objetivo.TipoLogico}...");
                 }
 
                 conexionApi.Curar(
@@ -430,8 +430,7 @@ namespace ImperiosEnGuerra.Controladores
             if (vistaHud != null)
             {
                 vistaHud.MostrarMensaje(
-                    $"Atacando {objetivo.TipoLogico} enemigo... " +
-                    "La unidad se acercará automáticamente si está fuera de alcance.");
+                    $"Atacando {objetivo.TipoLogico}. La unidad se acercará si es necesario.");
             }
 
             conexionApi.Atacar(
@@ -571,7 +570,7 @@ namespace ImperiosEnGuerra.Controladores
             if (!PermiteOpcion(entidad, accion))
             {
                 vistaHud.MostrarMensaje(
-                    "Selecciona una entidad humana apropiada para esta opción.",
+                    "Esta unidad no puede realizar esa acción.",
                     true);
 
                 return;
@@ -583,7 +582,7 @@ namespace ImperiosEnGuerra.Controladores
                         entidad.IdLogico))
                 {
                     vistaHud.MostrarMensaje(
-                        "La unidad seleccionada no tiene identidad disponible.",
+                        "No se puede dar una orden a esta unidad.",
                         true);
 
                     return;
@@ -594,7 +593,7 @@ namespace ImperiosEnGuerra.Controladores
                 {
                     vistaHud.MostrarMensaje(
                         conexionApi == null
-                            ? "La conexión con la API no está disponible."
+                            ? "Se perdió la conexión con la partida."
                             : conexionApi.MensajeAccionNoDisponible,
                         true);
 
@@ -622,7 +621,7 @@ namespace ImperiosEnGuerra.Controladores
                 {
                     vistaHud.MostrarMensaje(
                         conexionApi == null
-                            ? "La conexión con la API no está disponible."
+                            ? "Se perdió la conexión con la partida."
                             : conexionApi.MensajeAccionNoDisponible,
                         true);
 
@@ -657,8 +656,8 @@ namespace ImperiosEnGuerra.Controladores
                 {
                     vistaHud.MostrarMensaje(
                         accion == "Curar"
-                            ? "El Monje no tiene identidad disponible."
-                            : "La unidad atacante no tiene identidad disponible.",
+                            ? "No se puede dar una orden a este Monje."
+                            : "No se puede dar una orden a esta unidad.",
                         true);
 
                     return;
@@ -668,7 +667,7 @@ namespace ImperiosEnGuerra.Controladores
                 {
                     vistaHud.MostrarMensaje(
                         conexionApi == null
-                            ? "La conexión con la API no está disponible."
+                            ? "Se perdió la conexión con la partida."
                             : conexionApi.MensajeAccionNoDisponible,
                         true);
 
@@ -683,7 +682,7 @@ namespace ImperiosEnGuerra.Controladores
 
                 vistaHud.MostrarMensaje(
                     accion == "Curar"
-                        ? "Selecciona una unidad humana aliada dañada para curarla."
+                        ? "Selecciona una unidad aliada herida para curarla."
                         : "Selecciona una unidad o edificio enemigo como objetivo.");
 
                 return;
@@ -696,7 +695,7 @@ namespace ImperiosEnGuerra.Controladores
                 if (string.IsNullOrWhiteSpace(entidad.IdLogico))
                 {
                     vistaHud.MostrarMensaje(
-                        "La unidad seleccionada no tiene identidad disponible.",
+                        "No se puede dar una orden a esta unidad.",
                         true);
 
                     return;
@@ -706,7 +705,7 @@ namespace ImperiosEnGuerra.Controladores
                 {
                     vistaHud.MostrarMensaje(
                         conexionApi == null
-                            ? "La conexión con la API no está disponible."
+                            ? "Se perdió la conexión con la partida."
                             : conexionApi.MensajeAccionNoDisponible,
                         true);
 
@@ -760,7 +759,7 @@ namespace ImperiosEnGuerra.Controladores
             }
 
             vistaHud.MostrarMensaje(
-                $"Intención {accion} preparada. Ejecución pendiente de una fase posterior.");
+                $"Esta acción aún no está disponible.");
         }
 
         private void SeleccionarTipoUnidad(string tipoUnidad)
