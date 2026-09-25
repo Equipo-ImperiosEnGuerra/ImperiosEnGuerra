@@ -405,6 +405,57 @@ public class RecoleccionUnityTests
     }
 
     [Test]
+    public void UnidadConOrdenActiva_PermiteCancelar()
+    {
+        aldeano.Configurar(
+            CategoriaEntidadVisual.Unidad,
+            IdAldeano,
+            "Aldeano",
+            "Humano",
+            1,
+            1,
+            "Recolectando",
+            "Recolectar");
+
+        MethodInfo metodo =
+            typeof(ControladorAcciones)
+                .GetMethod(
+                    "PermiteOpcion",
+                    BindingFlags.Static |
+                    BindingFlags.NonPublic);
+
+        Assert.That(
+            metodo,
+            Is.Not.Null);
+
+        bool permiteCancelar =
+            (bool)metodo.Invoke(
+                null,
+                new object[]
+                {
+                    aldeano,
+                    "Cancelar"
+                });
+
+        bool permiteMover =
+            (bool)metodo.Invoke(
+                null,
+                new object[]
+                {
+                    aldeano,
+                    "Mover"
+                });
+
+        Assert.That(
+            permiteCancelar,
+            Is.True);
+
+        Assert.That(
+            permiteMover,
+            Is.False);
+    }
+
+    [Test]
     public void CambioSeleccion_CancelaRecoleccion()
     {
         Invocar(
