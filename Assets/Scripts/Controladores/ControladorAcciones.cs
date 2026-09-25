@@ -163,12 +163,18 @@ namespace ImperiosEnGuerra.Controladores
             if (vistaHud == null)
                 return;
 
+            bool puedeCurar =
+                PermiteOpcion(
+                    entidad,
+                    "Curar");
+
             vistaHud.MostrarOpciones(
                 PermiteOpcion(entidad, "Mover"),
                 PermiteOpcion(entidad, "Recolectar"),
                 PermiteOpcion(entidad, "Construir"),
                 PermiteOpcion(entidad, "Entrenar"),
-                PermiteOpcion(entidad, "Atacar"));
+                PermiteOpcion(entidad, "Atacar") || puedeCurar,
+                puedeCurar);
         }
 
         private void RegistrarEstadoMostrado(
@@ -348,8 +354,14 @@ namespace ImperiosEnGuerra.Controladores
 
         private void EnviarObjetivoAtaque(EntidadSeleccionableVista objetivo)
         {
-            if (accionPendiente != "Atacar")
+            bool curando =
+                accionPendiente == "Curar";
+
+            if (accionPendiente != "Atacar" &&
+                !curando)
+            {
                 return;
+            }
 
             if (!ConservaSeleccion())
             {
@@ -357,19 +369,29 @@ namespace ImperiosEnGuerra.Controladores
                 return;
             }
 
-            if (!EsObjetivoAtaqueValido(objetivo))
+            bool objetivoValido =
+                curando
+                    ? EsObjetivoCuracionValido(
+                        objetivo,
+                        unidadIdPendiente)
+                    : EsObjetivoAtaqueValido(
+                        objetivo);
+
+            if (!objetivoValido)
             {
                 if (vistaHud != null)
                 {
                     vistaHud.MostrarMensaje(
-                        "Selecciona una unidad o edificio enemigo válido como objetivo.",
+                        curando
+                            ? "Selecciona una unidad humana aliada dañada como objetivo de curación."
+                            : "Selecciona una unidad o edificio enemigo válido como objetivo.",
                         true);
                 }
 
                 return;
             }
 
-            string atacanteId = unidadIdPendiente;
+            string actorId = unidadIdPendiente;
             string objetivoId = objetivo.IdLogico;
 
             LimpiarCaptura();
@@ -389,6 +411,21 @@ namespace ImperiosEnGuerra.Controladores
                 return;
             }
 
+            if (curando)
+            {
+                if (vistaHud != null)
+                {
+                    vistaHud.MostrarMensaje(
+                        $"Curando {objetivo.TipoLogico} aliado...");
+                }
+
+                conexionApi.Curar(
+                    actorId,
+                    objetivoId);
+
+                return;
+            }
+
             if (vistaHud != null)
             {
                 vistaHud.MostrarMensaje(
@@ -397,7 +434,7 @@ namespace ImperiosEnGuerra.Controladores
             }
 
             conexionApi.Atacar(
-                atacanteId,
+                actorId,
                 objetivoId);
         }
 
@@ -410,6 +447,21 @@ namespace ImperiosEnGuerra.Controladores
                  objetivo.Categoria == CategoriaEntidadVisual.Edificio) &&
                 objetivo.Propietario == "Maquina" &&
                 !string.IsNullOrWhiteSpace(objetivo.IdLogico);
+        }
+
+        private static bool EsObjetivoCuracionValido(
+            EntidadSeleccionableVista objetivo,
+            string curadorId)
+        {
+            return objetivo != null &&
+                objetivo.isActiveAndEnabled &&
+                objetivo.Categoria == CategoriaEntidadVisual.Unidad &&
+                objetivo.Propietario == "Humano" &&
+                !string.IsNullOrWhiteSpace(objetivo.IdLogico) &&
+                objetivo.IdLogico != curadorId &&
+                objetivo.VidaMaxima > 0 &&
+                objetivo.VidaActual > 0 &&
+                objetivo.VidaActual < objetivo.VidaMaxima;
         }
 
         private bool PuedeIniciarAccion(string accion)
@@ -434,6 +486,9 @@ namespace ImperiosEnGuerra.Controladores
 
             if (accion == "Atacar")
                 return conexionApi.PuedeIniciarAtaque;
+
+            if (accion == "Curar")
+                return conexionApi.PuedeIniciarCuracion;
 
             return false;
         }
@@ -476,11 +531,15 @@ namespace ImperiosEnGuerra.Controladores
                 return entidad.TipoLogico == "Aldeano";
             }
 
-            return accion == "Atacar" &&
-                (entidad.TipoLogico == "Guerrero" ||
-                 entidad.TipoLogico == "Lancero" ||
-                 entidad.TipoLogico == "Arquero" ||
-                 entidad.TipoLogico == "Monje");
+            if (accion == "Atacar")
+            {
+                return entidad.TipoLogico == "Guerrero" ||
+                    entidad.TipoLogico == "Lancero" ||
+                    entidad.TipoLogico == "Arquero";
+            }
+
+            return accion == "Curar" &&
+                entidad.TipoLogico == "Monje";
         }
 
         private void PrepararAccion(string accion)
@@ -494,6 +553,13 @@ namespace ImperiosEnGuerra.Controladores
                 controladorSeleccion == null
                     ? null
                     : controladorSeleccion.SeleccionActual;
+
+            if (accion == "Atacar" &&
+                entidad != null &&
+                entidad.TipoLogico == "Monje")
+            {
+                accion = "Curar";
+            }
 
             if (!PermiteOpcion(entidad, accion))
             {
@@ -538,12 +604,15 @@ namespace ImperiosEnGuerra.Controladores
                 return;
             }
 
-            if (accion == "Atacar")
+            if (accion == "Atacar" ||
+                accion == "Curar")
             {
                 if (string.IsNullOrWhiteSpace(entidad.IdLogico))
                 {
                     vistaHud.MostrarMensaje(
-                        "La unidad atacante no tiene identidad disponible.",
+                        accion == "Curar"
+                            ? "El Monje no tiene identidad disponible."
+                            : "La unidad atacante no tiene identidad disponible.",
                         true);
 
                     return;
@@ -567,7 +636,9 @@ namespace ImperiosEnGuerra.Controladores
                 controladorSeleccion.IniciarCapturaObjetivoEntidad();
 
                 vistaHud.MostrarMensaje(
-                    "Selecciona una unidad o edificio enemigo como objetivo.");
+                    accion == "Curar"
+                        ? "Selecciona una unidad humana aliada dañada para curarla."
+                        : "Selecciona una unidad o edificio enemigo como objetivo.");
 
                 return;
             }
@@ -695,6 +766,9 @@ namespace ImperiosEnGuerra.Controladores
 
             if (accion == "Atacar")
                 return "Ataque cancelado.";
+
+            if (accion == "Curar")
+                return "Curación cancelada.";
 
             return "Movimiento cancelado.";
         }
