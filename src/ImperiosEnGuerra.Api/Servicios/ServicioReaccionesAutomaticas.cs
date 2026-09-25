@@ -15,6 +15,8 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
     private readonly TimeSpan intervaloDeteccion;
     private readonly object sincronizacion = new();
     private readonly HashSet<Guid> unidadesAsignadas = new();
+    private readonly Dictionary<Guid, DateTime> unidadesSuspendidas =
+        new Dictionary<Guid, DateTime>();
 
     private CancellationTokenSource? cancelacion;
     private bool dispuesto;
@@ -103,6 +105,27 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
         }
     }
 
+    public void SuspenderUnidad(
+        Guid unidadId,
+        TimeSpan duracion)
+    {
+        if (unidadId == Guid.Empty)
+            return;
+
+        if (duracion <= TimeSpan.Zero)
+        {
+            duracion =
+                TimeSpan.FromSeconds(3);
+        }
+
+        lock (sincronizacion)
+        {
+            unidadesSuspendidas[unidadId] =
+                DateTime.UtcNow.Add(
+                    duracion);
+        }
+    }
+
     public bool Detener()
     {
         CancellationTokenSource? actual;
@@ -131,6 +154,12 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
 
         foreach (ReaccionAutomatica reaccion in reacciones)
         {
+            if (EstaSuspendida(
+                    reaccion.UnidadId))
+            {
+                continue;
+            }
+
             if (EjecutarReaccion(
                     reaccion) != null)
             {
@@ -139,6 +168,30 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
         }
 
         return iniciadas;
+    }
+
+    private bool EstaSuspendida(
+        Guid unidadId)
+    {
+        lock (sincronizacion)
+        {
+            if (!unidadesSuspendidas.TryGetValue(
+                    unidadId,
+                    out DateTime hasta))
+            {
+                return false;
+            }
+
+            if (DateTime.UtcNow < hasta)
+            {
+                return true;
+            }
+
+            unidadesSuspendidas.Remove(
+                unidadId);
+
+            return false;
+        }
     }
 
     private ProcesoConcurrente? EjecutarReaccion(
