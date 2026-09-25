@@ -490,7 +490,8 @@ public bool PuedeCancelarAccion =>
                         string.IsNullOrWhiteSpace(
                             resultado.errorTecnico)
                             ? "El worker de movimiento finalizó con error."
-                            : resultado.errorTecnico);
+                            : "Error interno del worker: " +
+                              resultado.errorTecnico);
 
                     yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
@@ -789,7 +790,8 @@ public bool PuedeCancelarAccion =>
                         string.IsNullOrWhiteSpace(
                             resultado.errorTecnico)
                             ? "El worker de recolección finalizó con error."
-                            : resultado.errorTecnico);
+                            : "Error interno del worker: " +
+                              resultado.errorTecnico);
 
                     yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
@@ -1033,7 +1035,8 @@ public bool PuedeCancelarAccion =>
                         string.IsNullOrWhiteSpace(
                             resultado.errorTecnico)
                             ? "El worker de construcción finalizó con error."
-                            : resultado.errorTecnico);
+                            : "Error interno del worker: " +
+                              resultado.errorTecnico);
 
                     yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
@@ -1217,7 +1220,8 @@ public bool PuedeCancelarAccion =>
                         string.IsNullOrWhiteSpace(
                             resultado.errorTecnico)
                             ? "El worker de entrenamiento finalizó con error."
-                            : resultado.errorTecnico);
+                            : "Error interno del worker: " +
+                              resultado.errorTecnico);
 
                     yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
@@ -1450,7 +1454,8 @@ public bool PuedeCancelarAccion =>
                         string.IsNullOrWhiteSpace(
                             resultado.errorTecnico)
                             ? "El worker de ataque finalizó con error."
-                            : resultado.errorTecnico);
+                            : "Error interno del worker: " +
+                              resultado.errorTecnico);
 
                     yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
@@ -1630,7 +1635,8 @@ public bool PuedeCancelarAccion =>
                         string.IsNullOrWhiteSpace(
                             resultado.errorTecnico)
                             ? "El worker de curación finalizó con error."
-                            : resultado.errorTecnico);
+                            : "Error interno del worker: " +
+                              resultado.errorTecnico);
 
                     yield return SincronizarEstadoDespuesDeProceso();
                     yield break;
