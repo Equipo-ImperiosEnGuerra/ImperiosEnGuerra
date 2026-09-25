@@ -241,6 +241,59 @@ public class AtaqueUnityTests
     }
 
     [Test]
+    public void ClicEnMapaVacio_CancelaModoObjetivo()
+    {
+        Invocar(
+            acciones,
+            "PrepararAccion",
+            "Atacar");
+
+        Invocar(
+            seleccion,
+            "ProcesarObjetivoEntidad",
+            new object[] { null });
+
+        Assert.That(
+            seleccion.CapturandoObjetivoEntidad,
+            Is.False);
+
+        Assert.That(
+            LeerCampo(
+                acciones,
+                "accionPendiente"),
+            Is.Null);
+    }
+
+    [Test]
+    public void ClicEnEntidadNoValida_SaleDelModoObjetivoYLaSelecciona()
+    {
+        Invocar(
+            acciones,
+            "PrepararAccion",
+            "Atacar");
+
+        Invocar(
+            seleccion,
+            "ProcesarObjetivoEntidad",
+            objetivoPropio);
+
+        Assert.That(
+            seleccion.CapturandoObjetivoEntidad,
+            Is.False);
+
+        Assert.That(
+            LeerCampo(
+                acciones,
+                "accionPendiente"),
+            Is.Null);
+
+        Assert.That(
+            seleccion.SeleccionActual,
+            Is.SameAs(
+                objetivoPropio));
+    }
+
+    [Test]
     public void DtoAtaque_UsaIdsEstables()
     {
         var dto = new AtaqueDto
