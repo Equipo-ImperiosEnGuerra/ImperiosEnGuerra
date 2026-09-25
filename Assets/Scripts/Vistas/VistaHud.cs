@@ -15,6 +15,7 @@ namespace ImperiosEnGuerra.Vistas
         [SerializeField] private Button construir;
         [SerializeField] private Button entrenar;
         [SerializeField] private Button atacar;
+        [SerializeField] private Button cancelar;
         [SerializeField] private GameObject selectorEntrenamiento;
         [SerializeField] private Button entrenarAldeano;
         [SerializeField] private Button entrenarGuerrero;
@@ -33,8 +34,52 @@ namespace ImperiosEnGuerra.Vistas
 
         private void Awake()
         {
+            CrearBotonCancelarSiFalta();
             AplicarLayoutCompacto();
             CrearPantallaResultadoFinal();
+        }
+
+        private void CrearBotonCancelarSiFalta()
+        {
+            if (cancelar != null)
+                return;
+
+            RectTransform panel =
+                transform.Find("PanelContextual")
+                    as RectTransform;
+
+            if (panel == null ||
+                atacar == null)
+            {
+                return;
+            }
+
+            GameObject objeto =
+                Instantiate(
+                    atacar.gameObject,
+                    panel,
+                    false);
+
+            objeto.name = "Cancelar";
+
+            cancelar =
+                objeto.GetComponent<Button>();
+
+            if (cancelar != null)
+            {
+                cancelar.onClick.RemoveAllListeners();
+            }
+
+            Text etiqueta =
+                objeto.GetComponentInChildren<Text>(
+                    true);
+
+            if (etiqueta != null)
+            {
+                etiqueta.text = "Cancelar";
+            }
+
+            objeto.SetActive(false);
         }
 
         private void AplicarLayoutCompacto()
@@ -52,7 +97,7 @@ namespace ImperiosEnGuerra.Vistas
                 Vector2.zero,
                 Vector2.zero,
                 new Vector2(12f, 12f),
-                new Vector2(324f, 182f));
+                new Vector2(382f, 182f));
 
             ConfigurarRectHijo(
                 panel,
@@ -78,7 +123,8 @@ namespace ImperiosEnGuerra.Vistas
                 "Recolectar",
                 "Construir",
                 "Entrenar",
-                "Atacar"
+                "Atacar",
+                "Cancelar"
             };
 
             for (int i = 0; i < acciones.Length; i++)
@@ -220,6 +266,7 @@ namespace ImperiosEnGuerra.Vistas
             if (construir != null) construir.onClick.AddListener(SolicitarConstruir);
             if (entrenar != null) entrenar.onClick.AddListener(SolicitarEntrenar);
             if (atacar != null) atacar.onClick.AddListener(SolicitarAtacar);
+            if (cancelar != null) cancelar.onClick.AddListener(SolicitarCancelar);
 
             if (entrenarAldeano != null)
                 entrenarAldeano.onClick.AddListener(SolicitarEntrenarAldeano);
@@ -243,6 +290,7 @@ namespace ImperiosEnGuerra.Vistas
             if (construir != null) construir.onClick.RemoveListener(SolicitarConstruir);
             if (entrenar != null) entrenar.onClick.RemoveListener(SolicitarEntrenar);
             if (atacar != null) atacar.onClick.RemoveListener(SolicitarAtacar);
+            if (cancelar != null) cancelar.onClick.RemoveListener(SolicitarCancelar);
 
             if (entrenarAldeano != null)
                 entrenarAldeano.onClick.RemoveListener(SolicitarEntrenarAldeano);
@@ -265,6 +313,7 @@ namespace ImperiosEnGuerra.Vistas
         private void SolicitarConstruir() => AccionSolicitada?.Invoke("Construir");
         private void SolicitarEntrenar() => AccionSolicitada?.Invoke("Entrenar");
         private void SolicitarAtacar() => AccionSolicitada?.Invoke("Atacar");
+        private void SolicitarCancelar() => AccionSolicitada?.Invoke("Cancelar");
 
         private void SolicitarEntrenarAldeano() =>
             TipoUnidadSolicitado?.Invoke("Aldeano");
@@ -399,12 +448,14 @@ namespace ImperiosEnGuerra.Vistas
         }
 
         public void MostrarOpciones(bool puedeMover, bool puedeRecolectar, bool puedeConstruir,
-            bool puedeEntrenar, bool puedeAtacar, bool mostrarComoCurar = false)
+            bool puedeEntrenar, bool puedeAtacar, bool mostrarComoCurar = false,
+            bool puedeCancelar = false)
         {
             if (mover != null) mover.gameObject.SetActive(puedeMover);
             if (recolectar != null) recolectar.gameObject.SetActive(puedeRecolectar);
             if (construir != null) construir.gameObject.SetActive(puedeConstruir);
             if (entrenar != null) entrenar.gameObject.SetActive(puedeEntrenar);
+            if (cancelar != null) cancelar.gameObject.SetActive(puedeCancelar);
             if (atacar != null)
             {
                 atacar.gameObject.SetActive(puedeAtacar);
