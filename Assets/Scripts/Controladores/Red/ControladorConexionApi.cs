@@ -107,6 +107,11 @@ public bool PuedeIniciarCuracion =>
     ApiDisponible &&
     !PartidaFinalizada;
 
+public bool PuedeCancelarAccion =>
+    isActiveAndEnabled &&
+    ApiDisponible &&
+    !PartidaFinalizada;
+
         public void MoverUnidad(string unidadId, int x, int y)
         {
             if (!PuedeIniciarMovimiento)
@@ -230,6 +235,66 @@ public bool PuedeIniciarCuracion =>
                         curadorId = curadorId,
                         objetivoId = objetivoId
                     }));
+        }
+
+        public void CancelarAccionUnidad(
+            string unidadId)
+        {
+            if (!PuedeCancelarAccion ||
+                string.IsNullOrWhiteSpace(
+                    unidadId))
+            {
+                MostrarError(
+                    MensajeAccionNoDisponible);
+                return;
+            }
+
+            StartCoroutine(
+                EnviarCancelacionAccionUnidad(
+                    unidadId));
+        }
+
+        private IEnumerator EnviarCancelacionAccionUnidad(
+            string unidadId)
+        {
+            using var request =
+                new UnityWebRequest(
+                    $"{urlBaseApi}/api/partida/unidades/{unidadId}/cancelar-accion",
+                    UnityWebRequest.kHttpVerbPOST);
+
+            request.downloadHandler =
+                new DownloadHandlerBuffer();
+
+            request.timeout = 5;
+
+            yield return request.SendWebRequest();
+
+            if (request.result !=
+                UnityWebRequest.Result.Success)
+            {
+                MostrarError(
+                    MensajeError(
+                        LeerResultado(
+                            request.downloadHandler.text),
+                        $"No se pudo cancelar la acción. HTTP {request.responseCode}: {request.error}"));
+
+                yield break;
+            }
+
+            if (vistaHud != null)
+            {
+                vistaHud.MostrarMensaje(
+                    "Acción cancelada.");
+            }
+
+            yield return new WaitForSecondsRealtime(
+                0.05f);
+
+            yield return ObtenerPartidaActiva(
+                "",
+                "",
+                false,
+                true);
         }
 
         public void PrepararRegresoAlMenu()
