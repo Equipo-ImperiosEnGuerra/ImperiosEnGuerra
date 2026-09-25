@@ -241,8 +241,7 @@ public class ReaccionAutomaticaTests
                 TimeSpan.FromMilliseconds(20));
 
         reacciones.SuspenderUnidad(
-            guerrero.Id,
-            TimeSpan.FromSeconds(1));
+            guerrero.Id);
 
         int iniciadas =
             reacciones.EjecutarPaso();
