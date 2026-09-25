@@ -55,7 +55,8 @@ namespace ImperiosEnGuerra.Modelo.Combate
                     Unidad aliado =
                         BuscarAliadoHerido(
                             humano,
-                            monje);
+                            monje,
+                            radioDeteccionMilitar);
 
                     if (aliado != null)
                     {
@@ -102,7 +103,8 @@ namespace ImperiosEnGuerra.Modelo.Combate
 
         private static Unidad BuscarAliadoHerido(
             Jugador propietario,
-            Monje monje)
+            Monje monje,
+            int radioDeteccion)
         {
             return propietario.Unidades
                 .Where(
@@ -114,7 +116,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
                         Distancia(
                             monje.Coordenada,
                             u.Coordenada) <=
-                            monje.AlcanceCuracion)
+                            radioDeteccion)
                 .OrderBy(
                     u =>
                         Distancia(
