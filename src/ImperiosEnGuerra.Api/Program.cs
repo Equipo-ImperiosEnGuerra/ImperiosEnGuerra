@@ -403,6 +403,27 @@ app.MapPost(
 .WithName("IniciarAtaqueConcurrente");
 
 
+app.MapPost(
+    "/api/partida/curar-concurrente",
+    (
+        CurarRequest? request,
+        ServicioAccionesConcurrentes accionesConcurrentes) =>
+{
+    ProcesoConcurrente proceso =
+        accionesConcurrentes.IniciarCuracion(request);
+
+    return Results.Accepted(
+        $"/api/procesos/{proceso.Id}",
+        new
+        {
+            procesoId = proceso.Id,
+            nombre = proceso.Nombre,
+            estado = "iniciado"
+        });
+})
+.WithName("IniciarCuracionConcurrente");
+
+
 app.MapGet(
     "/api/maquina/estado",
     (ServicioJugadorMaquina jugadorMaquina) =>
