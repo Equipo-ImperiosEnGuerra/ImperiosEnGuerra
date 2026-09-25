@@ -203,6 +203,56 @@ public class ReaccionAutomaticaTests
     }
 
     [Test]
+    public void UnidadSuspendida_NoReiniciaReaccionAutomatica()
+    {
+        var guerrero =
+            new Guerrero(
+                new Coordenada(1, 1));
+
+        var enemigo =
+            new Guerrero(
+                new Coordenada(2, 1));
+
+        humano.AgregarUnidad(
+            guerrero);
+
+        maquina.AgregarUnidad(
+            enemigo);
+
+        var estado =
+            new EstadoPartidaService();
+
+        estado.EstablecerPartida(
+            partida);
+
+        using var gestor =
+            new GestorProcesosConcurrentes();
+
+        var acciones =
+            new ServicioAccionesConcurrentes(
+                estado,
+                gestor,
+                TimeSpan.Zero);
+
+        using var reacciones =
+            new ServicioReaccionesAutomaticas(
+                estado,
+                acciones,
+                TimeSpan.FromMilliseconds(20));
+
+        reacciones.SuspenderUnidad(
+            guerrero.Id,
+            TimeSpan.FromSeconds(1));
+
+        int iniciadas =
+            reacciones.EjecutarPaso();
+
+        Assert.That(
+            iniciadas,
+            Is.Zero);
+    }
+
+    [Test]
     public void Servicio_EjecutarPaso_LanzaReaccionConcurrente()
     {
         var guerrero =
