@@ -86,6 +86,14 @@ public class CuracionTests
     }
 
     [Test]
+    public void Monje_SeDesplazaComoUnidadDeApoyoAgil()
+    {
+        Assert.That(
+            monje.VelocidadMovimiento,
+            Is.EqualTo(1.20d));
+    }
+
+    [Test]
     public void Curar_AliadoDanado_RecuperaVidaSinSuperarMaximo()
     {
         aliado.RecibirDanio(40);
