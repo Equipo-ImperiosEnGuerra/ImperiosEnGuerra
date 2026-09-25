@@ -26,6 +26,11 @@ namespace ImperiosEnGuerra.Controladores.Red
         private bool iniciandoPartidaDesdeMenu;
         private bool ultimoInicioPartidaExitoso;
         private bool ultimoEstadoPartidaValido;
+        private bool sesionVisualActiva;
+        private Coroutine sincronizacionPeriodica;
+
+        private const float IntervaloSincronizacionEstado = 0.25f;
+        private const float IntervaloConsultaProceso = 0.25f;
 
         public event System.Action PartidaIniciadaDesdeMenu;
         public event System.Action<string> InicioPartidaFallido;
@@ -231,6 +236,8 @@ public bool PuedeIniciarCuracion =>
         {
             // El menú puede mostrarse sin recargar la escena. Así Play Mode
             // continúa activo y una nueva partida puede iniciarse después.
+            sesionVisualActiva = false;
+            sincronizacionPeriodica = null;
             StopAllCoroutines();
 
             iniciandoPartidaDesdeMenu = false;
@@ -258,10 +265,18 @@ public bool PuedeIniciarCuracion =>
             controladorSeleccion?.BloquearInteraccion();
             vistaHud?.OcultarResultadoFinal();
             vistaHud?.MostrarMensaje("");
+
+            if (isActiveAndEnabled)
+            {
+                StartCoroutine(
+                    PausarSesionRemota());
+            }
         }
 
         private void OnDisable()
         {
+            sesionVisualActiva = false;
+            sincronizacionPeriodica = null;
             StopAllCoroutines();
 
             movimientosActivos = 0;
@@ -344,7 +359,7 @@ public bool PuedeIniciarCuracion =>
             string procesoId,
             string unidadId)
         {
-            const float intervaloConsulta = 0.1f;
+            const float intervaloConsulta = IntervaloConsultaProceso;
             while (isActiveAndEnabled)
             {
                 using UnityWebRequest request =
@@ -370,9 +385,6 @@ public bool PuedeIniciarCuracion =>
                     string.IsNullOrWhiteSpace(
                         request.downloadHandler.text))
                 {
-                    yield return ActualizarMovimientoEnCurso(
-                        unidadId);
-
                     yield return new WaitForSecondsRealtime(
                         intervaloConsulta);
                     continue;
@@ -645,7 +657,7 @@ public bool PuedeIniciarCuracion =>
             string procesoId,
             string unidadId)
         {
-            const float intervaloConsulta = 0.1f;
+            const float intervaloConsulta = IntervaloConsultaProceso;
             // La recolección orgánica incluye desplazamiento y varios ciclos
             // de carga, por lo que puede superar el límite anterior de 15 s.
             while (isActiveAndEnabled)
@@ -673,12 +685,6 @@ public bool PuedeIniciarCuracion =>
                     string.IsNullOrWhiteSpace(
                         request.downloadHandler.text))
                 {
-                    // La recolección también contiene una fase de movimiento.
-                    // Consumimos snapshots intermedios para que Unity represente
-                    // cada paso en vez de saltar a la posición final.
-                    yield return ActualizarRecoleccionEnCurso(
-                        unidadId);
-
                     yield return new WaitForSecondsRealtime(
                         intervaloConsulta);
                     continue;
@@ -895,7 +901,7 @@ public bool PuedeIniciarCuracion =>
         private IEnumerator EsperarResultadoConstruccion(
             string procesoId)
         {
-            const float intervaloConsulta = 0.1f;
+            const float intervaloConsulta = IntervaloConsultaProceso;
             while (isActiveAndEnabled)
             {
                 using UnityWebRequest request =
@@ -922,13 +928,8 @@ public bool PuedeIniciarCuracion =>
                     string.IsNullOrWhiteSpace(
                         request.downloadHandler.text))
                 {
-                    yield return ObtenerPartidaActiva(
-                        "",
-                        "",
-                        false);
-
                     yield return new WaitForSecondsRealtime(
-                        0.5f);
+                        intervaloConsulta);
                     continue;
                 }
 
@@ -1111,9 +1112,6 @@ public bool PuedeIniciarCuracion =>
                     string.IsNullOrWhiteSpace(
                         request.downloadHandler.text))
                 {
-                    yield return ActualizarEntrenamientoEnCurso(
-                        edificioOrigen);
-
                     yield return new WaitForSecondsRealtime(
                         intervaloConsulta);
                     continue;
@@ -1314,9 +1312,7 @@ public bool PuedeIniciarCuracion =>
         private IEnumerator EsperarResultadoAtaque(
             string procesoId)
         {
-            const float intervaloConsulta = 0.1f;
-            const int consultasPorSincronizacion = 5;
-            int consultasPendientes = 0;
+            const float intervaloConsulta = IntervaloConsultaProceso;
 
             while (isActiveAndEnabled)
             {
@@ -1346,19 +1342,6 @@ public bool PuedeIniciarCuracion =>
                     string.IsNullOrWhiteSpace(
                         request.downloadHandler.text))
                 {
-                    consultasPendientes++;
-
-                    if (consultasPendientes >=
-                        consultasPorSincronizacion)
-                    {
-                        consultasPendientes = 0;
-
-                        yield return ObtenerPartidaActiva(
-                            "",
-                            "",
-                            false);
-                    }
-
                     yield return new WaitForSecondsRealtime(
                         intervaloConsulta);
 
@@ -1509,9 +1492,7 @@ public bool PuedeIniciarCuracion =>
         private IEnumerator EsperarResultadoCuracion(
             string procesoId)
         {
-            const float intervaloConsulta = 0.1f;
-            const int consultasPorSincronizacion = 5;
-            int consultasPendientes = 0;
+            const float intervaloConsulta = IntervaloConsultaProceso;
 
             while (isActiveAndEnabled)
             {
@@ -1541,19 +1522,6 @@ public bool PuedeIniciarCuracion =>
                     string.IsNullOrWhiteSpace(
                         request.downloadHandler.text))
                 {
-                    consultasPendientes++;
-
-                    if (consultasPendientes >=
-                        consultasPorSincronizacion)
-                    {
-                        consultasPendientes = 0;
-
-                        yield return ObtenerPartidaActiva(
-                            "",
-                            "",
-                            false);
-                    }
-
                     yield return new WaitForSecondsRealtime(
                         intervaloConsulta);
 
@@ -1888,7 +1856,68 @@ public bool PuedeIniciarCuracion =>
                 yield break;
             }
 
+            sesionVisualActiva = true;
+
+            if (sincronizacionPeriodica == null)
+            {
+                sincronizacionPeriodica =
+                    StartCoroutine(
+                        SincronizarPartidaPeriodicamente());
+            }
+
             PartidaIniciadaDesdeMenu?.Invoke();
+        }
+
+        private IEnumerator SincronizarPartidaPeriodicamente()
+        {
+            var espera =
+                new WaitForSecondsRealtime(
+                    IntervaloSincronizacionEstado);
+
+            while (sesionVisualActiva &&
+                   isActiveAndEnabled &&
+                   !PartidaFinalizada)
+            {
+                yield return espera;
+
+                if (!sesionVisualActiva ||
+                    !isActiveAndEnabled ||
+                    PartidaFinalizada)
+                {
+                    break;
+                }
+
+                yield return ObtenerPartidaActiva(
+                    "",
+                    "",
+                    false,
+                    true);
+            }
+
+            sincronizacionPeriodica = null;
+        }
+
+        private IEnumerator PausarSesionRemota()
+        {
+            using var request =
+                new UnityWebRequest(
+                    $"{urlBaseApi}/api/sesion/pausar",
+                    UnityWebRequest.kHttpVerbPOST);
+
+            request.downloadHandler =
+                new DownloadHandlerBuffer();
+
+            request.timeout = 3;
+
+            yield return request.SendWebRequest();
+
+            if (request.result !=
+                UnityWebRequest.Result.Success)
+            {
+                Debug.LogWarning(
+                    $"No se pudo notificar la pausa de sesión a la API: {request.error}",
+                    this);
+            }
         }
 
         private IEnumerator IniciarPartidaPrueba()
@@ -1955,7 +1984,8 @@ public bool PuedeIniciarCuracion =>
         private IEnumerator ObtenerPartidaActiva(
             string mensajeExito = "Partida recibida correctamente.",
             string contextoError = "",
-            bool mostrarMensaje = true)
+            bool mostrarMensaje = true,
+            bool silencioso = false)
         {
             ultimoEstadoPartidaValido = false;
 
@@ -1971,24 +2001,32 @@ public bool PuedeIniciarCuracion =>
 
             if (request.result != UnityWebRequest.Result.Success)
             {
-                MostrarError(
-                    contextoError +
-                    MensajeError(
-                        LeerResultado(request.downloadHandler.text),
-                        $"No se pudo obtener la partida activa. HTTP {request.responseCode}: {request.error}"));
+                if (!silencioso)
+                {
+                    MostrarError(
+                        contextoError +
+                        MensajeError(
+                            LeerResultado(request.downloadHandler.text),
+                            $"No se pudo obtener la partida activa. HTTP {request.responseCode}: {request.error}"));
+                }
 
                 yield break;
             }
 
-            Debug.Log(
-                $"Partida activa obtenida correctamente: " +
-                $"{request.downloadHandler.text}");
+            if (!silencioso)
+            {
+                Debug.Log(
+                    "Partida activa obtenida correctamente.");
+            }
 
             if (vistaPartida == null)
             {
-                MostrarError(
-                    contextoError +
-                    "VistaPartida no está configurada en ControladorAPI.");
+                if (!silencioso)
+                {
+                    MostrarError(
+                        contextoError +
+                        "VistaPartida no está configurada en ControladorAPI.");
+                }
 
                 yield break;
             }
@@ -2008,9 +2046,12 @@ public bool PuedeIniciarCuracion =>
             }
             catch (System.ArgumentException ex)
             {
-                MostrarError(
-                    contextoError +
-                    $"La respuesta de la partida no es JSON válido: {ex.Message}");
+                if (!silencioso)
+                {
+                    MostrarError(
+                        contextoError +
+                        $"La respuesta de la partida no es JSON válido: {ex.Message}");
+                }
 
                 yield break;
             }
@@ -2021,9 +2062,12 @@ public bool PuedeIniciarCuracion =>
                 estadoPartida.jugadorHumano == null ||
                 estadoPartida.jugadorMaquina == null)
             {
-                MostrarError(
-                    contextoError +
-                    "La API devolvió un estado de partida incompleto.");
+                if (!silencioso)
+                {
+                    MostrarError(
+                        contextoError +
+                        "La API devolvió un estado de partida incompleto.");
+                }
 
                 yield break;
             }
@@ -2031,6 +2075,11 @@ public bool PuedeIniciarCuracion =>
             PartidaFinalizada =
                 estadoPartida.estado ==
                 "finalizada";
+
+            if (PartidaFinalizada)
+            {
+                sesionVisualActiva = false;
+            }
 
             vistaPartida.Sincronizar(estadoPartida);
             ultimoEstadoPartidaValido = true;
