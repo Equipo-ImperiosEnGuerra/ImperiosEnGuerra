@@ -320,6 +320,97 @@ public sealed class ServicioAccionesConcurrentes
         return proceso;
     }
 
+    public ProcesoConcurrente IniciarMovimientoIdle(
+        MoverUnidadRequest? request)
+    {
+        MoverUnidadRequest? copia =
+            Copiar(request);
+
+        return gestorProcesos.Iniciar(
+            "MOVER_IDLE",
+            token =>
+            {
+                if (!Guid.TryParse(
+                        copia?.UnidadId,
+                        out Guid unidadId))
+                {
+                    return ResultadoAccion.Fallido(
+                        "El ID de la unidad debe tener formato Guid válido.");
+                }
+
+                Unidad? unidad =
+                    estadoPartida.ObtenerUnidad(
+                        unidadId);
+
+                if (!(unidad is Aldeano aldeano))
+                {
+                    return ResultadoAccion.Fallido(
+                        "El movimiento idle solo se aplica a Aldeanos.");
+                }
+
+                // Este movimiento es de baja prioridad: no crea OrdenActiva
+                // ni marca la unidad como ocupada. Una orden real del jugador
+                // puede cancelarlo inmediatamente desde ServicioReaccionesAutomaticas.
+                ResultadoPlanMovimiento plan =
+                    estadoPartida.PrepararMovimientoProgresivo(
+                        copia);
+
+                if (!plan.Exito)
+                {
+                    return ResultadoAccion.Fallido(
+                        plan.Mensaje);
+                }
+
+                if (plan.Pasos.Count == 0)
+                {
+                    return ResultadoAccion.Exitoso(
+                        "Movimiento idle completado.");
+                }
+
+                TimeSpan retardoPaso =
+                    CalcularRetardoPasoMovimiento(
+                        retardoMovimiento,
+                        aldeano.VelocidadMovimiento);
+
+                foreach (Coordenada paso
+                         in plan.Pasos)
+                {
+                    EsperarAntesDeAplicar(
+                        token,
+                        retardoPaso);
+
+                    token.ThrowIfCancellationRequested();
+
+                    // Si apareció una orden real mientras esperaba,
+                    // el paseo deja de ejecutarse sin interferir con ella.
+                    if (!aldeano.Disponible ||
+                        aldeano.OrdenActiva.HasValue)
+                    {
+                        return ResultadoAccion.Exitoso(
+                            "Movimiento idle cedido a una orden prioritaria.");
+                    }
+
+                    ResultadoAccion resultado =
+                        estadoPartida.AvanzarMovimiento(
+                            unidadId,
+                            paso);
+
+                    if (!resultado.Exito)
+                    {
+                        return ResultadoAccion.Exitoso(
+                            "Movimiento idle detenido por cambio del mapa.");
+                    }
+
+                    Console.WriteLine(
+                        $"MOVIMIENTO_IDLE: {unidadId} -> " +
+                        $"({paso.X},{paso.Y})");
+                }
+
+                return ResultadoAccion.Exitoso(
+                    "Movimiento idle completado.");
+            });
+    }
+
     // ============================================================
     // RECOLECCIÓN
     // ============================================================
