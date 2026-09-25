@@ -242,7 +242,7 @@ app.MapPost(
             request?.UnidadId,
             out Guid unidadMovimiento))
     {
-        reaccionesAutomaticas.ReanudarUnidad(
+        reaccionesAutomaticas.PrepararOrdenManual(
             unidadMovimiento);
     }
 
@@ -368,7 +368,7 @@ app.MapPost(
             request?.AldeanoId,
             out Guid unidadRecoleccion))
     {
-        reaccionesAutomaticas.ReanudarUnidad(
+        reaccionesAutomaticas.PrepararOrdenManual(
             unidadRecoleccion);
     }
 
@@ -409,7 +409,7 @@ app.MapPost(
             request?.AldeanoId,
             out Guid unidadConstruccion))
     {
-        reaccionesAutomaticas.ReanudarUnidad(
+        reaccionesAutomaticas.PrepararOrdenManual(
             unidadConstruccion);
     }
 
@@ -483,7 +483,7 @@ app.MapPost(
             request?.AtacanteId,
             out Guid unidadAtaque))
     {
-        reaccionesAutomaticas.ReanudarUnidad(
+        reaccionesAutomaticas.PrepararOrdenManual(
             unidadAtaque);
     }
 
@@ -513,7 +513,7 @@ app.MapPost(
             request?.CuradorId,
             out Guid unidadCuracion))
     {
-        reaccionesAutomaticas.ReanudarUnidad(
+        reaccionesAutomaticas.PrepararOrdenManual(
             unidadCuracion);
     }
 
