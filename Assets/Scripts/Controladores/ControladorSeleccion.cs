@@ -178,7 +178,24 @@ namespace ImperiosEnGuerra.Controladores
 
             if (CapturandoObjetivoEntidad)
             {
+                if (candidata == null)
+                {
+                    CancelarCapturaDestino();
+                    return;
+                }
+
                 ObjetivoEntidadSeleccionado?.Invoke(candidata);
+
+                // Si el controlador de acciones no consumió el objetivo,
+                // significa que no era válido para la orden preparada.
+                // Se abandona el modo de objetivo y el clic vuelve a servir
+                // como selección normal, evitando que el jugador quede atrapado.
+                if (CapturandoObjetivoEntidad)
+                {
+                    CancelarCapturaDestino();
+                    Seleccionar(candidata);
+                }
+
                 return;
             }
 
