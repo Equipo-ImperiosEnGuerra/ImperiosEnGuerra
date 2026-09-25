@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Threading;
+using System.Threading.Tasks;
 using ImperiosEnGuerra.Modelo.Unidades;
 using ImperiosEnGuerra.Modelo.Acciones;
 using ImperiosEnGuerra.Modelo.Combate;
@@ -20,6 +22,10 @@ public sealed class ServicioAccionesConcurrentes
     private readonly EstadoPartidaService estadoPartida;
     private readonly GestorProcesosConcurrentes gestorProcesos;
     private readonly ServicioOrdenesUnidad servicioOrdenes;
+
+    private readonly ConcurrentDictionary<Guid, Guid>
+        procesosPorUnidad =
+            new ConcurrentDictionary<Guid, Guid>();
 
     private readonly TimeSpan retardoMovimiento;
     private readonly TimeSpan retardoRecoleccion;
@@ -170,7 +176,8 @@ public sealed class ServicioAccionesConcurrentes
         MoverUnidadRequest? copia =
             Copiar(request);
 
-        return gestorProcesos.Iniciar(
+        ProcesoConcurrente proceso =
+            gestorProcesos.Iniciar(
             "MOVER",
             token =>
             {
@@ -305,6 +312,12 @@ public sealed class ServicioAccionesConcurrentes
                         unidadId);
                 }
             });
+
+        RegistrarProcesoUnidad(
+            copia?.UnidadId,
+            proceso);
+
+        return proceso;
     }
 
     // ============================================================
@@ -317,7 +330,8 @@ public sealed class ServicioAccionesConcurrentes
         RecolectarRequest? copia =
             Copiar(request);
 
-        return gestorProcesos.Iniciar(
+        ProcesoConcurrente proceso =
+            gestorProcesos.Iniciar(
             "RECOLECTAR",
             token =>
             {
@@ -683,6 +697,12 @@ public sealed class ServicioAccionesConcurrentes
                     }
                 }
             });
+
+        RegistrarProcesoUnidad(
+            copia?.AldeanoId,
+            proceso);
+
+        return proceso;
     }
 
     // ============================================================
@@ -695,7 +715,8 @@ public sealed class ServicioAccionesConcurrentes
         ConstruirRequest? copia =
             Copiar(request);
 
-        return gestorProcesos.Iniciar(
+        ProcesoConcurrente proceso =
+            gestorProcesos.Iniciar(
             "CONSTRUIR",
             token =>
             {
@@ -858,6 +879,12 @@ public sealed class ServicioAccionesConcurrentes
                     }
                 }
             });
+
+        RegistrarProcesoUnidad(
+            copia?.AldeanoId,
+            proceso);
+
+        return proceso;
     }
 
     // ============================================================
@@ -1011,7 +1038,8 @@ public sealed class ServicioAccionesConcurrentes
         AtacarRequest? copia =
             Copiar(request);
 
-        return gestorProcesos.Iniciar(
+        ProcesoConcurrente proceso =
+            gestorProcesos.Iniciar(
             "ATACAR",
             token =>
             {
@@ -1167,6 +1195,12 @@ public sealed class ServicioAccionesConcurrentes
                     }
                 }
             });
+
+        RegistrarProcesoUnidad(
+            copia?.AtacanteId,
+            proceso);
+
+        return proceso;
     }
 
 
@@ -1180,7 +1214,8 @@ public sealed class ServicioAccionesConcurrentes
         CurarRequest? copia =
             Copiar(request);
 
-        return gestorProcesos.Iniciar(
+        ProcesoConcurrente proceso =
+            gestorProcesos.Iniciar(
             "CURAR",
             token =>
             {
@@ -1282,6 +1317,12 @@ public sealed class ServicioAccionesConcurrentes
                         curadorId);
                 }
             });
+
+        RegistrarProcesoUnidad(
+            copia?.CuradorId,
+            proceso);
+
+        return proceso;
     }
 
 
@@ -1296,10 +1337,66 @@ public sealed class ServicioAccionesConcurrentes
             procesoId);
     }
 
+    public bool CancelarPorUnidad(
+        Guid unidadId)
+    {
+        if (!procesosPorUnidad.TryGetValue(
+                unidadId,
+                out Guid procesoId))
+        {
+            return false;
+        }
+
+        return gestorProcesos.Cancelar(
+            procesoId);
+    }
+
+    public bool TieneProcesoActivo(
+        Guid unidadId)
+    {
+        return procesosPorUnidad.ContainsKey(
+            unidadId);
+    }
+
 
     public void CancelarTodos()
     {
         gestorProcesos.CancelarTodos();
+    }
+
+
+    private void RegistrarProcesoUnidad(
+        string? unidadIdTexto,
+        ProcesoConcurrente proceso)
+    {
+        if (proceso == null ||
+            !Guid.TryParse(
+                unidadIdTexto,
+                out Guid unidadId))
+        {
+            return;
+        }
+
+        procesosPorUnidad[unidadId] =
+            proceso.Id;
+
+        _ = proceso.Finalizacion
+            .ContinueWith(
+                _ =>
+                {
+                    if (procesosPorUnidad.TryGetValue(
+                            unidadId,
+                            out Guid registrado) &&
+                        registrado == proceso.Id)
+                    {
+                        procesosPorUnidad.TryRemove(
+                            unidadId,
+                            out _);
+                    }
+                },
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
     }
 
 
