@@ -122,6 +122,72 @@ public class RecoleccionConcurrenteTests
     }
 
     [Test]
+    public async Task CancelarRecoleccion_PorUnidad_LiberaAldeano()
+    {
+        Partida partida =
+            CrearPartida(
+                out Aldeano aldeano);
+
+        var estado =
+            new EstadoPartidaService();
+
+        estado.EstablecerPartida(
+            partida);
+
+        using var gestor =
+            new GestorProcesosConcurrentes();
+
+        var servicio =
+            new ServicioAccionesConcurrentes(
+                estado,
+                gestor,
+                TimeSpan.FromSeconds(10));
+
+        ProcesoConcurrente proceso =
+            servicio.IniciarRecoleccion(
+                CrearRequest(
+                    aldeano,
+                    2,
+                    2));
+
+        Assert.That(
+            servicio.TieneProcesoActivo(
+                aldeano.Id),
+            Is.True);
+
+        Assert.That(
+            servicio.CancelarPorUnidad(
+                aldeano.Id),
+            Is.True);
+
+        await proceso.Finalizacion;
+
+        Assert.That(
+            servicio.IntentarObtenerResultado(
+                proceso.Id,
+                out ResultadoProcesoConcurrente resultado),
+            Is.True);
+
+        Assert.That(
+            resultado.Estado,
+            Is.EqualTo(
+                EstadoProcesoConcurrente.Cancelado));
+
+        Assert.That(
+            aldeano.Estado,
+            Is.EqualTo(
+                EstadoUnidad.Idle));
+
+        Assert.That(
+            aldeano.OrdenActiva,
+            Is.Null);
+
+        Assert.That(
+            aldeano.Disponible,
+            Is.True);
+    }
+
+    [Test]
     public async Task CancelarTrasPrimerCiclo_ConservaCargaParcialYVuelveIdle()
     {
         Partida partida =
