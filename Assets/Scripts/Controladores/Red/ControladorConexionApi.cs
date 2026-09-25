@@ -55,7 +55,7 @@ namespace ImperiosEnGuerra.Controladores.Red
 
             if (!ApiDisponible)
             {
-                return "La conexión con la API no está disponible.";
+                return "Se perdió la conexión con la partida.";
             }
 
             return "La acción no está disponible en este momento.";
@@ -151,7 +151,7 @@ public bool PuedeCancelarAccion =>
         if (!PuedeIniciarConstruccion)
         {
             MostrarError(
-                "La conexión con la API no está disponible.");
+                "Se perdió la conexión con la partida.");
             return;
         }
 
@@ -1811,9 +1811,43 @@ public bool PuedeCancelarAccion =>
             if (vistaHud != null)
             {
                 vistaHud.MostrarMensaje(
-                    mensaje,
+                    TraducirMensajeParaJugador(
+                        mensaje),
                     tecnico);
             }
+        }
+
+        private static string TraducirMensajeParaJugador(
+            string mensaje)
+        {
+            if (string.IsNullOrWhiteSpace(
+                    mensaje))
+            {
+                return "La acción no pudo completarse.";
+            }
+
+            if (mensaje.Contains("HTTP") ||
+                mensaje.Contains("conectar") ||
+                mensaje.Contains("conexión") ||
+                mensaje.Contains("API no está disponible"))
+            {
+                return "Se perdió la conexión con la partida. Inténtalo de nuevo.";
+            }
+
+            if (mensaje.Contains("JSON") ||
+                mensaje.Contains("worker") ||
+                mensaje.Contains("concurrente") ||
+                mensaje.Contains("proceso") ||
+                mensaje.Contains("Modelo") ||
+                mensaje.Contains("VistaPartida") ||
+                mensaje.Contains("identificador válido") ||
+                mensaje.Contains("estado de partida incompleto") ||
+                mensaje.Contains("respuesta"))
+            {
+                return "La acción no pudo completarse. Inténtalo de nuevo.";
+            }
+
+            return mensaje;
         }
 
         private static bool EsErrorTecnico(
@@ -1876,15 +1910,16 @@ public bool PuedeCancelarAccion =>
 
             if (request.result != UnityWebRequest.Result.Success)
             {
-                string mensaje =
+                string mensajeTecnico =
                     $"No se pudo conectar con la API: {request.error}";
 
                 Debug.LogError(
-                    mensaje);
+                    mensajeTecnico);
 
                 iniciandoPartidaDesdeMenu = false;
                 InicioPartidaFallido?.Invoke(
-                    mensaje);
+                    "No se pudo conectar al servidor de la partida. " +
+                    "Verifica que esté iniciado e inténtalo de nuevo.");
 
                 yield break;
             }
@@ -1901,7 +1936,7 @@ public bool PuedeCancelarAccion =>
             {
                 iniciandoPartidaDesdeMenu = false;
                 InicioPartidaFallido?.Invoke(
-                    "La API respondió, pero no fue posible crear la partida.");
+                    "No fue posible preparar una nueva partida. Inténtalo de nuevo.");
 
                 yield break;
             }
@@ -1916,7 +1951,7 @@ public bool PuedeCancelarAccion =>
             if (!ultimoEstadoPartidaValido)
             {
                 InicioPartidaFallido?.Invoke(
-                    "La partida fue creada, pero no fue posible cargar su estado inicial.");
+                    "La partida no pudo cargarse correctamente. Inténtalo de nuevo.");
 
                 yield break;
             }
@@ -2185,7 +2220,7 @@ public bool PuedeCancelarAccion =>
                 else
                 {
                     vistaHud.MostrarMensaje(
-                        "La respuesta no contiene los recursos del jugador humano.",
+                        "No se pudieron actualizar tus recursos.",
                         true);
                 }
             }
