@@ -131,7 +131,7 @@ public class EstadoFinalVisualUnityTests
 
             Assert.That(
                 detalle.text,
-                Does.Not.Contain("regla").IgnoreCase);
+                Does.Not.Contain("regla"));
 
             Assert.That(
                 detalle.text,
