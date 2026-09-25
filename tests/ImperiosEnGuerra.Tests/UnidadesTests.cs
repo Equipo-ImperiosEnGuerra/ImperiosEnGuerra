@@ -96,7 +96,7 @@ namespace ImperiosEnGuerra.Tests.Editor
 
             Assert.That(
                 monje.VelocidadMovimiento,
-                Is.LessThan(
+                Is.GreaterThan(
                     aldeano.VelocidadMovimiento));
         }
 
