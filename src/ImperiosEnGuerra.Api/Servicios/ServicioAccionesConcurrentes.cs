@@ -1382,7 +1382,7 @@ public sealed class ServicioAccionesConcurrentes
 
         _ = proceso.Finalizacion
             .ContinueWith(
-                _ =>
+                tarea =>
                 {
                     if (procesosPorUnidad.TryGetValue(
                             unidadId,
@@ -1391,7 +1391,7 @@ public sealed class ServicioAccionesConcurrentes
                     {
                         procesosPorUnidad.TryRemove(
                             unidadId,
-                            out _);
+                            out Guid _);
                     }
                 },
                 CancellationToken.None,
