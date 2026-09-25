@@ -183,6 +183,45 @@ public class ReaccionAutomaticaTests
     }
 
     [Test]
+    public void Monje_DetectaAliadoHeridoFueraDeAlcanceDeCuracion()
+    {
+        var monje =
+            new Monje(
+                new Coordenada(1, 1));
+
+        var aliado =
+            new Guerrero(
+                new Coordenada(5, 1));
+
+        aliado.RecibirDanio(
+            30);
+
+        humano.AgregarUnidad(
+            monje);
+
+        humano.AgregarUnidad(
+            aliado);
+
+        var reacciones =
+            planificador.Preparar(
+                partida);
+
+        Assert.That(
+            reacciones.Count,
+            Is.EqualTo(1));
+
+        Assert.That(
+            reacciones[0].Tipo,
+            Is.EqualTo(
+                TipoReaccionAutomatica.Curar));
+
+        Assert.That(
+            reacciones[0].ObjetivoId,
+            Is.EqualTo(
+                aliado.Id));
+    }
+
+    [Test]
     public void Monje_NoCuraAliadoConVidaCompleta()
     {
         humano.AgregarUnidad(
