@@ -3,6 +3,7 @@ using ImperiosEnGuerra.Controladores;
 using ImperiosEnGuerra.Vistas;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class EstadoFinalVisualUnityTests
 {
@@ -92,6 +93,49 @@ public class EstadoFinalVisualUnityTests
             Assert.That(
                 renderer.color,
                 Is.Not.EqualTo(Color.white));
+        }
+        finally
+        {
+            Object.DestroyImmediate(
+                objeto);
+        }
+    }
+
+    [Test]
+    public void ResultadoFinal_NoMuestraReglasTecnicas()
+    {
+        var objeto =
+            new GameObject(
+                "HudPrueba",
+                typeof(RectTransform));
+
+        try
+        {
+            VistaHud hud =
+                objeto.AddComponent<VistaHud>();
+
+            hud.MostrarResultadoFinal(
+                "Maquina",
+                "CPU",
+                "Regla AND cumplida: mensaje técnico de prueba.");
+
+            Text detalle =
+                objeto.transform
+                    .Find(
+                        "PantallaResultadoFinal/Detalle")
+                    .GetComponent<Text>();
+
+            Assert.That(
+                detalle.text,
+                Does.Not.Contain("AND"));
+
+            Assert.That(
+                detalle.text,
+                Does.Not.Contain("regla").IgnoreCase);
+
+            Assert.That(
+                detalle.text,
+                Does.Contain("Tu imperio ha caído"));
         }
         finally
         {
