@@ -23,6 +23,7 @@ builder.Services.AddSingleton<ServicioOrdenesUnidad>();
 builder.Services.AddSingleton<ServicioAccionesConcurrentes>();
 builder.Services.AddSingleton<ServicioReaccionesAutomaticas>();
 builder.Services.AddSingleton<ServicioJugadorMaquina>();
+builder.Services.AddSingleton<ServicioSesionJuego>();
 builder.Services.AddSingleton<DespachadorMensajesRed>();
 builder.Services.AddSingleton<ServicioRedPartida>();
 
@@ -65,16 +66,12 @@ app.MapPost(
     (
         IniciarPartidaRequest request,
         EstadoPartidaService estadoPartida,
-        ServicioAccionesConcurrentes accionesConcurrentes,
-        ServicioReaccionesAutomaticas reaccionesAutomaticas,
-        ServicioJugadorMaquina jugadorMaquina,
+        ServicioSesionJuego sesionJuego,
         ServicioArchivos servicioArchivos) =>
 {
     try
     {
-        jugadorMaquina.Detener();
-        reaccionesAutomaticas.Detener();
-        accionesConcurrentes.CancelarTodos();
+        sesionJuego.Pausar();
 
         Mapa mapa = new Mapa(
             request.AnchoMapa,
@@ -112,8 +109,7 @@ app.MapPost(
             partida);
 
         estadoPartida.EstablecerPartida(partida);
-        reaccionesAutomaticas.Iniciar();
-        jugadorMaquina.Iniciar();
+        sesionJuego.Activar();
 
         return Results.Ok(new
         {
@@ -173,9 +169,14 @@ app.MapPost(
 })
 .WithName("IniciarPartida");
 
-app.MapGet("/api/partida", (EstadoPartidaService estadoPartida) =>
+app.MapGet(
+    "/api/partida",
+    (
+        EstadoPartidaService estadoPartida,
+        ServicioSesionJuego sesionJuego) =>
 {
-    EstadoPartidaResponse? respuesta = estadoPartida.ObtenerEstado();
+    EstadoPartidaResponse? respuesta =
+        estadoPartida.ObtenerEstado();
 
     if (respuesta == null)
     {
@@ -185,9 +186,38 @@ app.MapGet("/api/partida", (EstadoPartidaService estadoPartida) =>
         });
     }
 
+    sesionJuego.RegistrarLatido();
+
     return Results.Ok(respuesta);
 })
 .WithName("ObtenerPartidaActiva");
+
+app.MapGet(
+    "/api/sesion/estado",
+    (ServicioSesionJuego sesionJuego) =>
+{
+    return Results.Ok(new
+    {
+        activa = sesionJuego.Activa,
+        ultimoLatidoUtc =
+            sesionJuego.UltimoLatidoUtc
+    });
+})
+.WithName("ObtenerEstadoSesionJuego");
+
+app.MapPost(
+    "/api/sesion/pausar",
+    (ServicioSesionJuego sesionJuego) =>
+{
+    return Results.Ok(new
+    {
+        pausada =
+            sesionJuego.Pausar(),
+        activa =
+            sesionJuego.Activa
+    });
+})
+.WithName("PausarSesionJuego");
 
 app.MapPost(
     "/api/partida/mover",
