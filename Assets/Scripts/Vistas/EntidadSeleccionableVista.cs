@@ -26,7 +26,16 @@ namespace ImperiosEnGuerra.Vistas
         public int Danio { get; private set; }
         public int Alcance { get; private set; }
 
+        public string TipoUnidadEntrenando { get; private set; }
+        public int ProgresoEntrenamiento { get; private set; }
+        public int TamanoColaEntrenamiento { get; private set; }
+        public bool EntrenamientoVisible =>
+            indicadorEntrenamiento != null &&
+            indicadorEntrenamiento.gameObject.activeSelf;
+
         public SpriteRenderer Renderer { get; private set; }
+
+        private TextMesh indicadorEntrenamiento;
 
         private const float UmbralVidaCritica = 0.25f;
         private const float VelocidadPulsoAtaque = 5f;
@@ -82,6 +91,10 @@ namespace ImperiosEnGuerra.Vistas
             Danio = danio;
             Alcance = alcance;
 
+            TipoUnidadEntrenando = string.Empty;
+            ProgresoEntrenamiento = 0;
+            TamanoColaEntrenamiento = 0;
+
             Renderer = GetComponent<SpriteRenderer>();
             colorOriginal = Renderer.color;
 
@@ -114,6 +127,99 @@ namespace ImperiosEnGuerra.Vistas
             }
 
             AplicarColorVisual();
+        }
+
+        public void ActualizarEntrenamientoVisual(
+            string tipoUnidad,
+            int progreso,
+            int tamanoCola,
+            bool mostrar)
+        {
+            TipoUnidadEntrenando =
+                tipoUnidad ?? string.Empty;
+
+            ProgresoEntrenamiento =
+                Mathf.Clamp(
+                    progreso,
+                    0,
+                    100);
+
+            TamanoColaEntrenamiento =
+                Mathf.Max(
+                    0,
+                    tamanoCola);
+
+            bool visible =
+                mostrar &&
+                Categoria == CategoriaEntidadVisual.Edificio &&
+                !string.IsNullOrWhiteSpace(
+                    TipoUnidadEntrenando) &&
+                TamanoColaEntrenamiento > 0;
+
+            if (!visible)
+            {
+                if (indicadorEntrenamiento != null)
+                {
+                    indicadorEntrenamiento.gameObject
+                        .SetActive(false);
+                }
+
+                return;
+            }
+
+            if (indicadorEntrenamiento == null)
+            {
+                var objeto =
+                    new GameObject(
+                        "IndicadorEntrenamiento");
+
+                objeto.transform.SetParent(
+                    transform,
+                    false);
+
+                objeto.transform.localPosition =
+                    new Vector3(
+                        0f,
+                        0.95f,
+                        -0.1f);
+
+                objeto.transform.localScale =
+                    Vector3.one * 0.12f;
+
+                indicadorEntrenamiento =
+                    objeto.AddComponent<TextMesh>();
+
+                indicadorEntrenamiento.anchor =
+                    TextAnchor.MiddleCenter;
+
+                indicadorEntrenamiento.alignment =
+                    TextAlignment.Center;
+
+                indicadorEntrenamiento.fontSize =
+                    48;
+
+                indicadorEntrenamiento.characterSize =
+                    0.12f;
+
+                MeshRenderer textoRenderer =
+                    indicadorEntrenamiento
+                        .GetComponent<MeshRenderer>();
+
+                if (textoRenderer != null &&
+                    Renderer != null)
+                {
+                    textoRenderer.sortingOrder =
+                        Renderer.sortingOrder + 20;
+                }
+            }
+
+            indicadorEntrenamiento.text =
+                TamanoColaEntrenamiento > 1
+                    ? $"Entrenando {TipoUnidadEntrenando} {ProgresoEntrenamiento}%\nCola: {TamanoColaEntrenamiento}"
+                    : $"Entrenando {TipoUnidadEntrenando} {ProgresoEntrenamiento}%";
+
+            indicadorEntrenamiento.gameObject
+                .SetActive(true);
         }
 
         private void Update()
