@@ -203,22 +203,27 @@ public sealed class ServicioSesionJuego : IDisposable
                     intervaloRevision,
                     token);
 
-                bool vencida;
+                bool debePausar = false;
 
                 lock (sincronizacion)
                 {
-                    vencida =
-                        activa &&
+                    if (activa &&
                         ultimoLatidoUtc !=
                             DateTime.MinValue &&
                         DateTime.UtcNow -
                             ultimoLatidoUtc >
-                            tiempoMaximoSinLatido;
+                            tiempoMaximoSinLatido)
+                    {
+                        activa = false;
+                        debePausar = true;
+                    }
                 }
 
-                if (vencida)
+                if (debePausar)
                 {
-                    Pausar();
+                    jugadorMaquina.Detener();
+                    reacciones.Detener();
+                    acciones.CancelarTodos();
                 }
             }
         }
