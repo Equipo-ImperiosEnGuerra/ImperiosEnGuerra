@@ -235,8 +235,17 @@ app.MapPost(
     "/api/partida/mover-concurrente",
     (
         MoverUnidadRequest? request,
-        ServicioAccionesConcurrentes accionesConcurrentes) =>
+        ServicioAccionesConcurrentes accionesConcurrentes,
+        ServicioReaccionesAutomaticas reaccionesAutomaticas) =>
 {
+    if (Guid.TryParse(
+            request?.UnidadId,
+            out Guid unidadMovimiento))
+    {
+        reaccionesAutomaticas.ReanudarUnidad(
+            unidadMovimiento);
+    }
+
     var proceso =
         accionesConcurrentes.IniciarMovimiento(request);
 
@@ -328,8 +337,7 @@ app.MapPost(
         ServicioReaccionesAutomaticas reaccionesAutomaticas) =>
 {
     reaccionesAutomaticas.SuspenderUnidad(
-        unidadId,
-        TimeSpan.FromSeconds(3));
+        unidadId);
 
     bool cancelada =
         accionesConcurrentes.CancelarPorUnidad(
@@ -353,8 +361,17 @@ app.MapPost(
     "/api/partida/recolectar-concurrente",
     (
         RecolectarRequest? request,
-        ServicioAccionesConcurrentes accionesConcurrentes) =>
+        ServicioAccionesConcurrentes accionesConcurrentes,
+        ServicioReaccionesAutomaticas reaccionesAutomaticas) =>
 {
+    if (Guid.TryParse(
+            request?.AldeanoId,
+            out Guid unidadRecoleccion))
+    {
+        reaccionesAutomaticas.ReanudarUnidad(
+            unidadRecoleccion);
+    }
+
     var proceso =
         accionesConcurrentes.IniciarRecoleccion(request);
 
@@ -385,8 +402,17 @@ app.MapPost(
     "/api/partida/construir-concurrente",
     (
         ConstruirRequest? request,
-        ServicioAccionesConcurrentes accionesConcurrentes) =>
+        ServicioAccionesConcurrentes accionesConcurrentes,
+        ServicioReaccionesAutomaticas reaccionesAutomaticas) =>
 {
+    if (Guid.TryParse(
+            request?.AldeanoId,
+            out Guid unidadConstruccion))
+    {
+        reaccionesAutomaticas.ReanudarUnidad(
+            unidadConstruccion);
+    }
+
     var proceso =
         accionesConcurrentes.IniciarConstruccion(request);
 
@@ -450,8 +476,17 @@ app.MapPost(
     "/api/partida/atacar-concurrente",
     (
         AtacarRequest? request,
-        ServicioAccionesConcurrentes accionesConcurrentes) =>
+        ServicioAccionesConcurrentes accionesConcurrentes,
+        ServicioReaccionesAutomaticas reaccionesAutomaticas) =>
 {
+    if (Guid.TryParse(
+            request?.AtacanteId,
+            out Guid unidadAtaque))
+    {
+        reaccionesAutomaticas.ReanudarUnidad(
+            unidadAtaque);
+    }
+
     ProcesoConcurrente proceso =
         accionesConcurrentes.IniciarAtaque(request);
 
@@ -471,8 +506,17 @@ app.MapPost(
     "/api/partida/curar-concurrente",
     (
         CurarRequest? request,
-        ServicioAccionesConcurrentes accionesConcurrentes) =>
+        ServicioAccionesConcurrentes accionesConcurrentes,
+        ServicioReaccionesAutomaticas reaccionesAutomaticas) =>
 {
+    if (Guid.TryParse(
+            request?.CuradorId,
+            out Guid unidadCuracion))
+    {
+        reaccionesAutomaticas.ReanudarUnidad(
+            unidadCuracion);
+    }
+
     ProcesoConcurrente proceso =
         accionesConcurrentes.IniciarCuracion(request);
 
