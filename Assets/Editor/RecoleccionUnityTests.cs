@@ -157,6 +157,35 @@ public class RecoleccionUnityTests
                     .raycastTarget,
                 Is.True,
                 "Los botones sí deben seguir recibiendo clics.");
+
+            RectTransform panelRect =
+                panel.GetComponent<RectTransform>();
+
+            Assert.That(
+                panelRect.anchorMin,
+                Is.EqualTo(
+                    new Vector2(
+                        0.5f,
+                        1f)));
+
+            Assert.That(
+                panelRect.anchorMax,
+                Is.EqualTo(
+                    new Vector2(
+                        0.5f,
+                        1f)));
+
+            Assert.That(
+                panelRect.pivot,
+                Is.EqualTo(
+                    new Vector2(
+                        0.5f,
+                        1f)));
+
+            Assert.That(
+                panelRect.offsetMax.y,
+                Is.EqualTo(-58f),
+                "El HUD contextual debe quedar debajo de la barra superior y lejos de la base humana.");
         }
         finally
         {
