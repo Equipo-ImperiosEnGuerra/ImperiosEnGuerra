@@ -242,6 +242,75 @@ public class VictoriaFinalTests
     }
 
     [Test]
+    public void ObtenerEstado_ReevaluaDerrotaSiCondicionYaSeCumplio()
+    {
+        var mapa =
+            new Mapa(
+                6,
+                6);
+
+        var humano =
+            new Jugador(
+                "Humano",
+                TipoJugador.Humano,
+                mapa,
+                new RecursosJugador());
+
+        var maquina =
+            new Jugador(
+                "CPU",
+                TipoJugador.Maquina,
+                mapa,
+                new RecursosJugador());
+
+        // Un Aldeano no cuenta como unidad militar para la condición final.
+        humano.AgregarUnidad(
+            new Aldeano(
+                new Coordenada(
+                    1,
+                    1)));
+
+        maquina.AgregarEdificio(
+            new CentroUrbano(
+                new Coordenada(
+                    5,
+                    5)));
+
+        mapa.ObtenerCasilla(
+                5,
+                5)
+            .Ocupar();
+
+        var partida =
+            new Partida(
+                humano,
+                maquina);
+
+        var estado =
+            new EstadoPartidaService();
+
+        estado.EstablecerPartida(
+            partida);
+
+        EstadoPartidaResponse respuesta =
+            estado.ObtenerEstado();
+
+        Assert.That(
+            partida.Finalizada,
+            Is.True);
+
+        Assert.That(
+            partida.Ganador,
+            Is.SameAs(
+                maquina));
+
+        Assert.That(
+            respuesta.Estado,
+            Is.EqualTo(
+                "finalizada"));
+    }
+
+    [Test]
     public void ReglaAnd_PuedeDeclararGanadoraALaMaquina()
     {
         var mapa =
