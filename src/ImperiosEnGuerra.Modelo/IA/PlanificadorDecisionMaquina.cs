@@ -24,20 +24,23 @@ namespace ImperiosEnGuerra.Modelo.IA
         public DecisionMaquina Preparar(
             Partida partida,
             IReadOnlyCollection<Guid> unidadesExcluidas = null,
-            IReadOnlyCollection<Coordenada> centrosExcluidos = null)
+            IReadOnlyCollection<Coordenada> centrosExcluidos = null,
+            bool permitirCombate = true)
         {
             return Preparar(
                 partida,
                 partida?.JugadorMaquina,
                 unidadesExcluidas,
-                centrosExcluidos);
+                centrosExcluidos,
+                permitirCombate);
         }
 
         public DecisionMaquina Preparar(
             Partida partida,
             Jugador maquina,
             IReadOnlyCollection<Guid> unidadesExcluidas = null,
-            IReadOnlyCollection<Coordenada> centrosExcluidos = null)
+            IReadOnlyCollection<Coordenada> centrosExcluidos = null,
+            bool permitirCombate = true)
         {
             if (partida == null)
             {
@@ -171,14 +174,17 @@ namespace ImperiosEnGuerra.Modelo.IA
                     nameof(Guerrero));
             }
 
-            DecisionMaquina combate =
-                PrepararCombate(
-                    partida,
-                    maquina,
-                    excluidas);
+            if (permitirCombate)
+            {
+                DecisionMaquina combate =
+                    PrepararCombate(
+                        partida,
+                        maquina,
+                        excluidas);
 
-            if (combate.Tipo != TipoDecisionMaquina.Ninguna)
-                return combate;
+                if (combate.Tipo != TipoDecisionMaquina.Ninguna)
+                    return combate;
+            }
 
             DecisionMaquina patrulla =
                 PrepararPatrulla(
