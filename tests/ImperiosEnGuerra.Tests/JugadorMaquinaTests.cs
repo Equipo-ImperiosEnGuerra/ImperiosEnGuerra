@@ -119,6 +119,136 @@ public class JugadorMaquinaTests
     }
 
     [Test]
+    public async Task EjecutarPaso_LimitaUnaRecoleccionConcurrentePorIa()
+    {
+        Partida partida =
+            CrearPartidaSeparada(
+                out _,
+                out _,
+                out _,
+                out _,
+                out _);
+
+        var estado =
+            new EstadoPartidaService();
+
+        estado.EstablecerPartida(
+            partida);
+
+        using var gestor =
+            new GestorProcesosConcurrentes();
+
+        var acciones =
+            new ServicioAccionesConcurrentes(
+                estado,
+                gestor,
+                TimeSpan.FromSeconds(1));
+
+        using var maquina =
+            new ServicioJugadorMaquina(
+                estado,
+                acciones,
+                TimeSpan.FromMilliseconds(10));
+
+        ProcesoConcurrente? primera =
+            maquina.EjecutarPaso();
+
+        Assert.That(
+            primera,
+            Is.Not.Null);
+
+        ProcesoConcurrente? segunda =
+            maquina.EjecutarPaso();
+
+        Assert.That(
+            segunda,
+            Is.Null,
+            "Una misma IA no debe lanzar varios workers de recolección al mismo tiempo.");
+
+        await primera!.Finalizacion;
+    }
+
+    [Test]
+    public async Task EjecutarPaso_EconomiaYFrenteMilitar_PuedenAvanzarEnParalelo()
+    {
+        Partida partida =
+            CrearPartidaCombate(
+                out _,
+                out _);
+
+        Jugador maquina =
+            partida.JugadorMaquina;
+
+        var aldeano =
+            new Aldeano(
+                new Coordenada(
+                    2,
+                    2));
+
+        maquina.AgregarUnidad(
+            aldeano);
+
+        var comida =
+            new Recurso(
+                TipoRecurso.Comida,
+                new Coordenada(
+                    3,
+                    2),
+                100);
+
+        Assert.That(
+            maquina.Mapa.ColocarRecurso(
+                comida),
+            Is.True);
+
+        var estado =
+            new EstadoPartidaService();
+
+        estado.EstablecerPartida(
+            partida);
+
+        using var gestor =
+            new GestorProcesosConcurrentes();
+
+        var acciones =
+            new ServicioAccionesConcurrentes(
+                estado,
+                gestor,
+                TimeSpan.FromMilliseconds(
+                    250));
+
+        using var ia =
+            new ServicioJugadorMaquina(
+                estado,
+                acciones,
+                TimeSpan.FromMilliseconds(
+                    10));
+
+        ProcesoConcurrente? militar =
+            ia.EjecutarPaso();
+
+        Assert.That(
+            militar,
+            Is.Not.Null);
+
+        Assert.That(
+            ia.UnidadesAsignadas,
+            Is.GreaterThanOrEqualTo(
+                2),
+            "La IA debe poder mover/atacar con una tropa mientras otro Aldeano sostiene la economía.");
+
+        await militar!.Finalizacion;
+
+        Assert.That(
+            SpinWait.SpinUntil(
+                () =>
+                    ia.UnidadesAsignadas <= 1,
+                TimeSpan.FromSeconds(
+                    3)),
+            Is.True);
+    }
+
+    [Test]
     public void CicloAutomatico_SePuedeIniciarYDetenerSinDuplicarlo()
     {
         Partida partida =
@@ -222,6 +352,171 @@ public class JugadorMaquinaTests
         Assert.That(
             decision.Objetivo,
             Is.Not.Null);
+    }
+
+    [Test]
+    public void Planificador_SinMilitaresYPocoOro_PriorizaOroParaReponerEjercito()
+    {
+        Partida partida =
+            CrearPartidaEstrategica(
+                aldeanos: 3,
+                centros: 2,
+                oro: 0,
+                madera: 0,
+                comida: 15);
+
+        var maderaCercana =
+            new Recurso(
+                TipoRecurso.Madera,
+                new Coordenada(4, 1),
+                100);
+
+        var oroNecesario =
+            new Recurso(
+                TipoRecurso.Oro,
+                new Coordenada(7, 7),
+                100);
+
+        Assert.That(
+            partida.JugadorMaquina.Mapa
+                .ColocarRecurso(
+                    maderaCercana),
+            Is.True);
+
+        Assert.That(
+            partida.JugadorMaquina.Mapa
+                .ColocarRecurso(
+                    oroNecesario),
+            Is.True);
+
+        DecisionMaquina decision =
+            new PlanificadorDecisionMaquina()
+                .Preparar(
+                    partida);
+
+        Assert.That(
+            decision.Tipo,
+            Is.EqualTo(
+                TipoDecisionMaquina.Recolectar));
+
+        Assert.That(
+            decision.Objetivo.X,
+            Is.EqualTo(
+                oroNecesario.Coordenada.X));
+
+        Assert.That(
+            decision.Objetivo.Y,
+            Is.EqualTo(
+                oroNecesario.Coordenada.Y),
+            "La IA debe buscar el Oro que necesita para volver a entrenar Guerreros, aunque haya Madera más cerca.");
+    }
+
+    [Test]
+    public void Planificador_SinMilitaresYPocaComida_PriorizaComidaParaReponerEjercito()
+    {
+        Partida partida =
+            CrearPartidaEstrategica(
+                aldeanos: 3,
+                centros: 2,
+                oro: 5,
+                madera: 0,
+                comida: 0);
+
+        var maderaCercana =
+            new Recurso(
+                TipoRecurso.Madera,
+                new Coordenada(4, 1),
+                100);
+
+        var comidaNecesaria =
+            new Recurso(
+                TipoRecurso.Comida,
+                new Coordenada(7, 7),
+                100);
+
+        Assert.That(
+            partida.JugadorMaquina.Mapa
+                .ColocarRecurso(
+                    maderaCercana),
+            Is.True);
+
+        Assert.That(
+            partida.JugadorMaquina.Mapa
+                .ColocarRecurso(
+                    comidaNecesaria),
+            Is.True);
+
+        DecisionMaquina decision =
+            new PlanificadorDecisionMaquina()
+                .Preparar(
+                    partida);
+
+        Assert.That(
+            decision.Tipo,
+            Is.EqualTo(
+                TipoDecisionMaquina.Recolectar));
+
+        Assert.That(
+            decision.Objetivo.X,
+            Is.EqualTo(
+                comidaNecesaria.Coordenada.X));
+
+        Assert.That(
+            decision.Objetivo.Y,
+            Is.EqualTo(
+                comidaNecesaria.Coordenada.Y),
+            "La IA debe buscar Comida para reponer ejército en vez de acumular recursos que no necesita.");
+    }
+
+    [Test]
+    public void Planificador_TrasPerderEjercito_VuelveAEntrenarGuerrero()
+    {
+        Partida partida =
+            CrearPartidaEstrategica(
+                aldeanos: 3,
+                centros: 2,
+                oro: 5,
+                madera: 0,
+                comida: 15);
+
+        Jugador maquina =
+            partida.JugadorMaquina;
+
+        var uno =
+            new Guerrero(
+                new Coordenada(4, 4));
+
+        var dos =
+            new Guerrero(
+                new Coordenada(5, 4));
+
+        maquina.AgregarUnidad(
+            uno);
+
+        maquina.AgregarUnidad(
+            dos);
+
+        maquina.EliminarUnidad(
+            uno);
+
+        maquina.EliminarUnidad(
+            dos);
+
+        DecisionMaquina decision =
+            new PlanificadorDecisionMaquina()
+                .Preparar(
+                    partida);
+
+        Assert.That(
+            decision.Tipo,
+            Is.EqualTo(
+                TipoDecisionMaquina.Entrenar));
+
+        Assert.That(
+            decision.TipoUnidad,
+            Is.EqualTo(
+                nameof(Guerrero)),
+            "Perder las tropas no debe dejar a la IA permanentemente solo con Aldeanos.");
     }
 
     [Test]
@@ -496,13 +791,164 @@ public class JugadorMaquinaTests
 
         Assert.That(
             decision.Tipo,
-            Is.Not.EqualTo(
-                TipoDecisionMaquina.Mover));
+            Is.EqualTo(
+                TipoDecisionMaquina.Patrullar));
+
+        Assert.That(
+            decision.Objetivo,
+            Is.Not.Null);
+
+        Assert.That(
+            decision.ObjetivoUnidadId,
+            Is.EqualTo(
+                Guid.Empty));
+    }
+
+    [Test]
+    public async Task EjecutarPaso_Patrulla_MueveMilitarSinObjetivoDeCombate()
+    {
+        var mapa =
+            new Mapa(10, 10);
+
+        var humano =
+            new Jugador(
+                "Humano",
+                TipoJugador.Humano,
+                mapa,
+                new RecursosJugador());
+
+        var maquina =
+            new Jugador(
+                "CPU",
+                TipoJugador.Maquina,
+                mapa,
+                new RecursosJugador());
+
+        var patrullero =
+            new Guerrero(
+                new Coordenada(3, 3));
+
+        maquina.AgregarUnidad(
+            patrullero);
+
+        humano.AgregarUnidad(
+            new Aldeano(
+                new Coordenada(8, 8)));
+
+        Partida partida =
+            new Partida(
+                humano,
+                maquina);
+
+        var estado =
+            new EstadoPartidaService();
+
+        estado.EstablecerPartida(
+            partida);
+
+        using var gestor =
+            new GestorProcesosConcurrentes();
+
+        var acciones =
+            new ServicioAccionesConcurrentes(
+                estado,
+                gestor,
+                TimeSpan.Zero);
+
+        using var ia =
+            new ServicioJugadorMaquina(
+                estado,
+                acciones,
+                TimeSpan.FromMilliseconds(10));
+
+        int origenX =
+            patrullero.Coordenada.X;
+
+        int origenY =
+            patrullero.Coordenada.Y;
+
+        ProcesoConcurrente? proceso =
+            ia.EjecutarPaso();
+
+        Assert.That(
+            proceso,
+            Is.Not.Null);
+
+        await proceso!.Finalizacion;
+
+        Assert.That(
+            patrullero.Coordenada.X != origenX ||
+            patrullero.Coordenada.Y != origenY,
+            Is.True);
+
+        Assert.That(
+            patrullero.OrdenActiva,
+            Is.Null);
+    }
+
+    [Test]
+    public void Planificador_EnFaseEconomica_NoIniciaCombate()
+    {
+        var mapa =
+            new Mapa(10, 10);
+
+        var humano =
+            new Jugador(
+                "Humano",
+                TipoJugador.Humano,
+                mapa,
+                new RecursosJugador());
+
+        var maquina =
+            new Jugador(
+                "CPU",
+                TipoJugador.Maquina,
+                mapa,
+                new RecursosJugador());
+
+        humano.AgregarEdificio(
+            new CentroUrbano(
+                new Coordenada(8, 8)));
+
+        maquina.AgregarUnidad(
+            new Guerrero(
+                new Coordenada(1, 1)));
+
+        maquina.AgregarUnidad(
+            new Guerrero(
+                new Coordenada(2, 1)));
+
+        mapa.ObtenerCasilla(
+                8,
+                8)
+            .Ocupar();
+
+        var partida =
+            new Partida(
+                humano,
+                maquina);
+
+        DecisionMaquina decision =
+            new PlanificadorDecisionMaquina()
+                .Preparar(
+                    partida,
+                    permitirCombate: false);
 
         Assert.That(
             decision.Tipo,
             Is.Not.EqualTo(
                 TipoDecisionMaquina.Atacar));
+
+        Assert.That(
+            decision.Tipo,
+            Is.Not.EqualTo(
+                TipoDecisionMaquina.Mover),
+            "Durante la gracia inicial no debe comenzar una aproximación ofensiva.");
+
+        Assert.That(
+            decision.Tipo,
+            Is.EqualTo(
+                TipoDecisionMaquina.Patrullar));
     }
 
     [Test]

@@ -1604,9 +1604,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ImperiosEnGuerra.Vistas.VistaPartida
   camara: {fileID: 519420031}
   espacioCasilla: 2
-  escalaRecursos: 0.75
-  escalaEdificios: 0.58
-  escalaUnidades: 0.65
+  escalaRecursos: 0.88
+  escalaEdificios: 0.68
+  escalaUnidades: 0.8
   suelo: {fileID: 873735274, guid: 0c69b498ba6f7624e81c9d8d701dc265, type: 3}
   oro: {fileID: 21300000, guid: 8f173b2662bb70e4586439951d9eb0eb, type: 3}
   madera: {fileID: 6215267202064938543, guid: 9f32a191d39ed4c43bf6746af6dfe202, type: 3}
@@ -2120,8 +2120,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 16, y: 16}
-  m_SizeDelta: {x: 380, y: 210}
+  m_AnchoredPosition: {x: 12, y: 12}
+  m_SizeDelta: {x: 270, y: 230}
   m_Pivot: {x: 0, y: 0}
 --- !u!114 &1517412434
 MonoBehaviour:

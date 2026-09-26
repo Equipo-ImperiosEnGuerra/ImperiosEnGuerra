@@ -10,6 +10,7 @@ namespace ImperiosEnGuerra.Modelo.IA
         Construir,
         Entrenar,
         Mover,
+        Patrullar,
         Atacar
     }
 
@@ -145,6 +146,26 @@ namespace ImperiosEnGuerra.Modelo.IA
                 null,
                 null,
                 "Acercar una unidad militar al enemigo.");
+        }
+
+        public static DecisionMaquina Patrullar(
+            Guid unidadId,
+            Coordenada destino)
+        {
+            ValidarUnidad(unidadId);
+
+            if (destino == null)
+                throw new ArgumentNullException(nameof(destino));
+
+            return new DecisionMaquina(
+                TipoDecisionMaquina.Patrullar,
+                unidadId,
+                Guid.Empty,
+                destino,
+                null,
+                null,
+                null,
+                "Patrullar una zona cercana mientras no haya una prioridad mayor.");
         }
 
         public static DecisionMaquina Atacar(

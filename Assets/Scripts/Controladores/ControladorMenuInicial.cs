@@ -114,7 +114,7 @@ namespace ImperiosEnGuerra.Controladores
             if (conexionApi == null)
             {
                 vistaMenu.MostrarEstado(
-                    "No se encontró el controlador de conexión con la API.",
+                    "No se pudo preparar la partida.",
                     true);
 
                 return;
@@ -122,7 +122,7 @@ namespace ImperiosEnGuerra.Controladores
 
             vistaMenu.EstablecerCargando(true);
             vistaMenu.MostrarEstado(
-                "Conectando con la API e iniciando partida...");
+                "Preparando una nueva partida...");
 
             conexionApi.IniciarPartidaDesdeMenu();
         }
@@ -144,7 +144,7 @@ namespace ImperiosEnGuerra.Controladores
             vistaMenu.EstablecerCargando(false);
             vistaMenu.MostrarEstado(
                 string.IsNullOrWhiteSpace(mensaje)
-                    ? "No fue posible iniciar la partida."
+                    ? "No fue posible iniciar la partida. Inténtalo de nuevo."
                     : mensaje,
                 true);
         }

@@ -312,6 +312,72 @@ public class ConstruccionEntrenamientoUnityTests
     }
 
     [Test]
+    public void CentroUrbanoEntrenando_MuestraProgresoYCola()
+    {
+        centroUrbano.ActualizarEntrenamientoVisual(
+            "Arquero",
+            40,
+            2,
+            true);
+
+        Assert.That(
+            centroUrbano.EntrenamientoVisible,
+            Is.True);
+
+        Assert.That(
+            centroUrbano.TipoUnidadEntrenando,
+            Is.EqualTo("Arquero"));
+
+        Assert.That(
+            centroUrbano.ProgresoEntrenamiento,
+            Is.EqualTo(40));
+
+        Assert.That(
+            centroUrbano.TamanoColaEntrenamiento,
+            Is.EqualTo(2));
+
+        TextMesh indicador =
+            centroUrbano.GetComponentInChildren<TextMesh>(
+                true);
+
+        Assert.That(
+            indicador,
+            Is.Not.Null);
+
+        Assert.That(
+            indicador.text,
+            Does.Contain("Entrenando Arquero 40%"));
+
+        Assert.That(
+            indicador.text,
+            Does.Contain("Cola: 2"));
+    }
+
+    [Test]
+    public void CentroUrbanoSinEntrenamiento_OcultaIndicador()
+    {
+        centroUrbano.ActualizarEntrenamientoVisual(
+            "Guerrero",
+            70,
+            1,
+            true);
+
+        centroUrbano.ActualizarEntrenamientoVisual(
+            "",
+            0,
+            0,
+            true);
+
+        Assert.That(
+            centroUrbano.EntrenamientoVisible,
+            Is.False);
+
+        Assert.That(
+            centroUrbano.TamanoColaEntrenamiento,
+            Is.Zero);
+    }
+
+    [Test]
     public void ConstruccionEnCurso_NoBloqueaOtraOrdenDeConstruccion()
     {
         CampoAutomatico(

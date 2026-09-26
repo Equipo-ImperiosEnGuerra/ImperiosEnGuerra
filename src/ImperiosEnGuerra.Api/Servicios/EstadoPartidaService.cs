@@ -25,6 +25,7 @@ public sealed class EstadoPartidaService
         new ConfiguracionEconomia();
     private Partida? partidaActiva;
     private bool finalizacionNotificada;
+    private bool reevaluacionTerminalPorSnapshotHabilitada;
 
     public event Action? PartidaFinalizada;
 
@@ -155,6 +156,48 @@ public sealed class EstadoPartidaService
                     partidaActiva,
                     new SolicitudAtaque(
                         atacanteId,
+                        objetivoId));
+        }
+    }
+
+    public ResultadoAproximacionCuracion PrepararAproximacionCuracion(
+        CurarRequest? request)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+            {
+                return ResultadoAproximacionCuracion.Fallido(
+                    "No hay una partida activa.");
+            }
+
+            if (request == null)
+            {
+                return ResultadoAproximacionCuracion.Fallido(
+                    "La solicitud de curación es obligatoria.");
+            }
+
+            if (!Guid.TryParse(
+                    request.CuradorId,
+                    out Guid curadorId))
+            {
+                return ResultadoAproximacionCuracion.Fallido(
+                    "El ID del Monje debe tener formato Guid válido.");
+            }
+
+            if (!Guid.TryParse(
+                    request.ObjetivoId,
+                    out Guid objetivoId))
+            {
+                return ResultadoAproximacionCuracion.Fallido(
+                    "El ID del objetivo debe tener formato Guid válido.");
+            }
+
+            return new PlanificadorAproximacionCuracion()
+                .Preparar(
+                    partidaActiva,
+                    new SolicitudCuracion(
+                        curadorId,
                         objetivoId));
         }
     }
@@ -332,6 +375,128 @@ public sealed class EstadoPartidaService
         }
     }
 
+    public IReadOnlyList<Recurso> ObtenerRecursosAgotados()
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+            {
+                return Array.Empty<Recurso>();
+            }
+
+            return partidaActiva.JugadorHumano.Mapa
+                .Recursos
+                .Where(
+                    recurso =>
+                        recurso != null &&
+                        recurso.Agotado)
+                .ToList()
+                .AsReadOnly();
+        }
+    }
+
+    public bool IntentarRegenerarRecurso(
+        TipoRecurso tipo,
+        Coordenada origenAgotado,
+        int selectorAleatorio,
+        out Coordenada nuevaCoordenada)
+    {
+        lock (sincronizacion)
+        {
+            nuevaCoordenada = null;
+
+            if (partidaActiva == null ||
+                partidaActiva.Finalizada ||
+                origenAgotado == null)
+            {
+                return false;
+            }
+
+            Mapa mapa =
+                partidaActiva.JugadorHumano.Mapa;
+
+            Recurso recursoAgotado =
+                mapa.ObtenerRecursoEn(
+                    origenAgotado);
+
+            if (recursoAgotado == null ||
+                recursoAgotado.Tipo != tipo ||
+                !recursoAgotado.Agotado)
+            {
+                return false;
+            }
+
+            var candidatas =
+                new List<Coordenada>();
+
+            for (int x = 0;
+                 x < mapa.Ancho;
+                 x++)
+            {
+                for (int y = 0;
+                     y < mapa.Alto;
+                     y++)
+                {
+                    var candidata =
+                        new Coordenada(
+                            x,
+                            y);
+
+                    if (mapa.PuedeColocar(
+                            candidata))
+                    {
+                        candidatas.Add(
+                            candidata);
+                    }
+                }
+            }
+
+            if (candidatas.Count == 0)
+                return false;
+
+            int valor =
+                selectorAleatorio ==
+                int.MinValue
+                    ? 0
+                    : Math.Abs(
+                        selectorAleatorio);
+
+            Coordenada destino =
+                candidatas[
+                    valor %
+                    candidatas.Count];
+
+            if (!mapa.RetirarRecursoAgotado(
+                    recursoAgotado))
+            {
+                return false;
+            }
+
+            var nuevo =
+                new Recurso(
+                    tipo,
+                    destino);
+
+            if (!mapa.ColocarRecurso(
+                    nuevo))
+            {
+                mapa.ColocarRecurso(
+                    recursoAgotado);
+
+                return false;
+            }
+
+            nuevaCoordenada =
+                destino;
+
+            RegistrarEventoSeguro(
+                $"RECURSO_REGENERADO|{tipo}|({destino.X},{destino.Y})");
+
+            return true;
+        }
+    }
+
+
     public bool RecursoExiste(
         Coordenada objetivo)
     {
@@ -416,15 +581,85 @@ public sealed class EstadoPartidaService
 
     public DecisionMaquina PrepararDecisionMaquina(
         IReadOnlyCollection<Guid>? unidadesExcluidas = null,
-        IReadOnlyCollection<Coordenada>? centrosExcluidos = null)
+        IReadOnlyCollection<Coordenada>? centrosExcluidos = null,
+        bool permitirCombate = true,
+        bool permitirPatrulla = true)
+    {
+        return PrepararDecisionMaquina(
+            0,
+            unidadesExcluidas,
+            centrosExcluidos,
+            permitirCombate,
+            permitirPatrulla);
+    }
+
+    public DecisionMaquina PrepararDecisionMaquina(
+        int indiceMaquina,
+        IReadOnlyCollection<Guid>? unidadesExcluidas = null,
+        IReadOnlyCollection<Coordenada>? centrosExcluidos = null,
+        bool permitirCombate = true,
+        bool permitirPatrulla = true)
     {
         lock (sincronizacion)
         {
+            Jugador? maquina =
+                partidaActiva?
+                    .JugadoresMaquina
+                    .ElementAtOrDefault(
+                        indiceMaquina);
+
             return new PlanificadorDecisionMaquina()
                 .Preparar(
                     partidaActiva,
+                    maquina,
                     unidadesExcluidas,
-                    centrosExcluidos);
+                    centrosExcluidos,
+                    permitirCombate,
+                    permitirPatrulla);
+        }
+    }
+
+    public DecisionMaquina PrepararDecisionMilitarMaquina(
+        int indiceMaquina,
+        IReadOnlyCollection<Guid>? unidadesExcluidas = null,
+        bool permitirCombate = true)
+    {
+        lock (sincronizacion)
+        {
+            Jugador? maquina =
+                partidaActiva?
+                    .JugadoresMaquina
+                    .ElementAtOrDefault(
+                        indiceMaquina);
+
+            return new PlanificadorDecisionMaquina()
+                .PrepararMilitar(
+                    partidaActiva,
+                    maquina,
+                    unidadesExcluidas,
+                    permitirCombate);
+        }
+    }
+
+    public int CantidadJugadoresMaquina()
+    {
+        lock (sincronizacion)
+        {
+            return partidaActiva?
+                .JugadoresMaquina.Count
+                ?? 0;
+        }
+    }
+
+
+    public IReadOnlyList<ReaccionAutomatica>
+        PrepararReaccionesAutomaticas()
+    {
+        lock (sincronizacion)
+        {
+            return new PlanificadorReaccionAutomatica()
+                .Preparar(
+                    partidaActiva);
         }
     }
 
@@ -684,6 +919,29 @@ public sealed class EstadoPartidaService
         {
             partidaActiva?.JugadorHumano
                 .Recursos.Reintegrar(costo);
+        }
+    }
+
+    public void ReembolsarCosto(
+        Coordenada centroUrbano,
+        CostoRecursos costo)
+    {
+        if (costo == null ||
+            centroUrbano == null)
+        {
+            return;
+        }
+
+        lock (sincronizacion)
+        {
+            Jugador? propietario =
+                partidaActiva?
+                    .BuscarJugadorPorEdificio(
+                        centroUrbano);
+
+            propietario?.Recursos
+                .Reintegrar(
+                    costo);
         }
     }
 
@@ -1025,22 +1283,27 @@ public sealed class EstadoPartidaService
         Guid obraId,
         out ObraConstruccion? obra)
     {
-        obra =
-            partidaActiva?.JugadorHumano.ObrasConstruccion
-                .FirstOrDefault(
-                    o => o.Id == obraId);
+        obra = null;
 
-        if (obra != null)
-            return partidaActiva!.JugadorHumano;
+        if (partidaActiva == null)
+            return null;
 
-        obra =
-            partidaActiva?.JugadorMaquina.ObrasConstruccion
-                .FirstOrDefault(
-                    o => o.Id == obraId);
+        foreach (Jugador jugador
+                 in partidaActiva.Jugadores)
+        {
+            ObraConstruccion? encontrada =
+                jugador.ObrasConstruccion
+                    .FirstOrDefault(
+                        o => o.Id == obraId);
 
-        return obra != null
-            ? partidaActiva!.JugadorMaquina
-            : null;
+            if (encontrada == null)
+                continue;
+
+            obra = encontrada;
+            return jugador;
+        }
+
+        return null;
     }
 
     public ResultadoAccion EncolarEntrenamiento(
@@ -1303,7 +1566,7 @@ public sealed class EstadoPartidaService
             new BuscadorCasillaSpawn()
                 .Buscar(
                     partidaActiva,
-                    propietario.Tipo,
+                    propietario,
                     centro.Coordenada);
 
         if (spawn == null)
@@ -1575,13 +1838,61 @@ public sealed class EstadoPartidaService
         }
     }
 
+    public ResultadoAccion Curar(CurarRequest? request)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+                return RegistrarResultado(
+                    "CURAR",
+                    ResultadoAccion.Fallido("No hay una partida activa."));
+
+            if (partidaActiva.Finalizada)
+                return RegistrarResultado(
+                    "CURAR",
+                    ResultadoAccion.Fallido("La partida ya finalizó."));
+
+            if (request == null)
+                return RegistrarResultado(
+                    "CURAR",
+                    ResultadoAccion.Fallido("La solicitud de curación es obligatoria."));
+
+            if (!Guid.TryParse(request.CuradorId, out Guid curadorId))
+                return RegistrarResultado(
+                    "CURAR",
+                    ResultadoAccion.Fallido("El ID del Monje debe tener formato Guid válido."));
+
+            if (!Guid.TryParse(request.ObjetivoId, out Guid objetivoId))
+                return RegistrarResultado(
+                    "CURAR",
+                    ResultadoAccion.Fallido("El ID del objetivo debe tener formato Guid válido."));
+
+            return RegistrarResultado(
+                "CURAR",
+                new OperacionCuracion()
+                    .Ejecutar(
+                        partidaActiva,
+                        new SolicitudCuracion(
+                            curadorId,
+                            objetivoId)));
+        }
+    }
+
     public EstadoPartidaResponse? ObtenerEstado()
     {
         lock (sincronizacion)
         {
-            return partidaActiva == null
-                ? null
-                : PartidaEstadoMapper.Convertir(partidaActiva);
+            if (partidaActiva == null)
+                return null;
+
+            // Respaldo de consistencia: aunque la condición terminal ya se
+            // evalúa al destruir una entidad, cada snapshot vuelve a validar
+            // el estado real. Así Unity no puede quedarse esperando una
+            // notificación perdida mientras el jugador ya está eliminado.
+            ReevaluarFinalizacionSinBloqueo();
+
+            return PartidaEstadoMapper.Convertir(
+                partidaActiva);
         }
     }
 
@@ -1593,6 +1904,23 @@ public sealed class EstadoPartidaService
         {
             partidaActiva = partida;
             finalizacionNotificada = false;
+
+            // La revalidación periódica solo aplica a partidas reales que
+            // comenzaron con Centros Urbanos. Muchos tests unitarios crean
+            // escenarios parciales (por ejemplo solo un Aldeano) y no deben
+            // considerarse derrotas únicamente por consultar un snapshot.
+            reevaluacionTerminalPorSnapshotHabilitada =
+                partida.JugadorHumano.Edificios
+                    .OfType<CentroUrbano>()
+                    .Any()
+                &&
+                partida.JugadoresMaquina
+                    .Any(
+                        maquina =>
+                            maquina.Edificios
+                                .OfType<CentroUrbano>()
+                                .Any());
+
             RegistrarEventoSeguro("PARTIDA|EXITO|Partida establecida.");
         }
     }
@@ -1627,18 +1955,13 @@ public sealed class EstadoPartidaService
             if (partidaActiva == null)
                 return false;
 
-            return
-                partidaActiva.JugadorHumano.Unidades.Any(
-                    u => u.Id == id)
-                ||
-                partidaActiva.JugadorMaquina.Unidades.Any(
-                    u => u.Id == id)
-                ||
-                partidaActiva.JugadorHumano.Edificios.Any(
-                    e => e.Id == id)
-                ||
-                partidaActiva.JugadorMaquina.Edificios.Any(
-                    e => e.Id == id);
+            return partidaActiva.Jugadores.Any(
+                jugador =>
+                    jugador.Unidades.Any(
+                        u => u.Id == id)
+                    ||
+                    jugador.Edificios.Any(
+                        e => e.Id == id));
         }
     }
 
@@ -1693,6 +2016,97 @@ public sealed class EstadoPartidaService
                    unidad.IntervaloAtaqueSegundos <= 0d
                 ? 4d
                 : unidad.IntervaloAtaqueSegundos;
+        }
+    }
+
+    public double ObtenerIntervaloCuracionSegundos(
+        Guid unidadId)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+                return 5d;
+
+            Jugador propietario =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    unidadId);
+
+            Monje monje =
+                propietario?.Unidades
+                    .OfType<Monje>()
+                    .FirstOrDefault(
+                        u => u.Id == unidadId);
+
+            return monje == null ||
+                   monje.IntervaloCuracionSegundos <= 0d
+                ? 5d
+                : monje.IntervaloCuracionSegundos;
+        }
+    }
+
+    public bool UnidadNecesitaCuracion(
+        Guid unidadId)
+    {
+        lock (sincronizacion)
+        {
+            Unidad unidad =
+                ObtenerUnidadSinBloqueo(
+                    unidadId);
+
+            return unidad != null &&
+                   !unidad.Destruida &&
+                   unidad.VidaActual < unidad.VidaMaxima;
+        }
+    }
+
+    private Unidad? ObtenerUnidadSinBloqueo(
+        Guid id)
+    {
+        if (partidaActiva == null)
+            return null;
+
+        Jugador? propietario =
+            partidaActiva.BuscarJugadorPorUnidad(
+                id);
+
+        return propietario?.Unidades
+            .FirstOrDefault(
+                u => u.Id == id);
+    }
+
+    private void ReevaluarFinalizacionSinBloqueo()
+    {
+        if (partidaActiva == null ||
+            partidaActiva.Finalizada ||
+            !reevaluacionTerminalPorSnapshotHabilitada)
+        {
+            return;
+        }
+
+        var evaluador =
+            new EvaluadorVictoria();
+
+        evaluador.Evaluar(
+            partidaActiva,
+            partidaActiva.JugadorHumano);
+
+        if (!partidaActiva.Finalizada)
+        {
+            foreach (Jugador maquina
+                     in partidaActiva.JugadoresMaquina)
+            {
+                evaluador.Evaluar(
+                    partidaActiva,
+                    maquina);
+
+                if (partidaActiva.Finalizada)
+                    break;
+            }
+        }
+
+        if (partidaActiva.Finalizada)
+        {
+            RegistrarFinalizacionSeguro();
         }
     }
 

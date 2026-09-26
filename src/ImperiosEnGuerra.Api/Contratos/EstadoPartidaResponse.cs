@@ -9,6 +9,7 @@ public sealed class EstadoPartidaResponse
     public required MapaEstadoResponse Mapa { get; init; }
     public required JugadorEstadoResponse JugadorHumano { get; init; }
     public required JugadorEstadoResponse JugadorMaquina { get; init; }
+    public required IReadOnlyList<JugadorEstadoResponse> Jugadores { get; init; }
     public required EconomiaEstadoResponse Economia { get; init; }
 }
 
@@ -40,6 +41,7 @@ public sealed class JugadorEstadoResponse
 {
     public required string Nombre { get; init; }
     public required string Tipo { get; init; }
+    public required string Faccion { get; init; }
     public required RecursosJugadorEstadoResponse Recursos { get; init; }
     public required IReadOnlyList<EdificioEstadoResponse> Edificios { get; init; }
     public required IReadOnlyList<ObraConstruccionEstadoResponse> ObrasConstruccion { get; init; }

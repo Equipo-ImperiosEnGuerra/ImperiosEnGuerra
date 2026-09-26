@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using ImperiosEnGuerra.Controladores.Red.Contratos;
 using UnityEngine;
 
@@ -9,9 +10,9 @@ namespace ImperiosEnGuerra.Vistas
     {
         [SerializeField] private Camera camara;
         [SerializeField, Min(0.1f)] private float espacioCasilla = 2f;
-        [SerializeField, Min(0.01f)] private float escalaRecursos = 0.75f;
-        [SerializeField, Min(0.01f)] private float escalaEdificios = 0.58f;
-        [SerializeField, Min(0.01f)] private float escalaUnidades = 0.65f;
+        [SerializeField, Min(0.01f)] private float escalaRecursos = 0.88f;
+        [SerializeField, Min(0.01f)] private float escalaEdificios = 0.68f;
+        [SerializeField, Min(0.01f)] private float escalaUnidades = 0.80f;
         [SerializeField] private Sprite suelo;
         [SerializeField] private Sprite oro;
         [SerializeField] private Sprite madera;
@@ -39,12 +40,19 @@ namespace ImperiosEnGuerra.Vistas
         private sealed class MovimientoVisualPendiente
         {
             public EntidadSeleccionableVista Entidad;
-            public Vector3 Destino;
+            public readonly Queue<Vector3> Destinos =
+                new Queue<Vector3>();
         }
 
         private readonly Dictionary<string, MovimientoVisualPendiente>
             movimientosVisuales =
                 new Dictionary<string, MovimientoVisualPendiente>();
+
+        // Índice visual por identidad estable. Evita recorrer toda la jerarquía
+        // por cada unidad/edificio en cada snapshot.
+        private readonly Dictionary<string, EntidadSeleccionableVista>
+            entidadesPorId =
+                new Dictionary<string, EntidadSeleccionableVista>();
 
         public event System.Action AntesDeLimpiarContenido;
 
@@ -74,8 +82,18 @@ namespace ImperiosEnGuerra.Vistas
 
             RenderizarMapa(estado.mapa, mapa);
             RenderizarRecursos(estado.mapa.recursos, recursos);
-            RenderizarJugador(estado.jugadorHumano, true, edificios, unidades);
-            RenderizarJugador(estado.jugadorMaquina, false, edificios, unidades);
+            foreach (JugadorEstadoDto jugador in
+                     ObtenerJugadoresEstado(
+                         estado))
+            {
+                RenderizarJugador(
+                    jugador,
+                    EsHumano(
+                        jugador),
+                    edificios,
+                    unidades);
+            }
+
             AjustarCamara(estado.mapa);
         }
 
@@ -123,17 +141,17 @@ namespace ImperiosEnGuerra.Vistas
             LimpiarObrasVisuales(
                 edificios);
 
-            SincronizarJugador(
-                estado.jugadorHumano,
-                true,
-                edificios,
-                unidades);
-
-            SincronizarJugador(
-                estado.jugadorMaquina,
-                false,
-                edificios,
-                unidades);
+            foreach (JugadorEstadoDto jugador in
+                     ObtenerJugadoresEstado(
+                         estado))
+            {
+                SincronizarJugador(
+                    jugador,
+                    EsHumano(
+                        jugador),
+                    edificios,
+                    unidades);
+            }
         }
 
         private void SincronizarRecursos(
@@ -204,26 +222,34 @@ namespace ImperiosEnGuerra.Vistas
                 return;
 
             string propietario =
-                humano
-                    ? "Humano"
-                    : "Maquina";
+                ObtenerPropietarioVisual(
+                    jugador,
+                    humano);
+
+            Color colorFaccion =
+                ObtenerColorFaccion(
+                    jugador,
+                    humano);
 
             SincronizarEdificios(
                 jugador.edificios,
                 humano,
                 propietario,
+                colorFaccion,
                 edificios);
 
             SincronizarObras(
                 jugador.obrasConstruccion,
                 humano,
                 propietario,
+                colorFaccion,
                 edificios);
 
             SincronizarUnidades(
                 jugador.unidades,
                 humano,
                 propietario,
+                colorFaccion,
                 unidades);
         }
 
@@ -231,6 +257,7 @@ namespace ImperiosEnGuerra.Vistas
             EdificioEstadoDto[] datos,
             bool humano,
             string propietario,
+            Color colorFaccion,
             Transform contenedor)
         {
             if (datos == null)
@@ -266,6 +293,11 @@ namespace ImperiosEnGuerra.Vistas
                         edificio.vidaActual,
                         edificio.vidaMaxima);
 
+                    ActualizarIndicadorEntrenamiento(
+                        existente,
+                        edificio.colaEntrenamiento,
+                        humano);
+
                     continue;
                 }
 
@@ -281,6 +313,10 @@ namespace ImperiosEnGuerra.Vistas
                         contenedor,
                         Vector3.one * escalaEdificios);
 
+                AplicarColorFaccion(
+                    objeto,
+                    colorFaccion);
+
                 ConfigurarSeleccionable(
                     objeto,
                     CategoriaEntidadVisual.Edificio,
@@ -292,13 +328,48 @@ namespace ImperiosEnGuerra.Vistas
                     "",
                     edificio.vidaActual,
                     edificio.vidaMaxima);
+
+                ActualizarIndicadorEntrenamiento(
+                    objeto == null
+                        ? null
+                        : objeto.GetComponent<EntidadSeleccionableVista>(),
+                    edificio.colaEntrenamiento,
+                    humano);
             }
+        }
+
+        private static void ActualizarIndicadorEntrenamiento(
+            EntidadSeleccionableVista entidad,
+            EntrenamientoEstadoDto[] cola,
+            bool mostrar)
+        {
+            if (entidad == null)
+                return;
+
+            EntrenamientoEstadoDto actual =
+                cola != null &&
+                cola.Length > 0
+                    ? cola[0]
+                    : null;
+
+            entidad.ActualizarEntrenamientoVisual(
+                actual == null
+                    ? string.Empty
+                    : actual.tipoUnidad,
+                actual == null
+                    ? 0
+                    : actual.progreso,
+                cola == null
+                    ? 0
+                    : cola.Length,
+                mostrar);
         }
 
         private void SincronizarObras(
             ObraConstruccionEstadoDto[] obras,
             bool humano,
             string propietario,
+            Color colorFaccion,
             Transform contenedor)
         {
             if (obras == null)
@@ -346,7 +417,7 @@ namespace ImperiosEnGuerra.Vistas
                 if (renderer != null)
                 {
                     Color color =
-                        renderer.color;
+                        colorFaccion;
 
                     color.a = 0.55f;
                     renderer.color = color;
@@ -358,6 +429,7 @@ namespace ImperiosEnGuerra.Vistas
             UnidadEstadoDto[] datos,
             bool humano,
             string propietario,
+            Color colorFaccion,
             Transform contenedor)
         {
             if (datos == null)
@@ -387,6 +459,12 @@ namespace ImperiosEnGuerra.Vistas
 
                 if (existente != null)
                 {
+                    int xAnterior =
+                        existente.X;
+
+                    int yAnterior =
+                        existente.Y;
+
                     existente.ActualizarDatosLogicos(
                         unidad.coordenada.x,
                         unidad.coordenada.y,
@@ -397,14 +475,37 @@ namespace ImperiosEnGuerra.Vistas
                         unidad.danio,
                         unidad.alcance);
 
-                    movimientosVisuales[unidad.id] =
-                        new MovimientoVisualPendiente
-                        {
-                            Entidad = existente,
-                            Destino = PosicionVisual(
-                                unidad.coordenada.x,
-                                unidad.coordenada.y)
-                        };
+                    int saltoLogico =
+                        Mathf.Max(
+                            Mathf.Abs(
+                                unidad.coordenada.x -
+                                xAnterior),
+                            Mathf.Abs(
+                                unidad.coordenada.y -
+                                yAnterior));
+
+                    Vector3 destinoVisual =
+                        PosicionVisual(
+                            unidad.coordenada.x,
+                            unidad.coordenada.y);
+
+                    if (saltoLogico > 1)
+                    {
+                        // Si hubo una pausa larga o se perdió algún snapshot,
+                        // no se interpola atravesando el mapa en diagonal.
+                        existente.transform.position =
+                            destinoVisual;
+
+                        movimientosVisuales.Remove(
+                            unidad.id);
+                    }
+                    else
+                    {
+                        ProgramarMovimientoVisual(
+                            unidad.id,
+                            existente,
+                            destinoVisual);
+                    }
 
                     continue;
                 }
@@ -426,6 +527,10 @@ namespace ImperiosEnGuerra.Vistas
                         30,
                         contenedor,
                         Vector3.one * escalaUnidades);
+
+                AplicarColorFaccion(
+                    objeto,
+                    colorFaccion);
 
                 ConfigurarSeleccionable(
                     objeto,
@@ -515,6 +620,24 @@ namespace ImperiosEnGuerra.Vistas
             int y,
             bool ignorarCoordenada = false)
         {
+            if (!string.IsNullOrWhiteSpace(
+                    id) &&
+                entidadesPorId.TryGetValue(
+                    id,
+                    out EntidadSeleccionableVista porId) &&
+                porId != null)
+            {
+                if (porId.Categoria == categoria &&
+                    porId.TipoLogico == tipo &&
+                    porId.Propietario == propietario &&
+                    (ignorarCoordenada ||
+                     (porId.X == x &&
+                      porId.Y == y)))
+                {
+                    return porId;
+                }
+            }
+
             EntidadSeleccionableVista[] entidades =
                 GetComponentsInChildren<EntidadSeleccionableVista>(
                     true);
@@ -540,6 +663,14 @@ namespace ImperiosEnGuerra.Vistas
                      entidad.Y != y))
                 {
                     continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(
+                        entidad.IdLogico))
+                {
+                    entidadesPorId[
+                        entidad.IdLogico] =
+                        entidad;
                 }
 
                 return entidad;
@@ -614,6 +745,7 @@ namespace ImperiosEnGuerra.Vistas
         {
             AntesDeLimpiarContenido?.Invoke();
             movimientosVisuales.Clear();
+            entidadesPorId.Clear();
             anchoVisual = 0;
             altoVisual = 0;
             if (contenidoGenerado == null)
@@ -705,7 +837,15 @@ namespace ImperiosEnGuerra.Vistas
                 return;
             }
 
-            string propietario = humano ? "Humano" : "Maquina";
+            string propietario =
+                ObtenerPropietarioVisual(
+                    jugador,
+                    humano);
+
+            Color colorFaccion =
+                ObtenerColorFaccion(
+                    jugador,
+                    humano);
             if (jugador.edificios != null)
             {
                 foreach (EdificioEstadoDto edificio in jugador.edificios)
@@ -725,6 +865,11 @@ namespace ImperiosEnGuerra.Vistas
                         humano ? centroHumano : centroMaquina,
                         edificio.coordenada.x, edificio.coordenada.y, 20, edificios,
                         Vector3.one * escalaEdificios);
+
+                    AplicarColorFaccion(
+                        objeto,
+                        colorFaccion);
+
                     ConfigurarSeleccionable(
                         objeto,
                         CategoriaEntidadVisual.Edificio,
@@ -736,6 +881,13 @@ namespace ImperiosEnGuerra.Vistas
                         "",
                         edificio.vidaActual,
                         edificio.vidaMaxima);
+
+                    ActualizarIndicadorEntrenamiento(
+                        objeto == null
+                            ? null
+                            : objeto.GetComponent<EntidadSeleccionableVista>(),
+                        edificio.colaEntrenamiento,
+                        humano);
                 }
             }
 
@@ -782,7 +934,7 @@ namespace ImperiosEnGuerra.Vistas
                         if (renderer != null)
                         {
                             Color color =
-                                renderer.color;
+                                colorFaccion;
 
                             color.a = 0.55f;
                             renderer.color = color;
@@ -820,6 +972,11 @@ namespace ImperiosEnGuerra.Vistas
                 GameObject objeto = CrearSprite($"Unidad_{propietario}_{unidad.tipo}_{unidad.coordenada.x}_{unidad.coordenada.y}",
                     sprite, unidad.coordenada.x, unidad.coordenada.y, 30, unidades,
                     Vector3.one * escalaUnidades);
+
+                AplicarColorFaccion(
+                    objeto,
+                    colorFaccion);
+
                 ConfigurarSeleccionable(
                     objeto,
                     CategoriaEntidadVisual.Unidad,
@@ -833,6 +990,107 @@ namespace ImperiosEnGuerra.Vistas
                     unidad.vidaMaxima,
                     unidad.danio,
                     unidad.alcance);
+            }
+        }
+
+        private static JugadorEstadoDto[] ObtenerJugadoresEstado(
+            EstadoPartidaDto estado)
+        {
+            if (estado?.jugadores != null &&
+                estado.jugadores.Length > 0)
+            {
+                return estado.jugadores;
+            }
+
+            var jugadores =
+                new List<JugadorEstadoDto>();
+
+            if (estado?.jugadorHumano != null)
+            {
+                jugadores.Add(
+                    estado.jugadorHumano);
+            }
+
+            if (estado?.jugadorMaquina != null)
+            {
+                jugadores.Add(
+                    estado.jugadorMaquina);
+            }
+
+            return jugadores.ToArray();
+        }
+
+        private static bool EsHumano(
+            JugadorEstadoDto jugador)
+        {
+            return jugador != null &&
+                   jugador.tipo == "Humano";
+        }
+
+        private static string ObtenerPropietarioVisual(
+            JugadorEstadoDto jugador,
+            bool humano)
+        {
+            if (humano)
+                return "Humano";
+
+            if (string.IsNullOrWhiteSpace(
+                    jugador?.faccion))
+            {
+                // Compatibilidad con snapshots/pruebas anteriores a F7.5.
+                return "Maquina";
+            }
+
+            return $"Maquina_{jugador.faccion}";
+        }
+
+        private static Color ObtenerColorFaccion(
+            JugadorEstadoDto jugador,
+            bool humano)
+        {
+            if (humano)
+                return Color.white;
+
+            switch (jugador?.faccion)
+            {
+                case "Verde":
+                    return new Color(
+                        0.48f,
+                        0.95f,
+                        0.52f,
+                        1f);
+
+                case "Amarilla":
+                    return new Color(
+                        1f,
+                        0.88f,
+                        0.35f,
+                        1f);
+
+                case "Morada":
+                default:
+                    return new Color(
+                        0.72f,
+                        0.50f,
+                        0.96f,
+                        1f);
+            }
+        }
+
+        private static void AplicarColorFaccion(
+            GameObject objeto,
+            Color color)
+        {
+            if (objeto == null)
+                return;
+
+            SpriteRenderer renderer =
+                objeto.GetComponent<SpriteRenderer>();
+
+            if (renderer != null)
+            {
+                renderer.color =
+                    color;
             }
         }
 
@@ -853,23 +1111,12 @@ namespace ImperiosEnGuerra.Vistas
                 return false;
             }
 
-            EntidadSeleccionableVista[] entidades =
-                GetComponentsInChildren<EntidadSeleccionableVista>(true);
-
-            EntidadSeleccionableVista encontrada = null;
-
-            foreach (EntidadSeleccionableVista entidad in entidades)
-            {
-                if (entidad != null &&
-                    entidad.Categoria == CategoriaEntidadVisual.Unidad &&
-                    entidad.IdLogico == unidadId)
-                {
-                    encontrada = entidad;
-                    break;
-                }
-            }
-
-            if (encontrada == null)
+            if (!entidadesPorId.TryGetValue(
+                    unidadId,
+                    out EntidadSeleccionableVista encontrada) ||
+                encontrada == null ||
+                encontrada.Categoria !=
+                    CategoriaEntidadVisual.Unidad)
             {
                 return false;
             }
@@ -880,14 +1127,72 @@ namespace ImperiosEnGuerra.Vistas
                 estadoLogico,
                 ordenActiva);
 
-            movimientosVisuales[unidadId] =
-                new MovimientoVisualPendiente
-                {
-                    Entidad = encontrada,
-                    Destino = PosicionVisual(x, y)
-                };
+            ProgramarMovimientoVisual(
+                unidadId,
+                encontrada,
+                PosicionVisual(
+                    x,
+                    y));
 
             return true;
+        }
+
+        private void ProgramarMovimientoVisual(
+            string unidadId,
+            EntidadSeleccionableVista entidad,
+            Vector3 destino)
+        {
+            if (string.IsNullOrWhiteSpace(
+                    unidadId) ||
+                entidad == null)
+            {
+                return;
+            }
+
+            if (!movimientosVisuales.TryGetValue(
+                    unidadId,
+                    out MovimientoVisualPendiente movimiento) ||
+                movimiento == null ||
+                movimiento.Entidad != entidad)
+            {
+                movimiento =
+                    new MovimientoVisualPendiente
+                    {
+                        Entidad =
+                            entidad
+                    };
+
+                movimientosVisuales[
+                    unidadId] =
+                    movimiento;
+            }
+
+            if ((entidad.transform.position -
+                 destino).sqrMagnitude <=
+                0.0001f)
+            {
+                return;
+            }
+
+            if (movimiento.Destinos.Count > 0 &&
+                (movimiento.Destinos.Last() -
+                 destino).sqrMagnitude <=
+                0.0001f)
+            {
+                return;
+            }
+
+            // No acumulamos una cola infinita si Unity estuvo detenido.
+            if (movimiento.Destinos.Count >= 4)
+            {
+                movimiento.Destinos.Clear();
+                entidad.transform.position =
+                    destino;
+                return;
+            }
+
+            movimiento.Destinos.Enqueue(
+                destino);
         }
 
         private void Update()
@@ -913,8 +1218,18 @@ namespace ImperiosEnGuerra.Vistas
                     continue;
                 }
 
+                if (movimiento.Destinos.Count == 0)
+                {
+                    completados.Add(
+                        par.Key);
+                    continue;
+                }
+
                 Transform transformUnidad =
                     movimiento.Entidad.transform;
+
+                Vector3 destino =
+                    movimiento.Destinos.Peek();
 
                 float paso =
                     velocidadMovimientoVisual *
@@ -923,16 +1238,22 @@ namespace ImperiosEnGuerra.Vistas
                 transformUnidad.position =
                     Vector3.MoveTowards(
                         transformUnidad.position,
-                        movimiento.Destino,
+                        destino,
                         paso);
 
-                if ((transformUnidad.position - movimiento.Destino)
+                if ((transformUnidad.position - destino)
                     .sqrMagnitude <= 0.0001f)
                 {
                     transformUnidad.position =
-                        movimiento.Destino;
+                        destino;
 
-                    completados.Add(par.Key);
+                    movimiento.Destinos.Dequeue();
+
+                    if (movimiento.Destinos.Count == 0)
+                    {
+                        completados.Add(
+                            par.Key);
+                    }
                 }
             }
 
@@ -1001,6 +1322,14 @@ namespace ImperiosEnGuerra.Vistas
                 danio,
                 alcance);
 
+            if (!string.IsNullOrWhiteSpace(
+                    idLogico))
+            {
+                entidadesPorId[
+                    idLogico] =
+                    entidad;
+            }
+
             var collider = objeto.AddComponent<BoxCollider2D>();
 
             collider.size = entidad.Renderer.sprite.bounds.size;
@@ -1041,7 +1370,8 @@ namespace ImperiosEnGuerra.Vistas
             float aspecto = Mathf.Max(camara.aspect, 0.01f);
             camara.orthographicSize = Mathf.Max(
                 mapa.alto * espacioCasilla / 2f,
-                mapa.ancho * espacioCasilla / (2f * aspecto)) + espacioCasilla;
+                mapa.ancho * espacioCasilla / (2f * aspecto)) +
+                espacioCasilla * 0.35f;
         }
     }
 }

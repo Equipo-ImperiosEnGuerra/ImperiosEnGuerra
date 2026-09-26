@@ -11,16 +11,22 @@ public sealed class ServicioJugadorMaquina : IDisposable
     private readonly EstadoPartidaService estadoPartida;
     private readonly ServicioAccionesConcurrentes acciones;
     private readonly TimeSpan intervaloDecision;
+    private readonly TimeSpan graciaCombateInicial;
+    private readonly TimeSpan escalonCombateEntreFacciones;
     private readonly object sincronizacion = new();
     private readonly HashSet<Guid> unidadesAsignadas = new();
     private readonly HashSet<string> centrosAsignados =
         new HashSet<string>();
 
-    // La economía puede seguir siendo concurrente, pero la Máquina mantiene
-    // un único frente de combate para no encadenar varias bajas simultáneas.
-    private bool combateAsignado;
+    // Cada facción de Máquina mantiene como máximo un frente de combate,
+    // pero las tres IAs pueden combatir al mismo tiempo de forma independiente.
+    private readonly HashSet<int> combatesAsignados =
+        new HashSet<int>();
+    private readonly HashSet<int> recoleccionesAsignadas =
+        new HashSet<int>();
 
     private CancellationTokenSource? cancelacion;
+    private DateTime inicioCicloUtc = DateTime.MinValue;
     private bool dispuesto;
 
     public ServicioJugadorMaquina(
@@ -29,7 +35,9 @@ public sealed class ServicioJugadorMaquina : IDisposable
         : this(
             estadoPartida,
             acciones,
-            TimeSpan.FromMilliseconds(500))
+            TimeSpan.FromMilliseconds(500),
+            TimeSpan.FromSeconds(45),
+            TimeSpan.FromSeconds(15))
     {
     }
 
@@ -37,6 +45,21 @@ public sealed class ServicioJugadorMaquina : IDisposable
         EstadoPartidaService estadoPartida,
         ServicioAccionesConcurrentes acciones,
         TimeSpan intervaloDecision)
+        : this(
+            estadoPartida,
+            acciones,
+            intervaloDecision,
+            TimeSpan.Zero,
+            TimeSpan.Zero)
+    {
+    }
+
+    public ServicioJugadorMaquina(
+        EstadoPartidaService estadoPartida,
+        ServicioAccionesConcurrentes acciones,
+        TimeSpan intervaloDecision,
+        TimeSpan graciaCombateInicial,
+        TimeSpan escalonCombateEntreFacciones)
     {
         this.estadoPartida =
             estadoPartida
@@ -49,8 +72,20 @@ public sealed class ServicioJugadorMaquina : IDisposable
         if (intervaloDecision <= TimeSpan.Zero)
             throw new ArgumentOutOfRangeException(nameof(intervaloDecision));
 
+        if (graciaCombateInicial < TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(graciaCombateInicial));
+
+        if (escalonCombateEntreFacciones < TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(escalonCombateEntreFacciones));
+
         this.intervaloDecision =
             intervaloDecision;
+
+        this.graciaCombateInicial =
+            graciaCombateInicial;
+
+        this.escalonCombateEntreFacciones =
+            escalonCombateEntreFacciones;
 
         this.estadoPartida.PartidaFinalizada +=
             DetenerPorFinalizacion;
@@ -94,6 +129,9 @@ public sealed class ServicioJugadorMaquina : IDisposable
             cancelacion =
                 nueva;
 
+            inicioCicloUtc =
+                DateTime.UtcNow;
+
             _ = Task.Run(
                 () => EjecutarCicloAsync(
                     nueva));
@@ -104,32 +142,67 @@ public sealed class ServicioJugadorMaquina : IDisposable
 
     public bool Detener()
     {
-        CancellationTokenSource? actual;
-
         lock (sincronizacion)
         {
-            actual =
+            CancellationTokenSource? actual =
                 cancelacion;
+
+            if (actual == null)
+                return false;
+
+            try
+            {
+                actual.Cancel();
+                return true;
+            }
+            catch (ObjectDisposedException)
+            {
+                return false;
+            }
         }
-
-        if (actual == null)
-            return false;
-
-        actual.Cancel();
-        return true;
     }
 
     public ProcesoConcurrente? EjecutarPaso()
     {
         ThrowSiDispuesto();
 
+        ProcesoConcurrente? primero =
+            null;
+
+        int cantidad =
+            estadoPartida.CantidadJugadoresMaquina();
+
+        for (int indice = 0;
+             indice < cantidad;
+             indice++)
+        {
+            ProcesoConcurrente? proceso =
+                EjecutarPasoMaquina(
+                    indice);
+
+            if (primero == null &&
+                proceso != null)
+            {
+                primero =
+                    proceso;
+            }
+        }
+
+        return primero;
+    }
+
+    private ProcesoConcurrente? EjecutarPasoMaquina(
+        int indiceMaquina)
+    {
         Guid[] unidadesExcluidas;
         Coordenada[] centrosExcluidos;
+        bool frenteMilitarActivo;
 
         lock (sincronizacion)
         {
-            if (combateAsignado)
-                return null;
+            frenteMilitarActivo =
+                combatesAsignados.Contains(
+                    indiceMaquina);
 
             unidadesExcluidas =
                 unidadesAsignadas.ToArray();
@@ -143,15 +216,70 @@ public sealed class ServicioJugadorMaquina : IDisposable
                     .ToArray();
         }
 
-        DecisionMaquina decision =
+        ProcesoConcurrente? procesoMilitar =
+            null;
+
+        if (!frenteMilitarActivo)
+        {
+            DecisionMaquina decisionMilitar =
+                estadoPartida.PrepararDecisionMilitarMaquina(
+                    indiceMaquina,
+                    unidadesExcluidas,
+                    CombateHabilitado(
+                        indiceMaquina));
+
+            procesoMilitar =
+                EjecutarDecisionMaquina(
+                    indiceMaquina,
+                    decisionMilitar);
+        }
+
+        // La economía se decide de forma independiente del frente militar.
+        // Así una recolección o entrenamiento no bloquea patrulla/ataque y,
+        // al mismo tiempo, el combate no detiene la economía de la facción.
+        lock (sincronizacion)
+        {
+            unidadesExcluidas =
+                unidadesAsignadas.ToArray();
+
+            centrosExcluidos =
+                centrosAsignados
+                    .Select(
+                        ParsearCentro)
+                    .Where(
+                        c => c != null)
+                    .ToArray();
+        }
+
+        DecisionMaquina decisionEconomica =
             estadoPartida.PrepararDecisionMaquina(
+                indiceMaquina,
                 unidadesExcluidas,
-                centrosExcluidos);
+                centrosExcluidos,
+                permitirCombate: false,
+                permitirPatrulla: false);
+
+        ProcesoConcurrente? procesoEconomico =
+            EjecutarDecisionMaquina(
+                indiceMaquina,
+                decisionEconomica);
+
+        return procesoMilitar ??
+               procesoEconomico;
+    }
+
+    private ProcesoConcurrente? EjecutarDecisionMaquina(
+        int indiceMaquina,
+        DecisionMaquina decision)
+    {
+        if (decision == null)
+            return null;
 
         switch (decision.Tipo)
         {
             case TipoDecisionMaquina.Recolectar:
-                return EjecutarConUnidadAsignada(
+                return EjecutarConRecoleccionAsignada(
+                    indiceMaquina,
                     decision.UnidadId,
                     () =>
                         acciones.IniciarRecoleccion(
@@ -219,33 +347,44 @@ public sealed class ServicioJugadorMaquina : IDisposable
                             }));
 
             case TipoDecisionMaquina.Mover:
+            case TipoDecisionMaquina.Patrullar:
                 return EjecutarConCombateAsignado(
+                    indiceMaquina,
                     decision.UnidadId,
                     () =>
                         acciones.IniciarMovimiento(
                             new MoverUnidadRequest
                             {
                                 UnidadId =
-                                    decision.UnidadId.ToString("D"),
+                                    decision.UnidadId
+                                        .ToString("D"),
+
                                 Destino =
                                     new CoordenadaRequest
                                     {
-                                        X = decision.Objetivo.X,
-                                        Y = decision.Objetivo.Y
+                                        X =
+                                            decision.Objetivo.X,
+
+                                        Y =
+                                            decision.Objetivo.Y
                                     }
                             }));
 
             case TipoDecisionMaquina.Atacar:
                 return EjecutarConCombateAsignado(
+                    indiceMaquina,
                     decision.UnidadId,
                     () =>
                         acciones.IniciarAtaque(
                             new AtacarRequest
                             {
                                 AtacanteId =
-                                    decision.UnidadId.ToString("D"),
+                                    decision.UnidadId
+                                        .ToString("D"),
+
                                 ObjetivoId =
-                                    decision.ObjetivoUnidadId.ToString("D")
+                                    decision.ObjetivoUnidadId
+                                        .ToString("D")
                             }));
 
             default:
@@ -253,7 +392,8 @@ public sealed class ServicioJugadorMaquina : IDisposable
         }
     }
 
-    private ProcesoConcurrente? EjecutarConCombateAsignado(
+    private ProcesoConcurrente? EjecutarConRecoleccionAsignada(
+        int indiceMaquina,
         Guid unidadId,
         Func<ProcesoConcurrente> iniciar)
     {
@@ -265,14 +405,16 @@ public sealed class ServicioJugadorMaquina : IDisposable
 
         lock (sincronizacion)
         {
-            if (combateAsignado ||
+            if (recoleccionesAsignadas.Contains(
+                    indiceMaquina) ||
                 !unidadesAsignadas.Add(
                     unidadId))
             {
                 return null;
             }
 
-            combateAsignado = true;
+            recoleccionesAsignadas.Add(
+                indiceMaquina);
         }
 
         try
@@ -289,7 +431,8 @@ public sealed class ServicioJugadorMaquina : IDisposable
                             unidadesAsignadas.Remove(
                                 unidadId);
 
-                            combateAsignado = false;
+                            recoleccionesAsignadas.Remove(
+                                indiceMaquina);
                         }
                     },
                     CancellationToken.None,
@@ -305,7 +448,72 @@ public sealed class ServicioJugadorMaquina : IDisposable
                 unidadesAsignadas.Remove(
                     unidadId);
 
-                combateAsignado = false;
+                recoleccionesAsignadas.Remove(
+                    indiceMaquina);
+            }
+
+            throw;
+        }
+    }
+
+    private ProcesoConcurrente? EjecutarConCombateAsignado(
+        int indiceMaquina,
+        Guid unidadId,
+        Func<ProcesoConcurrente> iniciar)
+    {
+        if (unidadId == Guid.Empty ||
+            iniciar == null)
+        {
+            return null;
+        }
+
+        lock (sincronizacion)
+        {
+            if (combatesAsignados.Contains(
+                    indiceMaquina) ||
+                !unidadesAsignadas.Add(
+                    unidadId))
+            {
+                return null;
+            }
+
+            combatesAsignados.Add(
+                indiceMaquina);
+        }
+
+        try
+        {
+            ProcesoConcurrente proceso =
+                iniciar();
+
+            _ = proceso.Finalizacion
+                .ContinueWith(
+                    _ =>
+                    {
+                        lock (sincronizacion)
+                        {
+                            unidadesAsignadas.Remove(
+                                unidadId);
+
+                            combatesAsignados.Remove(
+                                indiceMaquina);
+                        }
+                    },
+                    CancellationToken.None,
+                    TaskContinuationOptions.ExecuteSynchronously,
+                    TaskScheduler.Default);
+
+            return proceso;
+        }
+        catch
+        {
+            lock (sincronizacion)
+            {
+                unidadesAsignadas.Remove(
+                    unidadId);
+
+                combatesAsignados.Remove(
+                    indiceMaquina);
             }
 
             throw;
@@ -446,11 +654,47 @@ public sealed class ServicioJugadorMaquina : IDisposable
                         origen))
                 {
                     cancelacion = null;
+                    inicioCicloUtc =
+                        DateTime.MinValue;
                 }
             }
 
             origen.Dispose();
         }
+    }
+
+    private bool CombateHabilitado(
+        int indiceMaquina)
+    {
+        DateTime inicio;
+
+        lock (sincronizacion)
+        {
+            // Las llamadas directas usadas por pruebas y diagnóstico mantienen
+            // el comportamiento inmediato. La gracia solo rige mientras el
+            // ciclo real de IA está activo.
+            if (cancelacion == null ||
+                inicioCicloUtc ==
+                    DateTime.MinValue)
+            {
+                return true;
+            }
+
+            inicio =
+                inicioCicloUtc;
+        }
+
+        TimeSpan espera =
+            graciaCombateInicial +
+            TimeSpan.FromTicks(
+                escalonCombateEntreFacciones.Ticks *
+                Math.Max(
+                    0,
+                    indiceMaquina));
+
+        return DateTime.UtcNow -
+               inicio >=
+               espera;
     }
 
     private static string ClaveCentro(
@@ -497,21 +741,25 @@ public sealed class ServicioJugadorMaquina : IDisposable
 
     public void Dispose()
     {
-        CancellationTokenSource? actual;
-
         lock (sincronizacion)
         {
             if (dispuesto)
                 return;
 
             dispuesto = true;
-            actual =
-                cancelacion;
+
+            try
+            {
+                cancelacion?.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // El ciclo pudo finalizar y disponer su token justo antes.
+                // Dispose debe seguir siendo idempotente y seguro.
+            }
         }
 
         estadoPartida.PartidaFinalizada -=
             DetenerPorFinalizacion;
-
-        actual?.Cancel();
     }
 }

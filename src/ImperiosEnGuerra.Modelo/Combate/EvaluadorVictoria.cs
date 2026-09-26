@@ -53,15 +53,41 @@ namespace ImperiosEnGuerra.Modelo.Combate
                 return evaluacion;
             }
 
-            Jugador ganador =
-                partida.ObtenerOponente(
-                    jugadorAfectado);
+            if (ReferenceEquals(
+                    jugadorAfectado,
+                    partida.JugadorHumano))
+            {
+                Jugador ganador =
+                    partida.JugadoresMaquina
+                        .FirstOrDefault(
+                            maquina =>
+                                !Evaluar(
+                                    maquina)
+                                    .HayVictoria);
 
-            if (ganador != null)
+                if (ganador != null)
+                {
+                    partida.IntentarFinalizar(
+                        ganador,
+                        "Tu imperio se quedó sin Centros Urbanos y sin unidades militares.");
+                }
+
+                return evaluacion;
+            }
+
+            bool todasLasIasEliminadas =
+                partida.JugadoresMaquina
+                    .All(
+                        maquina =>
+                            Evaluar(
+                                maquina)
+                                .HayVictoria);
+
+            if (todasLasIasEliminadas)
             {
                 partida.IntentarFinalizar(
-                    ganador,
-                    "Regla AND cumplida: el jugador perdió todos sus Centros Urbanos y todas sus unidades militares.");
+                    partida.JugadorHumano,
+                    "Las tres facciones enemigas se quedaron sin Centros Urbanos y sin unidades militares.");
             }
 
             return evaluacion;

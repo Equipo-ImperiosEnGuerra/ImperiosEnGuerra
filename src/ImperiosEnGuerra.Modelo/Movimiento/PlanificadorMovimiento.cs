@@ -90,17 +90,15 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
                 return ResultadoPlanMovimiento.Fallido(
                     "La casilla destino contiene un recurso físico.");
 
-            if (TieneEntidadEn(
-                    partida.JugadorHumano,
-                    unidad,
-                    destino) ||
-                (ReferenceEquals(
-                     mapa,
-                     partida.JugadorMaquina.Mapa) &&
-                 TieneEntidadEn(
-                     partida.JugadorMaquina,
-                     unidad,
-                     destino)))
+            if (partida.Jugadores.Any(
+                    jugador =>
+                        ReferenceEquals(
+                            jugador.Mapa,
+                            mapa) &&
+                        TieneEntidadEn(
+                            jugador,
+                            unidad,
+                            destino)))
             {
                 return ResultadoPlanMovimiento.Fallido(
                     "La posición destino contiene una unidad o un edificio.");
@@ -114,7 +112,15 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
                     propietario);
 
             List<Coordenada> ocupacionesAliadas =
-                propietario.Unidades
+                partida.Jugadores
+                    .Where(
+                        jugador =>
+                            partida.SonAliados(
+                                propietario,
+                                jugador))
+                    .SelectMany(
+                        jugador =>
+                            jugador.Unidades)
                     .Where(
                         u =>
                             !ReferenceEquals(
@@ -123,7 +129,8 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
                     .Select(
                         u => u.Coordenada)
                     .Where(
-                        c => c != null)
+                        coordenada =>
+                            coordenada != null)
                     .ToList();
 
             ResultadoRuta ruta =
@@ -153,23 +160,17 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
             var bloqueos =
                 new List<Coordenada>();
 
-            AgregarBloqueos(
-                partida.JugadorHumano,
-                mapa,
-                unidadMovil,
-                ReferenceEquals(
-                    partida.JugadorHumano,
-                    propietario),
-                bloqueos);
-
-            AgregarBloqueos(
-                partida.JugadorMaquina,
-                mapa,
-                unidadMovil,
-                ReferenceEquals(
-                    partida.JugadorMaquina,
-                    propietario),
-                bloqueos);
+            foreach (Jugador jugador in partida.Jugadores)
+            {
+                AgregarBloqueos(
+                    jugador,
+                    mapa,
+                    unidadMovil,
+                    partida.SonAliados(
+                        propietario,
+                        jugador),
+                    bloqueos);
+            }
 
             return bloqueos;
         }
@@ -178,7 +179,7 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
             Jugador jugador,
             Mapa mapa,
             Unidad unidadMovil,
-            bool esPropietario,
+            bool esAliado,
             List<Coordenada> bloqueos)
         {
             if (!ReferenceEquals(
@@ -191,7 +192,7 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
             // Las unidades aliadas son obstáculos dinámicos: no deben cerrar
             // permanentemente una ruta de A*. La aplicación paso a paso
             // mantiene las reglas de colisión con enemigos y estructuras.
-            if (!esPropietario)
+            if (!esAliado)
             {
                 foreach (Unidad unidad in jugador.Unidades)
                 {

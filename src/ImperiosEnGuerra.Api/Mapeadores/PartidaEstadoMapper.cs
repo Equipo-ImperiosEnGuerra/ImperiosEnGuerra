@@ -34,8 +34,30 @@ public static class PartidaEstadoMapper
                     CantidadRestante = recurso.CantidadRestante
                 }).ToList()
             },
-            JugadorHumano = ConvertirJugador(partida.JugadorHumano),
-            JugadorMaquina = ConvertirJugador(partida.JugadorMaquina),
+            JugadorHumano =
+                ConvertirJugador(
+                    partida.JugadorHumano,
+                    "Azul"),
+            JugadorMaquina =
+                ConvertirJugador(
+                    partida.JugadorMaquina,
+                    "Morada"),
+            Jugadores =
+                new[]
+                {
+                    ConvertirJugador(
+                        partida.JugadorHumano,
+                        "Azul")
+                }
+                .Concat(
+                    partida.JugadoresMaquina
+                        .Select(
+                            (jugador, indice) =>
+                                ConvertirJugador(
+                                    jugador,
+                                    ObtenerFaccionMaquina(
+                                        indice))))
+                .ToList(),
             Economia = ConvertirEconomia()
         };
     }
@@ -91,12 +113,15 @@ public static class PartidaEstadoMapper
         };
     }
 
-    private static JugadorEstadoResponse ConvertirJugador(Jugador jugador)
+    private static JugadorEstadoResponse ConvertirJugador(
+        Jugador jugador,
+        string faccion)
     {
         return new JugadorEstadoResponse
         {
             Nombre = jugador.Nombre,
             Tipo = jugador.Tipo.ToString(),
+            Faccion = faccion,
             Recursos = new RecursosJugadorEstadoResponse
             {
                 Oro = jugador.Recursos.ObtenerCantidad(TipoRecurso.Oro),
@@ -151,6 +176,22 @@ public static class PartidaEstadoMapper
                     : null
             }).ToList()
         };
+    }
+
+    private static string ObtenerFaccionMaquina(
+        int indice)
+    {
+        switch (indice)
+        {
+            case 0:
+                return "Morada";
+            case 1:
+                return "Verde";
+            case 2:
+                return "Amarilla";
+            default:
+                return $"Maquina{indice + 1}";
+        }
     }
 
     private static CoordenadaEstadoResponse ConvertirCoordenada(Coordenada coordenada)

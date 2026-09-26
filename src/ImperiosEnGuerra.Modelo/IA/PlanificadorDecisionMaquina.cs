@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ImperiosEnGuerra.Modelo.Combate;
 using ImperiosEnGuerra.Modelo.Core;
 using ImperiosEnGuerra.Modelo.Edificios;
 using ImperiosEnGuerra.Modelo.Map;
@@ -23,7 +24,26 @@ namespace ImperiosEnGuerra.Modelo.IA
         public DecisionMaquina Preparar(
             Partida partida,
             IReadOnlyCollection<Guid> unidadesExcluidas = null,
-            IReadOnlyCollection<Coordenada> centrosExcluidos = null)
+            IReadOnlyCollection<Coordenada> centrosExcluidos = null,
+            bool permitirCombate = true,
+            bool permitirPatrulla = true)
+        {
+            return Preparar(
+                partida,
+                partida?.JugadorMaquina,
+                unidadesExcluidas,
+                centrosExcluidos,
+                permitirCombate,
+                permitirPatrulla);
+        }
+
+        public DecisionMaquina Preparar(
+            Partida partida,
+            Jugador maquina,
+            IReadOnlyCollection<Guid> unidadesExcluidas = null,
+            IReadOnlyCollection<Coordenada> centrosExcluidos = null,
+            bool permitirCombate = true,
+            bool permitirPatrulla = true)
         {
             if (partida == null)
             {
@@ -37,8 +57,23 @@ namespace ImperiosEnGuerra.Modelo.IA
                     "La partida ya finalizó.");
             }
 
-            Jugador maquina =
-                partida.JugadorMaquina;
+            if (maquina == null ||
+                maquina.Tipo != TipoJugador.Maquina ||
+                !partida.Jugadores.Contains(
+                    maquina))
+            {
+                return DecisionMaquina.SinAccion(
+                    "La facción de Máquina indicada no pertenece a la partida.");
+            }
+
+            if (new EvaluadorVictoria()
+                .Evaluar(
+                    maquina)
+                .HayVictoria)
+            {
+                return DecisionMaquina.SinAccion(
+                    "La facción de Máquina ya fue eliminada.");
+            }
 
             var excluidas =
                 unidadesExcluidas == null
@@ -142,19 +177,49 @@ namespace ImperiosEnGuerra.Modelo.IA
                     nameof(Guerrero));
             }
 
-            DecisionMaquina combate =
-                PrepararCombate(
-                    partida,
-                    maquina,
-                    excluidas);
+            if (militaresPropios < 2 &&
+                disponibles.Length > 0)
+            {
+                DecisionMaquina reposicion =
+                    PrepararRecoleccionParaGuerrero(
+                        maquina,
+                        disponibles);
 
-            if (combate.Tipo != TipoDecisionMaquina.Ninguna)
-                return combate;
+                if (reposicion.Tipo !=
+                    TipoDecisionMaquina.Ninguna)
+                {
+                    return reposicion;
+                }
+            }
+
+            if (permitirCombate)
+            {
+                DecisionMaquina combate =
+                    PrepararCombate(
+                        partida,
+                        maquina,
+                        excluidas);
+
+                if (combate.Tipo != TipoDecisionMaquina.Ninguna)
+                    return combate;
+            }
+
+            DecisionMaquina patrulla =
+                permitirPatrulla
+                    ? PrepararPatrulla(
+                        partida,
+                        maquina,
+                        excluidas)
+                    : DecisionMaquina.SinAccion(
+                        "La patrulla está reservada al canal militar.");
 
             if (disponibles.Length == 0)
             {
-                return DecisionMaquina.SinAccion(
-                    "No hay Aldeanos de la Máquina disponibles.");
+                return patrulla.Tipo !=
+                       TipoDecisionMaquina.Ninguna
+                    ? patrulla
+                    : DecisionMaquina.SinAccion(
+                        "No hay unidades disponibles para una nueva decisión.");
             }
 
             Recurso[] recursos =
@@ -171,8 +236,11 @@ namespace ImperiosEnGuerra.Modelo.IA
 
             if (recursos.Length == 0)
             {
-                return DecisionMaquina.SinAccion(
-                    "No hay recursos físicos disponibles.");
+                return patrulla.Tipo !=
+                       TipoDecisionMaquina.Ninguna
+                    ? patrulla
+                    : DecisionMaquina.SinAccion(
+                        "No hay recursos físicos disponibles.");
             }
 
             Aldeano mejorAldeano = null;
@@ -209,6 +277,186 @@ namespace ImperiosEnGuerra.Modelo.IA
                 : DecisionMaquina.Recolectar(
                     mejorAldeano.Id,
                     mejorRecurso.Coordenada);
+        }
+
+        public DecisionMaquina PrepararMilitar(
+            Partida partida,
+            Jugador maquina,
+            IReadOnlyCollection<Guid> unidadesExcluidas = null,
+            bool permitirCombate = true)
+        {
+            if (partida == null)
+            {
+                return DecisionMaquina.SinAccion(
+                    "No hay una partida activa.");
+            }
+
+            if (partida.Finalizada)
+            {
+                return DecisionMaquina.SinAccion(
+                    "La partida ya finalizó.");
+            }
+
+            if (maquina == null ||
+                maquina.Tipo != TipoJugador.Maquina ||
+                !partida.Jugadores.Contains(
+                    maquina))
+            {
+                return DecisionMaquina.SinAccion(
+                    "La facción de Máquina indicada no pertenece a la partida.");
+            }
+
+            if (new EvaluadorVictoria()
+                .Evaluar(
+                    maquina)
+                .HayVictoria)
+            {
+                return DecisionMaquina.SinAccion(
+                    "La facción de Máquina ya fue eliminada.");
+            }
+
+            var excluidas =
+                unidadesExcluidas == null
+                    ? new HashSet<Guid>()
+                    : new HashSet<Guid>(
+                        unidadesExcluidas);
+
+            if (permitirCombate)
+            {
+                DecisionMaquina combate =
+                    PrepararCombate(
+                        partida,
+                        maquina,
+                        excluidas);
+
+                if (combate.Tipo !=
+                    TipoDecisionMaquina.Ninguna)
+                {
+                    return combate;
+                }
+            }
+
+            return PrepararPatrulla(
+                partida,
+                maquina,
+                excluidas);
+        }
+
+        private static DecisionMaquina PrepararPatrulla(
+            Partida partida,
+            Jugador maquina,
+            HashSet<Guid> excluidas)
+        {
+            Unidad[] patrulleros =
+                maquina.Unidades
+                    .Where(
+                        u =>
+                            (u is Soldado || u is Monje) &&
+                            u.Disponible &&
+                            !excluidas.Contains(
+                                u.Id))
+                    .OrderBy(
+                        u => u.Coordenada.X)
+                    .ThenBy(
+                        u => u.Coordenada.Y)
+                    .ThenBy(
+                        u => u.Id)
+                    .ToArray();
+
+            foreach (Unidad patrullero
+                     in patrulleros)
+            {
+                Coordenada destino =
+                    BuscarCasillaPatrulla(
+                        partida,
+                        maquina,
+                        patrullero);
+
+                if (destino != null)
+                {
+                    return DecisionMaquina.Patrullar(
+                        patrullero.Id,
+                        destino);
+                }
+            }
+
+            return DecisionMaquina.SinAccion(
+                "No hay una casilla libre para patrullar.");
+        }
+
+        private static Coordenada BuscarCasillaPatrulla(
+            Partida partida,
+            Jugador maquina,
+            Unidad unidad)
+        {
+            Mapa mapa =
+                maquina.Mapa;
+
+            (int X, int Y)[] desplazamientos =
+            {
+                (2, 0),
+                (1, 1),
+                (0, 2),
+                (-1, 1),
+                (-2, 0),
+                (-1, -1),
+                (0, -2),
+                (1, -1),
+                (1, 0),
+                (0, 1),
+                (-1, 0),
+                (0, -1)
+            };
+
+            int inicio =
+                Math.Abs(
+                    unidad.Coordenada.X * 3 +
+                    unidad.Coordenada.Y * 5)
+                % desplazamientos.Length;
+
+            for (int i = 0;
+                 i < desplazamientos.Length;
+                 i++)
+            {
+                (int X, int Y) desplazamiento =
+                    desplazamientos[
+                        (inicio + i) %
+                        desplazamientos.Length];
+
+                Coordenada candidata =
+                    new Coordenada(
+                        unidad.Coordenada.X +
+                            desplazamiento.X,
+                        unidad.Coordenada.Y +
+                            desplazamiento.Y);
+
+                Casilla casilla =
+                    mapa.ObtenerCasilla(
+                        candidata.X,
+                        candidata.Y);
+
+                if (casilla == null ||
+                    !casilla.EsTransitable ||
+                    !mapa.PuedeColocar(
+                        candidata))
+                {
+                    continue;
+                }
+
+                if (partida.Jugadores.Any(
+                        jugador =>
+                            HayEntidadEn(
+                                jugador,
+                                mapa,
+                                candidata)))
+                {
+                    continue;
+                }
+
+                return candidata;
+            }
+
+            return null;
         }
 
         private static DecisionMaquina PrepararCombate(
@@ -344,8 +592,15 @@ namespace ImperiosEnGuerra.Modelo.IA
             Coordenada objetivo,
             int alcance)
         {
+            Jugador propietario =
+                partida.BuscarJugadorPorUnidad(
+                    atacante.Id);
+
             Mapa mapa =
-                partida.JugadorMaquina.Mapa;
+                propietario?.Mapa;
+
+            if (mapa == null)
+                return null;
 
             var candidatas =
                 new List<Coordenada>();
@@ -377,14 +632,12 @@ namespace ImperiosEnGuerra.Modelo.IA
                 .Where(
                     c =>
                         mapa.PuedeColocar(c) &&
-                        !HayEntidadEn(
-                            partida.JugadorHumano,
-                            mapa,
-                            c) &&
-                        !HayEntidadEn(
-                            partida.JugadorMaquina,
-                            mapa,
-                            c))
+                        !partida.Jugadores.Any(
+                            jugador =>
+                                HayEntidadEn(
+                                    jugador,
+                                    mapa,
+                                    c)))
                 .OrderBy(
                     c => Distancia(
                         atacante.Coordenada,
@@ -392,6 +645,175 @@ namespace ImperiosEnGuerra.Modelo.IA
                 .ThenBy(c => c.X)
                 .ThenBy(c => c.Y)
                 .FirstOrDefault();
+        }
+
+        private DecisionMaquina PrepararRecoleccionParaGuerrero(
+            Jugador maquina,
+            IReadOnlyList<Aldeano> disponibles)
+        {
+            if (maquina == null ||
+                disponibles == null ||
+                disponibles.Count == 0 ||
+                !economia.IntentarObtenerCostoUnidad(
+                    nameof(Guerrero),
+                    out CostoRecursos costo))
+            {
+                return DecisionMaquina.SinAccion(
+                    "No fue posible preparar recursos para reponer ejército.");
+            }
+
+            int oroActual =
+                maquina.Recursos.ObtenerCantidad(
+                    TipoRecurso.Oro);
+
+            int comidaActual =
+                maquina.Recursos.ObtenerCantidad(
+                    TipoRecurso.Comida);
+
+            int faltaOro =
+                Math.Max(
+                    0,
+                    costo.Oro -
+                    oroActual);
+
+            int faltaComida =
+                Math.Max(
+                    0,
+                    costo.Comida -
+                    comidaActual);
+
+            if (faltaOro == 0 &&
+                faltaComida == 0)
+            {
+                return DecisionMaquina.SinAccion(
+                    "La IA ya dispone de recursos para entrenar un Guerrero.");
+            }
+
+            TipoRecurso tipoPrioritario;
+
+            if (faltaOro > 0 &&
+                faltaComida > 0)
+            {
+                double proporcionOro =
+                    costo.Oro <= 0
+                        ? 0d
+                        : (double)faltaOro /
+                          costo.Oro;
+
+                double proporcionComida =
+                    costo.Comida <= 0
+                        ? 0d
+                        : (double)faltaComida /
+                          costo.Comida;
+
+                tipoPrioritario =
+                    proporcionComida >=
+                    proporcionOro
+                        ? TipoRecurso.Comida
+                        : TipoRecurso.Oro;
+            }
+            else
+            {
+                tipoPrioritario =
+                    faltaComida > 0
+                        ? TipoRecurso.Comida
+                        : TipoRecurso.Oro;
+            }
+
+            Recurso recurso =
+                BuscarRecursoMasCercano(
+                    maquina,
+                    disponibles,
+                    tipoPrioritario,
+                    out Aldeano aldeano);
+
+            if (recurso == null)
+            {
+                TipoRecurso alternativo =
+                    tipoPrioritario ==
+                    TipoRecurso.Comida
+                        ? TipoRecurso.Oro
+                        : TipoRecurso.Comida;
+
+                bool alternativoNecesario =
+                    alternativo ==
+                    TipoRecurso.Oro
+                        ? faltaOro > 0
+                        : faltaComida > 0;
+
+                if (alternativoNecesario)
+                {
+                    recurso =
+                        BuscarRecursoMasCercano(
+                            maquina,
+                            disponibles,
+                            alternativo,
+                            out aldeano);
+                }
+            }
+
+            return recurso == null ||
+                   aldeano == null
+                ? DecisionMaquina.SinAccion(
+                    "No hay un nodo disponible del recurso necesario para reponer ejército.")
+                : DecisionMaquina.Recolectar(
+                    aldeano.Id,
+                    recurso.Coordenada);
+        }
+
+        private static Recurso BuscarRecursoMasCercano(
+            Jugador maquina,
+            IReadOnlyList<Aldeano> disponibles,
+            TipoRecurso tipo,
+            out Aldeano mejorAldeano)
+        {
+            mejorAldeano =
+                null;
+
+            Recurso mejorRecurso =
+                null;
+
+            int mejorDistancia =
+                int.MaxValue;
+
+            Recurso[] candidatos =
+                maquina.Mapa.Recursos
+                    .Where(
+                        recurso =>
+                            recurso != null &&
+                            !recurso.Agotado &&
+                            recurso.Tipo == tipo)
+                    .ToArray();
+
+            foreach (Aldeano aldeano
+                     in disponibles)
+            {
+                foreach (Recurso recurso
+                         in candidatos)
+                {
+                    int distancia =
+                        Distancia(
+                            aldeano.Coordenada,
+                            recurso.Coordenada);
+
+                    if (distancia >=
+                        mejorDistancia)
+                    {
+                        continue;
+                    }
+
+                    mejorDistancia =
+                        distancia;
+
+                    mejorAldeano =
+                        aldeano;
+
+                    mejorRecurso =
+                        recurso;
+                }
+            }
+
+            return mejorRecurso;
         }
 
         private bool PuedePagarUnidad(
@@ -509,15 +931,12 @@ namespace ImperiosEnGuerra.Modelo.IA
             }
 
             bool entidad =
-                HayEntidadEn(
-                    partida.JugadorHumano,
-                    mapa,
-                    candidata)
-                ||
-                HayEntidadEn(
-                    partida.JugadorMaquina,
-                    mapa,
-                    candidata);
+                partida.Jugadores.Any(
+                    jugador =>
+                        HayEntidadEn(
+                            jugador,
+                            mapa,
+                            candidata));
 
             if (entidad)
                 return false;
@@ -547,14 +966,12 @@ namespace ImperiosEnGuerra.Modelo.IA
                            adyacente.EsTransitable &&
                            mapa.PuedeColocar(
                                vecina) &&
-                           !HayEntidadEn(
-                               partida.JugadorHumano,
-                               mapa,
-                               vecina) &&
-                           !HayEntidadEn(
-                               partida.JugadorMaquina,
-                               mapa,
-                               vecina);
+                           !partida.Jugadores.Any(
+                               jugador =>
+                                   HayEntidadEn(
+                                       jugador,
+                                       mapa,
+                                       vecina));
                 });
         }
 

@@ -252,6 +252,59 @@ public class NetworkingTests
                 entorno.GuerreroMaquina));
     }
 
+    [Test]
+    public async Task MensajeCurar_DespachaCuracionConcurrente()
+    {
+        using EntornoRed entorno =
+            CrearEntorno();
+
+        var monje =
+            new Monje(
+                new Coordenada(1, 0));
+
+        entorno.Partida.JugadorHumano.AgregarUnidad(
+            monje);
+
+        entorno.GuerreroHumano.RecibirDanio(
+            30);
+
+        string json =
+            CrearMensaje(
+                "CURAR",
+                new
+                {
+                    curadorId =
+                        monje.Id.ToString("D"),
+                    objetivoId =
+                        entorno.GuerreroHumano.Id
+                            .ToString("D")
+                });
+
+        var despacho =
+            entorno.Despachador.Procesar(
+                json);
+
+        Assert.That(
+            despacho.Exito,
+            Is.True,
+            despacho.Mensaje);
+
+        ResultadoProcesoConcurrente resultado =
+            await EsperarResultado(
+                entorno.Acciones,
+                despacho.ProcesoId);
+
+        Assert.That(
+            resultado.Resultado?.Exito,
+            Is.True,
+            resultado.Resultado?.Mensaje);
+
+        Assert.That(
+            entorno.GuerreroHumano.VidaActual,
+            Is.EqualTo(
+                entorno.GuerreroHumano.VidaMaxima));
+    }
+
     [TestCase("{esto-no-es-json")]
     [TestCase("{\"tipo\":\"DESCONOCIDO\",\"datos\":{}}")]
     public void MensajeInvalido_SeRechazaSinLanzarExcepcion(

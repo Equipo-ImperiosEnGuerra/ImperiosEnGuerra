@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Threading;
+using System.Threading.Tasks;
 using ImperiosEnGuerra.Modelo.Unidades;
 using ImperiosEnGuerra.Modelo.Acciones;
 using ImperiosEnGuerra.Modelo.Combate;
@@ -20,6 +22,10 @@ public sealed class ServicioAccionesConcurrentes
     private readonly EstadoPartidaService estadoPartida;
     private readonly GestorProcesosConcurrentes gestorProcesos;
     private readonly ServicioOrdenesUnidad servicioOrdenes;
+
+    private readonly ConcurrentDictionary<Guid, Guid>
+        procesosPorUnidad =
+            new ConcurrentDictionary<Guid, Guid>();
 
     private readonly TimeSpan retardoMovimiento;
     private readonly TimeSpan retardoRecoleccion;
@@ -170,7 +176,8 @@ public sealed class ServicioAccionesConcurrentes
         MoverUnidadRequest? copia =
             Copiar(request);
 
-        return gestorProcesos.Iniciar(
+        ProcesoConcurrente proceso =
+            gestorProcesos.Iniciar(
             "MOVER",
             token =>
             {
@@ -291,9 +298,6 @@ public sealed class ServicioAccionesConcurrentes
                             continue;
                         }
 
-                        Console.WriteLine(
-                            $"MOVIMIENTO_PASO: {unidadId} -> " +
-                            $"({siguiente.X},{siguiente.Y})");
                     }
 
                     return ResultadoAccion.Exitoso(
@@ -304,6 +308,100 @@ public sealed class ServicioAccionesConcurrentes
                     estadoPartida.CompletarOrdenUnidad(
                         unidadId);
                 }
+            });
+
+        RegistrarProcesoUnidad(
+            copia?.UnidadId,
+            proceso);
+
+        return proceso;
+    }
+
+    public ProcesoConcurrente IniciarMovimientoIdle(
+        MoverUnidadRequest? request)
+    {
+        MoverUnidadRequest? copia =
+            Copiar(request);
+
+        return gestorProcesos.Iniciar(
+            "MOVER_IDLE",
+            token =>
+            {
+                if (!Guid.TryParse(
+                        copia?.UnidadId,
+                        out Guid unidadId))
+                {
+                    return ResultadoAccion.Fallido(
+                        "El ID de la unidad debe tener formato Guid válido.");
+                }
+
+                Unidad? unidad =
+                    estadoPartida.ObtenerUnidad(
+                        unidadId);
+
+                if (!(unidad is Aldeano aldeano))
+                {
+                    return ResultadoAccion.Fallido(
+                        "El movimiento idle solo se aplica a Aldeanos.");
+                }
+
+                // Este movimiento es de baja prioridad: no crea OrdenActiva
+                // ni marca la unidad como ocupada. Una orden real del jugador
+                // puede cancelarlo inmediatamente desde ServicioReaccionesAutomaticas.
+                ResultadoPlanMovimiento plan =
+                    estadoPartida.PrepararMovimientoProgresivo(
+                        copia);
+
+                if (!plan.Exito)
+                {
+                    return ResultadoAccion.Fallido(
+                        plan.Mensaje);
+                }
+
+                if (plan.Pasos.Count == 0)
+                {
+                    return ResultadoAccion.Exitoso(
+                        "Movimiento idle completado.");
+                }
+
+                TimeSpan retardoPaso =
+                    CalcularRetardoPasoMovimiento(
+                        retardoMovimiento,
+                        aldeano.VelocidadMovimiento);
+
+                foreach (Coordenada paso
+                         in plan.Pasos)
+                {
+                    EsperarAntesDeAplicar(
+                        token,
+                        retardoPaso);
+
+                    token.ThrowIfCancellationRequested();
+
+                    // Si apareció una orden real mientras esperaba,
+                    // el paseo deja de ejecutarse sin interferir con ella.
+                    if (!aldeano.Disponible ||
+                        aldeano.OrdenActiva.HasValue)
+                    {
+                        return ResultadoAccion.Exitoso(
+                            "Movimiento idle cedido a una orden prioritaria.");
+                    }
+
+                    ResultadoAccion resultado =
+                        estadoPartida.AvanzarMovimiento(
+                            unidadId,
+                            paso);
+
+                    if (!resultado.Exito)
+                    {
+                        return ResultadoAccion.Exitoso(
+                            "Movimiento idle detenido por cambio del mapa.");
+                    }
+
+                }
+
+                return ResultadoAccion.Exitoso(
+                    "Movimiento idle completado.");
             });
     }
 
@@ -317,7 +415,8 @@ public sealed class ServicioAccionesConcurrentes
         RecolectarRequest? copia =
             Copiar(request);
 
-        return gestorProcesos.Iniciar(
+        ProcesoConcurrente proceso =
+            gestorProcesos.Iniciar(
             "RECOLECTAR",
             token =>
             {
@@ -683,6 +782,12 @@ public sealed class ServicioAccionesConcurrentes
                     }
                 }
             });
+
+        RegistrarProcesoUnidad(
+            copia?.AldeanoId,
+            proceso);
+
+        return proceso;
     }
 
     // ============================================================
@@ -695,7 +800,8 @@ public sealed class ServicioAccionesConcurrentes
         ConstruirRequest? copia =
             Copiar(request);
 
-        return gestorProcesos.Iniciar(
+        ProcesoConcurrente proceso =
+            gestorProcesos.Iniciar(
             "CONSTRUIR",
             token =>
             {
@@ -858,6 +964,12 @@ public sealed class ServicioAccionesConcurrentes
                     }
                 }
             });
+
+        RegistrarProcesoUnidad(
+            copia?.AldeanoId,
+            proceso);
+
+        return proceso;
     }
 
     // ============================================================
@@ -898,7 +1010,6 @@ public sealed class ServicioAccionesConcurrentes
                     ResultadoAccion encolado =
                         estadoPartida.EncolarEntrenamiento(
                             copia,
-                            propietarioTipo,
                             out entrenamientoId,
                             out centroUrbano);
 
@@ -907,8 +1018,7 @@ public sealed class ServicioAccionesConcurrentes
 
                     while (!estadoPartida.EsTurnoEntrenamiento(
                         centroUrbano,
-                        entrenamientoId,
-                        propietarioTipo))
+                        entrenamientoId))
                     {
                         EsperarAntesDeAplicar(
                             token,
@@ -946,8 +1056,7 @@ public sealed class ServicioAccionesConcurrentes
                             estadoPartida.AvanzarEntrenamiento(
                                 centroUrbano,
                                 entrenamientoId,
-                                10,
-                                propietarioTipo);
+                                10);
 
                         if (!progreso.Exito)
                         {
@@ -964,8 +1073,7 @@ public sealed class ServicioAccionesConcurrentes
                         estadoPartida.CompletarEntrenamientoConSpawn(
                             centroUrbano,
                             entrenamientoId,
-                            copia?.TipoUnidad ?? string.Empty,
-                            propietarioTipo);
+                            copia?.TipoUnidad ?? string.Empty);
 
                     if (!spawn.Exito)
                     {
@@ -986,15 +1094,14 @@ public sealed class ServicioAccionesConcurrentes
                     {
                         estadoPartida.CancelarEntrenamientoCola(
                             centroUrbano,
-                            entrenamientoId,
-                            propietarioTipo);
+                            entrenamientoId);
                     }
 
                     if (!completado &&
                         costoReservado)
                     {
                         estadoPartida.ReembolsarCosto(
-                            propietarioTipo,
+                            centroUrbano,
                             costo);
                     }
                 }
@@ -1011,7 +1118,8 @@ public sealed class ServicioAccionesConcurrentes
         AtacarRequest? copia =
             Copiar(request);
 
-        return gestorProcesos.Iniciar(
+        ProcesoConcurrente proceso =
+            gestorProcesos.Iniciar(
             "ATACAR",
             token =>
             {
@@ -1167,6 +1275,311 @@ public sealed class ServicioAccionesConcurrentes
                     }
                 }
             });
+
+        RegistrarProcesoUnidad(
+            copia?.AtacanteId,
+            proceso);
+
+        return proceso;
+    }
+
+
+    // ============================================================
+    // CURACIÓN
+    // ============================================================
+
+    public ProcesoConcurrente IniciarCuracion(
+        CurarRequest? request)
+    {
+        CurarRequest? copia =
+            Copiar(request);
+
+        ProcesoConcurrente proceso =
+            gestorProcesos.Iniciar(
+            "CURAR",
+            token =>
+            {
+                if (!Guid.TryParse(
+                        copia?.CuradorId,
+                        out Guid curadorId))
+                {
+                    return ResultadoAccion.Fallido(
+                        "El ID del Monje debe tener formato Guid válido.");
+                }
+
+                if (!Guid.TryParse(
+                        copia?.ObjetivoId,
+                        out Guid objetivoId))
+                {
+                    return ResultadoAccion.Fallido(
+                        "El ID del objetivo debe tener formato Guid válido.");
+                }
+
+                Unidad? unidad =
+                    estadoPartida.ObtenerUnidad(
+                        curadorId);
+
+                Monje? monje =
+                    unidad as Monje;
+
+                if (monje == null)
+                {
+                    return ResultadoAccion.Fallido(
+                        "Solo un Monje puede ejecutar la acción Curar.");
+                }
+
+                if (!estadoPartida.UnidadNecesitaCuracion(
+                        objetivoId))
+                {
+                    return ResultadoAccion.Fallido(
+                        "La unidad aliada no necesita curación.");
+                }
+
+                bool ordenIniciada =
+                    false;
+
+                try
+                {
+                    const int maximoReplanes = 12;
+                    int replanteos = 0;
+
+                    while (true)
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        ResultadoAproximacionCuracion aproximacion =
+                            estadoPartida.PrepararAproximacionCuracion(
+                                copia);
+
+                        if (!aproximacion.Exito)
+                        {
+                            return ResultadoAccion.Fallido(
+                                aproximacion.Mensaje);
+                        }
+
+                        if (aproximacion.Pasos.Count == 0)
+                            break;
+
+                        if (!ordenIniciada)
+                        {
+                            if (!estadoPartida.IntentarIniciarOrdenUnidad(
+                                    curadorId,
+                                    TipoAccionJuego.Mover))
+                            {
+                                return ResultadoAccion.Fallido(
+                                    "El Monje no está disponible.");
+                            }
+
+                            ordenIniciada = true;
+                        }
+                        else if (!estadoPartida.IntentarReemplazarOrdenUnidad(
+                                     curadorId,
+                                     TipoAccionJuego.Mover))
+                        {
+                            return ResultadoAccion.Fallido(
+                                "No se pudo activar la aproximación de curación.");
+                        }
+
+                        TimeSpan retardoPaso =
+                            CalcularRetardoPasoMovimiento(
+                                retardoMovimiento,
+                                monje.VelocidadMovimiento);
+
+                        bool requiereReplan =
+                            false;
+
+                        bool primerPasoCuracion =
+                            true;
+
+                        foreach (Coordenada paso
+                                 in aproximacion.Pasos)
+                        {
+                            if (!primerPasoCuracion)
+                            {
+                                EsperarAntesDeAplicar(
+                                    token,
+                                    retardoPaso);
+                            }
+
+                            primerPasoCuracion =
+                                false;
+
+                            token.ThrowIfCancellationRequested();
+
+                            ResultadoAccion movimiento =
+                                estadoPartida.AvanzarMovimiento(
+                                    curadorId,
+                                    paso);
+
+                            if (!movimiento.Exito)
+                            {
+                                requiereReplan =
+                                    true;
+
+                                break;
+                            }
+
+                        }
+
+                        if (requiereReplan)
+                        {
+                            replanteos++;
+
+                            if (replanteos >
+                                maximoReplanes)
+                            {
+                                return ResultadoAccion.Fallido(
+                                    "No se encontró una ruta libre hasta el aliado tras varios cambios del mapa.");
+                            }
+
+                            EsperarCesionPaso(
+                                curadorId,
+                                token,
+                                replanteos);
+                        }
+                    }
+
+                    if (!ordenIniciada)
+                    {
+                        if (!estadoPartida.IntentarIniciarOrdenUnidad(
+                                curadorId,
+                                TipoAccionJuego.Curar))
+                        {
+                            return ResultadoAccion.Fallido(
+                                "El Monje no está disponible.");
+                        }
+
+                        ordenIniciada = true;
+                    }
+                    else if (!estadoPartida.IntentarReemplazarOrdenUnidad(
+                                 curadorId,
+                                 TipoAccionJuego.Curar))
+                    {
+                        return ResultadoAccion.Fallido(
+                            "No se pudo cambiar de aproximación a curación.");
+                    }
+
+                    TimeSpan esperaCuracion =
+                        usarIntervaloCombateConfigurado
+                            ? TimeSpan.FromSeconds(
+                                estadoPartida.ObtenerIntervaloCuracionSegundos(
+                                    curadorId))
+                            : retardoAtaque;
+
+                    ResultadoAccion ultimoPulso =
+                        ResultadoAccion.Exitoso(
+                            "Curación iniciada.");
+
+                    bool primerPulso =
+                        true;
+
+                    while (true)
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        if (estadoPartida.EstaFinalizada() ||
+                            !estadoPartida.ExisteEntidad(
+                                objetivoId) ||
+                            !estadoPartida.UnidadNecesitaCuracion(
+                                objetivoId))
+                        {
+                            return ultimoPulso;
+                        }
+
+                        ResultadoAproximacionCuracion alcanceActual =
+                            estadoPartida.PrepararAproximacionCuracion(
+                                copia);
+
+                        if (!alcanceActual.Exito)
+                        {
+                            return ResultadoAccion.Fallido(
+                                alcanceActual.Mensaje);
+                        }
+
+                        if (alcanceActual.Pasos.Count > 0)
+                        {
+                            if (!estadoPartida.IntentarReemplazarOrdenUnidad(
+                                    curadorId,
+                                    TipoAccionJuego.Mover))
+                            {
+                                return ResultadoAccion.Fallido(
+                                    "No se pudo volver a aproximar al aliado.");
+                            }
+
+                            foreach (Coordenada paso
+                                     in alcanceActual.Pasos)
+                            {
+                                EsperarAntesDeAplicar(
+                                    token,
+                                    CalcularRetardoPasoMovimiento(
+                                        retardoMovimiento,
+                                        monje.VelocidadMovimiento));
+
+                                token.ThrowIfCancellationRequested();
+
+                                ResultadoAccion movimiento =
+                                    estadoPartida.AvanzarMovimiento(
+                                        curadorId,
+                                        paso);
+
+                                if (!movimiento.Exito)
+                                    break;
+                            }
+
+                            if (!estadoPartida.IntentarReemplazarOrdenUnidad(
+                                    curadorId,
+                                    TipoAccionJuego.Curar))
+                            {
+                                return ResultadoAccion.Fallido(
+                                    "No se pudo reanudar la curación.");
+                            }
+
+                            continue;
+                        }
+
+                        if (!primerPulso)
+                        {
+                            EsperarAntesDeAplicar(
+                                token,
+                                esperaCuracion);
+                        }
+
+                        primerPulso =
+                            false;
+
+                        token.ThrowIfCancellationRequested();
+
+                        ultimoPulso =
+                            estadoPartida.Curar(
+                                copia);
+
+                        if (!ultimoPulso.Exito)
+                        {
+                            return ultimoPulso;
+                        }
+
+                        if (!estadoPartida.UnidadNecesitaCuracion(
+                                objetivoId))
+                        {
+                            return ultimoPulso;
+                        }
+                    }
+                }
+                finally
+                {
+                    if (ordenIniciada)
+                    {
+                        estadoPartida.CompletarOrdenUnidad(
+                            curadorId);
+                    }
+                }
+            });
+
+        RegistrarProcesoUnidad(
+            copia?.CuradorId,
+            proceso);
+
+        return proceso;
     }
 
 
@@ -1181,10 +1594,66 @@ public sealed class ServicioAccionesConcurrentes
             procesoId);
     }
 
+    public bool CancelarPorUnidad(
+        Guid unidadId)
+    {
+        if (!procesosPorUnidad.TryGetValue(
+                unidadId,
+                out Guid procesoId))
+        {
+            return false;
+        }
+
+        return gestorProcesos.Cancelar(
+            procesoId);
+    }
+
+    public bool TieneProcesoActivo(
+        Guid unidadId)
+    {
+        return procesosPorUnidad.ContainsKey(
+            unidadId);
+    }
+
 
     public void CancelarTodos()
     {
         gestorProcesos.CancelarTodos();
+    }
+
+
+    private void RegistrarProcesoUnidad(
+        string? unidadIdTexto,
+        ProcesoConcurrente proceso)
+    {
+        if (proceso == null ||
+            !Guid.TryParse(
+                unidadIdTexto,
+                out Guid unidadId))
+        {
+            return;
+        }
+
+        procesosPorUnidad[unidadId] =
+            proceso.Id;
+
+        _ = proceso.Finalizacion
+            .ContinueWith(
+                tarea =>
+                {
+                    if (procesosPorUnidad.TryGetValue(
+                            unidadId,
+                            out Guid registrado) &&
+                        registrado == proceso.Id)
+                    {
+                        procesosPorUnidad.TryRemove(
+                            unidadId,
+                            out Guid _);
+                    }
+                },
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
     }
 
 
@@ -1494,9 +1963,6 @@ public sealed class ServicioAccionesConcurrentes
                 return resultado;
             }
 
-            Console.WriteLine(
-                $"RECOLECCION_MOVIMIENTO: {unidadId} -> " +
-                $"({siguiente.X},{siguiente.Y})");
         }
 
         return ResultadoAccion.Exitoso(
@@ -1532,9 +1998,6 @@ public sealed class ServicioAccionesConcurrentes
             if (!resultado.Exito)
                 return resultado;
 
-            Console.WriteLine(
-                $"CONSTRUCCION_MOVIMIENTO: {unidadId} -> " +
-                $"({siguiente.X},{siguiente.Y})");
         }
 
         return ResultadoAccion.Exitoso(
@@ -1879,6 +2342,25 @@ public sealed class ServicioAccionesConcurrentes
         {
             AtacanteId =
                 request.AtacanteId,
+
+            ObjetivoId =
+                request.ObjetivoId
+        };
+    }
+
+
+    private static CurarRequest? Copiar(
+        CurarRequest? request)
+    {
+        if (request == null)
+        {
+            return null;
+        }
+
+        return new CurarRequest
+        {
+            CuradorId =
+                request.CuradorId,
 
             ObjetivoId =
                 request.ObjetivoId

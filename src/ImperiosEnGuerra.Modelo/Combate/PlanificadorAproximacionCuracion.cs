@@ -11,83 +11,97 @@ using ImperiosEnGuerra.Modelo.Unidades;
 namespace ImperiosEnGuerra.Modelo.Combate
 {
     /// <summary>
-    /// Calcula una posición alcanzable desde la que una unidad pueda atacar.
-    /// No modifica el Modelo.
+    /// Calcula una posición alcanzable desde la que un Monje pueda curar
+    /// a una unidad aliada. No modifica el Modelo.
     /// </summary>
-    public sealed class PlanificadorAproximacionAtaque
+    public sealed class PlanificadorAproximacionCuracion
     {
         private readonly BuscadorRutaAStar buscador =
             new BuscadorRutaAStar();
 
-        public ResultadoAproximacionAtaque Preparar(
+        public ResultadoAproximacionCuracion Preparar(
             Partida partida,
-            SolicitudAtaque solicitud)
+            SolicitudCuracion solicitud)
         {
             if (partida == null)
-                return ResultadoAproximacionAtaque.Fallido(
+            {
+                return ResultadoAproximacionCuracion.Fallido(
                     "No hay una partida activa.");
+            }
 
             if (solicitud == null)
-                return ResultadoAproximacionAtaque.Fallido(
-                    "La solicitud de ataque es obligatoria.");
+            {
+                return ResultadoAproximacionCuracion.Fallido(
+                    "La solicitud de curación es obligatoria.");
+            }
 
             Jugador propietario =
                 partida.BuscarJugadorPorUnidad(
-                    solicitud.AtacanteId);
+                    solicitud.CuradorId);
 
             if (propietario == null)
-                return ResultadoAproximacionAtaque.Fallido(
-                    "No existe la unidad atacante indicada.");
-
-            Unidad atacante =
-                propietario.Unidades.First(
-                    u => u.Id == solicitud.AtacanteId);
-
-            if (atacante.AlcanceAtaque <= 0)
-                return ResultadoAproximacionAtaque.Fallido(
-                    "La unidad atacante no tiene alcance ofensivo.");
-
-            Jugador objetivoPropietario =
-                partida.BuscarJugadorPorUnidad(
-                    solicitud.ObjetivoId)
-                ??
-                partida.BuscarJugadorPorEdificio(
-                    solicitud.ObjetivoId);
-
-            if (objetivoPropietario == null ||
-                !partida.SonEnemigos(
-                    propietario,
-                    objetivoPropietario) ||
-                !ReferenceEquals(
-                    propietario.Mapa,
-                    objetivoPropietario.Mapa))
             {
-                return ResultadoAproximacionAtaque.Fallido(
-                    "El objetivo no pertenece a una facción enemiga válida.");
+                return ResultadoAproximacionCuracion.Fallido(
+                    "No existe la unidad curadora indicada.");
             }
 
-            Unidad objetivoUnidad =
-                objetivoPropietario.Unidades.FirstOrDefault(
-                    u => u.Id == solicitud.ObjetivoId);
+            Monje curador =
+                propietario.Unidades
+                    .OfType<Monje>()
+                    .FirstOrDefault(
+                        u => u.Id == solicitud.CuradorId);
 
-            Edificio objetivoEdificio =
-                objetivoPropietario.Edificios.FirstOrDefault(
-                    e => e.Id == solicitud.ObjetivoId);
+            if (curador == null)
+            {
+                return ResultadoAproximacionCuracion.Fallido(
+                    "Solo un Monje puede ejecutar la acción Curar.");
+            }
 
-            Coordenada objetivo =
-                objetivoUnidad?.Coordenada ??
-                objetivoEdificio?.Coordenada;
+            if (solicitud.CuradorId == solicitud.ObjetivoId)
+            {
+                return ResultadoAproximacionCuracion.Fallido(
+                    "El Monje no puede curarse a sí mismo.");
+            }
+
+            Unidad objetivo =
+                propietario.Unidades
+                    .FirstOrDefault(
+                        u => u.Id == solicitud.ObjetivoId);
 
             if (objetivo == null)
-                return ResultadoAproximacionAtaque.Fallido(
-                    "No existe la entidad enemiga objetivo indicada.");
-
-            if (DistanciaCombate(
-                    atacante.Coordenada,
-                    objetivo) <= atacante.AlcanceAtaque)
             {
-                return ResultadoAproximacionAtaque.EnAlcance(
-                    atacante.Coordenada);
+                return ResultadoAproximacionCuracion.Fallido(
+                    "La curación solo puede aplicarse a una unidad aliada.");
+            }
+
+            if (objetivo.Destruida)
+            {
+                return ResultadoAproximacionCuracion.Fallido(
+                    "No se puede curar una unidad destruida.");
+            }
+
+            if (objetivo.VidaActual >= objetivo.VidaMaxima)
+            {
+                return ResultadoAproximacionCuracion.Fallido(
+                    "La unidad aliada ya tiene la vida completa.");
+            }
+
+            if (!ReferenceEquals(
+                    propietario.Mapa,
+                    partida.BuscarJugadorPorUnidad(
+                        solicitud.ObjetivoId)?.Mapa))
+            {
+                return ResultadoAproximacionCuracion.Fallido(
+                    "El Monje y el aliado no comparten el mismo mapa lógico.");
+            }
+
+            if (Distancia(
+                    curador.Coordenada,
+                    objetivo.Coordenada) <=
+                curador.AlcanceCuracion)
+            {
+                return ResultadoAproximacionCuracion.EnAlcance(
+                    curador.Coordenada);
             }
 
             Mapa mapa =
@@ -97,7 +111,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
                 ObtenerBloqueos(
                     partida,
                     mapa,
-                    atacante,
+                    curador,
                     propietario);
 
             List<Coordenada> ocupacionesAliadas =
@@ -114,7 +128,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
                         u =>
                             !ReferenceEquals(
                                 u,
-                                atacante))
+                                curador))
                     .Select(
                         u => u.Coordenada)
                     .Where(
@@ -125,29 +139,37 @@ namespace ImperiosEnGuerra.Modelo.Combate
             var candidatas =
                 new List<(Coordenada Punto, IReadOnlyList<Coordenada> Pasos)>();
 
-            for (int x = 0; x < mapa.Ancho; x++)
+            for (int x = 0;
+                 x < mapa.Ancho;
+                 x++)
             {
-                for (int y = 0; y < mapa.Alto; y++)
+                for (int y = 0;
+                     y < mapa.Alto;
+                     y++)
                 {
                     var candidata =
-                        new Coordenada(x, y);
+                        new Coordenada(
+                            x,
+                            y);
 
                     int distanciaObjetivo =
-                        DistanciaCombate(
+                        Distancia(
                             candidata,
-                            objetivo);
+                            objetivo.Coordenada);
 
                     if (distanciaObjetivo <= 0 ||
-                        distanciaObjetivo > atacante.AlcanceAtaque)
+                        distanciaObjetivo >
+                            curador.AlcanceCuracion)
                     {
                         continue;
                     }
 
-                    if (!mapa.PuedeColocar(candidata) ||
+                    if (!mapa.PuedeColocar(
+                            candidata) ||
                         HayEntidadEn(
                             partida,
                             mapa,
-                            atacante,
+                            curador,
                             candidata))
                     {
                         continue;
@@ -156,7 +178,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
                     ResultadoRuta ruta =
                         buscador.Buscar(
                             mapa,
-                            atacante.Coordenada,
+                            curador.Coordenada,
                             candidata,
                             bloqueos,
                             ocupacionesAliadas);
@@ -165,27 +187,34 @@ namespace ImperiosEnGuerra.Modelo.Combate
                         continue;
 
                     candidatas.Add(
-                        (candidata, ruta.Pasos));
+                        (
+                            candidata,
+                            ruta.Pasos
+                        ));
                 }
             }
 
             if (candidatas.Count == 0)
             {
-                return ResultadoAproximacionAtaque.Fallido(
-                    "No existe una ruta transitable hasta una posición de ataque válida.");
+                return ResultadoAproximacionCuracion.Fallido(
+                    "No existe una ruta transitable hasta una posición válida de curación.");
             }
 
             var mejor =
                 candidatas
-                    .OrderBy(c => c.Pasos.Count)
-                    .ThenBy(c => DistanciaManhattan(
-                        atacante.Coordenada,
-                        c.Punto))
-                    .ThenBy(c => c.Punto.X)
-                    .ThenBy(c => c.Punto.Y)
+                    .OrderBy(
+                        c => c.Pasos.Count)
+                    .ThenBy(
+                        c => DistanciaManhattan(
+                            curador.Coordenada,
+                            c.Punto))
+                    .ThenBy(
+                        c => c.Punto.X)
+                    .ThenBy(
+                        c => c.Punto.Y)
                     .First();
 
-            return ResultadoAproximacionAtaque.Exitoso(
+            return ResultadoAproximacionCuracion.Exitoso(
                 mejor.Punto,
                 mejor.Pasos);
         }
@@ -193,7 +222,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
         private static List<Coordenada> ObtenerBloqueos(
             Partida partida,
             Mapa mapa,
-            Unidad atacante,
+            Unidad curador,
             Jugador propietario)
         {
             var bloqueos =
@@ -204,7 +233,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
                 AgregarBloqueos(
                     jugador,
                     mapa,
-                    atacante,
+                    curador,
                     partida.SonAliados(
                         propietario,
                         jugador),
@@ -217,7 +246,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
         private static void AgregarBloqueos(
             Jugador jugador,
             Mapa mapa,
-            Unidad atacante,
+            Unidad curador,
             bool esAliado,
             List<Coordenada> bloqueos)
         {
@@ -228,15 +257,14 @@ namespace ImperiosEnGuerra.Modelo.Combate
                 return;
             }
 
-            // Los compañeros de equipo no cierran la ruta de aproximación.
-            // En cambio las unidades enemigas continúan siendo obstáculos.
             if (!esAliado)
             {
-                foreach (Unidad unidad in jugador.Unidades)
+                foreach (Unidad unidad
+                         in jugador.Unidades)
                 {
                     if (!ReferenceEquals(
                             unidad,
-                            atacante))
+                            curador))
                     {
                         bloqueos.Add(
                             unidad.Coordenada);
@@ -244,7 +272,8 @@ namespace ImperiosEnGuerra.Modelo.Combate
                 }
             }
 
-            foreach (Edificio edificio in jugador.Edificios)
+            foreach (Edificio edificio
+                     in jugador.Edificios)
             {
                 bloqueos.Add(
                     edificio.Coordenada);
@@ -254,7 +283,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
         private static bool HayEntidadEn(
             Partida partida,
             Mapa mapa,
-            Unidad atacante,
+            Unidad curador,
             Coordenada posicion)
         {
             return partida.Jugadores.Any(
@@ -262,14 +291,14 @@ namespace ImperiosEnGuerra.Modelo.Combate
                     TieneEntidad(
                         jugador,
                         mapa,
-                        atacante,
+                        curador,
                         posicion));
         }
 
         private static bool TieneEntidad(
             Jugador jugador,
             Mapa mapa,
-            Unidad atacante,
+            Unidad curador,
             Coordenada posicion)
         {
             if (!ReferenceEquals(
@@ -283,7 +312,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
                        u =>
                            !ReferenceEquals(
                                u,
-                               atacante) &&
+                               curador) &&
                            Coincide(
                                u.Coordenada,
                                posicion))
@@ -304,21 +333,25 @@ namespace ImperiosEnGuerra.Modelo.Combate
                    a.Y == b.Y;
         }
 
-        private static int DistanciaCombate(
+        private static int Distancia(
             Coordenada a,
             Coordenada b)
         {
             return Math.Max(
-                Math.Abs(a.X - b.X),
-                Math.Abs(a.Y - b.Y));
+                Math.Abs(
+                    a.X - b.X),
+                Math.Abs(
+                    a.Y - b.Y));
         }
 
         private static int DistanciaManhattan(
             Coordenada a,
             Coordenada b)
         {
-            return Math.Abs(a.X - b.X) +
-                   Math.Abs(a.Y - b.Y);
+            return Math.Abs(
+                       a.X - b.X) +
+                   Math.Abs(
+                       a.Y - b.Y);
         }
     }
 }

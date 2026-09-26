@@ -82,7 +82,13 @@ public class VictoriaFinalTests
 
         Assert.That(partida.Finalizada, Is.True);
         Assert.That(partida.Ganador, Is.SameAs(partida.JugadorHumano));
-        Assert.That(partida.MotivoFinalizacion, Does.Contain("Regla AND"));
+        Assert.That(
+            partida.MotivoFinalizacion,
+            Does.Not.Contain("AND"));
+
+        Assert.That(
+            partida.MotivoFinalizacion,
+            Does.Contain("Centros Urbanos"));
     }
 
     [Test]
@@ -233,6 +239,102 @@ public class VictoriaFinalTests
         Assert.That(
             resultado.Estado,
             Is.EqualTo(EstadoProcesoConcurrente.Cancelado));
+    }
+
+    [Test]
+    public void ObtenerEstado_ReevaluaDerrotaSiCondicionYaSeCumplio()
+    {
+        var mapa =
+            new Mapa(
+                6,
+                6);
+
+        var humano =
+            new Jugador(
+                "Humano",
+                TipoJugador.Humano,
+                mapa,
+                new RecursosJugador());
+
+        var maquina =
+            new Jugador(
+                "CPU",
+                TipoJugador.Maquina,
+                mapa,
+                new RecursosJugador());
+
+        // Un Aldeano no cuenta como unidad militar para la condición final.
+        humano.AgregarUnidad(
+            new Aldeano(
+                new Coordenada(
+                    1,
+                    1)));
+
+        var centroHumano =
+            new CentroUrbano(
+                new Coordenada(
+                    0,
+                    0));
+
+        var centroMaquina =
+            new CentroUrbano(
+                new Coordenada(
+                    5,
+                    5));
+
+        humano.AgregarEdificio(
+            centroHumano);
+
+        maquina.AgregarEdificio(
+            centroMaquina);
+
+        mapa.ObtenerCasilla(
+                0,
+                0)
+            .Ocupar();
+
+        mapa.ObtenerCasilla(
+                5,
+                5)
+            .Ocupar();
+
+        var partida =
+            new Partida(
+                humano,
+                maquina);
+
+        var estado =
+            new EstadoPartidaService();
+
+        estado.EstablecerPartida(
+            partida);
+
+        // Simula una condición terminal que ya ocurrió en una partida real,
+        // pero cuya notificación de combate no llegó al cliente.
+        humano.EliminarEdificio(
+            centroHumano);
+
+        mapa.ObtenerCasilla(
+                0,
+                0)
+            .Liberar();
+
+        EstadoPartidaResponse respuesta =
+            estado.ObtenerEstado();
+
+        Assert.That(
+            partida.Finalizada,
+            Is.True);
+
+        Assert.That(
+            partida.Ganador,
+            Is.SameAs(
+                maquina));
+
+        Assert.That(
+            respuesta.Estado,
+            Is.EqualTo(
+                "finalizada"));
     }
 
     [Test]

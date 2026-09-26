@@ -72,9 +72,48 @@ namespace ImperiosEnGuerra.Servicios
 
             StringBuilder texto = new StringBuilder();
             texto.Append("PARTIDA\n");
-            AgregarJugador(texto, "JUGADOR_HUMANO", partida.JugadorHumano);
-            texto.Append('\n');
-            AgregarJugador(texto, "JUGADOR_MAQUINA", partida.JugadorMaquina);
+
+            for (int i = 0;
+                 i < partida.Jugadores.Count;
+                 i++)
+            {
+                Jugador jugador =
+                    partida.Jugadores[i];
+
+                string seccion;
+
+                if (ReferenceEquals(
+                        jugador,
+                        partida.JugadorHumano))
+                {
+                    seccion =
+                        "JUGADOR_HUMANO";
+                }
+                else
+                {
+                    int indiceMaquina =
+                        partida.JugadoresMaquina
+                            .ToList()
+                            .IndexOf(
+                                jugador);
+
+                    seccion =
+                        indiceMaquina <= 0
+                            ? "JUGADOR_MAQUINA"
+                            : $"JUGADOR_MAQUINA_{indiceMaquina + 1}";
+                }
+
+                AgregarJugador(
+                    texto,
+                    seccion,
+                    jugador);
+
+                if (i <
+                    partida.Jugadores.Count - 1)
+                {
+                    texto.Append('\n');
+                }
+            }
 
             GuardarConfiguracion(texto.ToString());
         }
@@ -201,9 +240,16 @@ namespace ImperiosEnGuerra.Servicios
                     "La partida debe estar finalizada y tener un ganador antes de guardar el resultado.");
             }
 
-            Jugador perdedor =
-                partida.ObtenerOponente(
-                    partida.Ganador);
+            Jugador[] perdedores =
+                ReferenceEquals(
+                    partida.Ganador,
+                    partida.JugadorHumano)
+                    ? partida.JugadoresMaquina
+                        .ToArray()
+                    : new[]
+                    {
+                        partida.JugadorHumano
+                    };
 
             StringBuilder texto =
                 new StringBuilder();
@@ -218,13 +264,35 @@ namespace ImperiosEnGuerra.Servicios
                 .Append(partida.Ganador.Nombre)
                 .Append('\n');
 
-            if (perdedor != null)
+            if (perdedores.Length > 0)
             {
                 texto.Append("PerdedorTipo=")
-                    .Append(perdedor.Tipo)
+                    .Append(perdedores[0].Tipo)
                     .Append('\n');
+
                 texto.Append("PerdedorNombre=")
-                    .Append(perdedor.Nombre)
+                    .Append(perdedores[0].Nombre)
+                    .Append('\n');
+            }
+
+            texto.Append("Perdedores=")
+                .Append(perdedores.Length)
+                .Append('\n');
+
+            for (int i = 0;
+                 i < perdedores.Length;
+                 i++)
+            {
+                texto.Append("Perdedor")
+                    .Append(i + 1)
+                    .Append("Tipo=")
+                    .Append(perdedores[i].Tipo)
+                    .Append('\n');
+
+                texto.Append("Perdedor")
+                    .Append(i + 1)
+                    .Append("Nombre=")
+                    .Append(perdedores[i].Nombre)
                     .Append('\n');
             }
 

@@ -12,6 +12,7 @@ namespace ImperiosEnGuerra.Controladores.Red.Contratos
         public MapaEstadoDto mapa;
         public JugadorEstadoDto jugadorHumano;
         public JugadorEstadoDto jugadorMaquina;
+        public JugadorEstadoDto[] jugadores;
         public EconomiaEstadoDto economia;
     }
 
@@ -47,6 +48,7 @@ namespace ImperiosEnGuerra.Controladores.Red.Contratos
     {
         public string nombre;
         public string tipo;
+        public string faccion;
         public RecursosJugadorEstadoDto recursos;
         public EdificioEstadoDto[] edificios;
         public ObraConstruccionEstadoDto[] obrasConstruccion;

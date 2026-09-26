@@ -6,6 +6,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
         Recolectar,
         Construir,
         Entrenar,
-        Atacar
+        Atacar,
+        Curar
     }
 }

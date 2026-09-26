@@ -84,25 +84,35 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     "El paso contiene un recurso físico.");
             }
 
-            Jugador oponente =
-                partida.ObtenerOponente(
-                    propietario);
-
             bool hayUnidadAliada =
-                TieneUnidadEn(
-                    propietario,
-                    unidad,
-                    siguiente);
+                partida.Jugadores
+                    .Where(
+                        jugador =>
+                            partida.SonAliados(
+                                propietario,
+                                jugador))
+                    .Any(
+                        jugador =>
+                            ReferenceEquals(
+                                jugador.Mapa,
+                                mapa) &&
+                            TieneUnidadEn(
+                                jugador,
+                                unidad,
+                                siguiente));
 
             bool hayUnidadEnemiga =
-                oponente != null &&
-                ReferenceEquals(
-                    oponente.Mapa,
-                    mapa) &&
-                TieneUnidadEn(
-                    oponente,
-                    unidad,
-                    siguiente);
+                partida.ObtenerEnemigos(
+                        propietario)
+                    .Any(
+                        jugador =>
+                            ReferenceEquals(
+                                jugador.Mapa,
+                                mapa) &&
+                            TieneUnidadEn(
+                                jugador,
+                                unidad,
+                                siguiente));
 
             if (HayEdificioEn(
                     partida,
@@ -162,15 +172,12 @@ namespace ImperiosEnGuerra.Modelo.Acciones
             Mapa mapa,
             Coordenada posicion)
         {
-            return TieneEdificio(
-                       partida.JugadorHumano,
-                       mapa,
-                       posicion)
-                   ||
-                   TieneEdificio(
-                       partida.JugadorMaquina,
-                       mapa,
-                       posicion);
+            return partida.Jugadores.Any(
+                jugador =>
+                    TieneEdificio(
+                        jugador,
+                        mapa,
+                        posicion));
         }
 
         private static bool TieneEdificio(

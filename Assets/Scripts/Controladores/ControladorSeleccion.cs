@@ -161,10 +161,23 @@ namespace ImperiosEnGuerra.Controladores
                         DestinoSeleccionado?.Invoke(
                             recurso.X,
                             recurso.Y);
+
+                        return;
                     }
 
-                    // En recolección solo una entidad Recurso válida puede
-                    // convertirse en objetivo lógico.
+                    // Si mientras espera un recurso el jugador hace clic
+                    // sobre otra entidad, cambia la selección en lugar de
+                    // quedar atrapado en el modo Recolectar.
+                    EntidadSeleccionableVista entidad =
+                        ObtenerEntidadEn(mundo);
+
+                    if (entidad != null)
+                    {
+                        CancelarCapturaDestino();
+                        Seleccionar(
+                            entidad);
+                    }
+
                     return;
                 }
 
@@ -178,11 +191,39 @@ namespace ImperiosEnGuerra.Controladores
 
             if (CapturandoObjetivoEntidad)
             {
-                ObjetivoEntidadSeleccionado?.Invoke(candidata);
+                ProcesarObjetivoEntidad(
+                    candidata);
+
                 return;
             }
 
             Seleccionar(candidata);
+        }
+
+        private void ProcesarObjetivoEntidad(
+            EntidadSeleccionableVista candidata)
+        {
+            if (!CapturandoObjetivoEntidad)
+                return;
+
+            if (candidata == null)
+            {
+                CancelarCapturaDestino();
+                return;
+            }
+
+            ObjetivoEntidadSeleccionado?.Invoke(
+                candidata);
+
+            // Un objetivo válido consume la captura desde ControladorAcciones.
+            // Si sigue activa, el clic fue sobre una entidad no válida para
+            // esa orden: se cancela la intención y se selecciona normalmente.
+            if (CapturandoObjetivoEntidad)
+            {
+                CancelarCapturaDestino();
+                Seleccionar(
+                    candidata);
+            }
         }
 
         private EntidadSeleccionableVista ObtenerRecursoEn(

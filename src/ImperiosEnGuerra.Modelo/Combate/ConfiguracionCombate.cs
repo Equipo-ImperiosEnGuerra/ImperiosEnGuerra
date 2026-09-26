@@ -49,9 +49,9 @@ namespace ImperiosEnGuerra.Modelo.Combate
                     new EstadisticasCombate(
                         "Monje",
                         70,
-                        15,
-                        2,
-                        5d),
+                        0,
+                        0,
+                        0d),
 
                 ["CentroUrbano"] =
                     new EstadisticasCombate(
