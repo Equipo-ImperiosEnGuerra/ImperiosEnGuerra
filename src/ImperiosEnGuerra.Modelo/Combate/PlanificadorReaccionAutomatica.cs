@@ -125,20 +125,15 @@ namespace ImperiosEnGuerra.Modelo.Combate
             Mapa mapa =
                 propietario.Mapa;
 
+            // El paseo ambiental es deliberadamente corto y ortogonal:
+            // una sola casilla por vez evita movimientos diagonales caóticos
+            // y reduce el número de rutas concurrentes activas.
             (int X, int Y)[] desplazamientos =
             {
                 (1, 0),
                 (0, 1),
                 (-1, 0),
-                (0, -1),
-                (1, 1),
-                (-1, 1),
-                (-1, -1),
-                (1, -1),
-                (2, 0),
-                (0, 2),
-                (-2, 0),
-                (0, -2)
+                (0, -1)
             };
 
             int semilla =
