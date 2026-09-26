@@ -39,9 +39,6 @@ namespace ImperiosEnGuerra.Modelo.Combate
             Jugador humano =
                 partida.JugadorHumano;
 
-            Jugador maquina =
-                partida.JugadorMaquina;
-
             foreach (Unidad unidad in humano.Unidades)
             {
                 if (!EstaLibre(
@@ -95,7 +92,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
                 Guid objetivoId =
                     BuscarObjetivoEnemigo(
                         unidad,
-                        maquina,
+                        partida.JugadoresMaquina,
                         radioDeteccionMilitar);
 
                 if (objetivoId != Guid.Empty)
@@ -179,14 +176,12 @@ namespace ImperiosEnGuerra.Modelo.Combate
                     !casilla.EsTransitable ||
                     !mapa.PuedeColocar(
                         candidata) ||
-                    HayUnidadEn(
-                        partida.JugadorHumano,
-                        candidata,
-                        aldeano.Id) ||
-                    HayUnidadEn(
-                        partida.JugadorMaquina,
-                        candidata,
-                        aldeano.Id))
+                    partida.Jugadores.Any(
+                        jugador =>
+                            HayUnidadEn(
+                                jugador,
+                                candidata,
+                                aldeano.Id)))
                 {
                     continue;
                 }
@@ -241,11 +236,17 @@ namespace ImperiosEnGuerra.Modelo.Combate
 
         private static Guid BuscarObjetivoEnemigo(
             Unidad atacante,
-            Jugador enemigo,
+            IEnumerable<Jugador> enemigos,
             int radioDeteccion)
         {
-            var unidades =
-                enemigo.Unidades
+            IEnumerable<ObjetivoDetectado> unidades =
+                enemigos
+                    .Where(
+                        enemigo =>
+                            enemigo != null)
+                    .SelectMany(
+                        enemigo =>
+                            enemigo.Unidades)
                     .Where(
                         u =>
                             u != null &&
@@ -257,8 +258,14 @@ namespace ImperiosEnGuerra.Modelo.Combate
                                 u.Coordenada,
                                 0));
 
-            var edificios =
-                enemigo.Edificios
+            IEnumerable<ObjetivoDetectado> edificios =
+                enemigos
+                    .Where(
+                        enemigo =>
+                            enemigo != null)
+                    .SelectMany(
+                        enemigo =>
+                            enemigo.Edificios)
                     .Where(
                         e =>
                             e != null &&
