@@ -29,17 +29,6 @@ namespace ImperiosEnGuerra.Controladores.Red
         private bool ultimoEstadoPartidaValido;
         private bool sesionVisualActiva;
         private Coroutine sincronizacionPeriodica;
-        private readonly Dictionary<string, bool> aldeanosConTarea =
-            new Dictionary<string, bool>();
-        private readonly Dictionary<string, CoordenadaEstadoDto> posicionesAldeanos =
-            new Dictionary<string, CoordenadaEstadoDto>();
-        private readonly HashSet<string> avisosAldeanoPendientes =
-            new HashSet<string>();
-        private readonly Dictionary<string, int> quietudAldeanos =
-            new Dictionary<string, int>();
-        private bool seguimientoAldeanosInicializado;
-
-        private const int SnapshotsQuietudParaAviso = 3;
         private const float IntervaloSincronizacionEstado = 0.25f;
         private const float IntervaloConsultaProceso = 0.25f;
 
@@ -839,6 +828,8 @@ public bool PuedeCancelarAccion =>
                     "Recolección completada, pero no se pudo actualizar la vista. ",
                     false);
 
+                NotificarAldeanoDisponible();
+
                 yield break;
             }
 
@@ -1085,6 +1076,8 @@ public bool PuedeCancelarAccion =>
                         : resultado.mensaje,
                     "Construcción completada, pero no se pudo actualizar la vista. ",
                     false);
+
+                NotificarAldeanoDisponible();
 
                 yield break;
             }
@@ -1891,7 +1884,6 @@ public bool PuedeCancelarAccion =>
         {
             ApiDisponible = false;
             PartidaFinalizada = false;
-            ReiniciarSeguimientoAldeanos();
 
             if (controladorSeleccion == null)
             {
@@ -1917,7 +1909,6 @@ public bool PuedeCancelarAccion =>
             ApiDisponible = false;
             ultimoInicioPartidaExitoso = false;
             ultimoEstadoPartidaValido = false;
-            ReiniciarSeguimientoAldeanos();
 
             string url =
                 $"{urlBaseApi}/api/estado";
@@ -2203,12 +2194,6 @@ public bool PuedeCancelarAccion =>
             vistaPartida.Sincronizar(estadoPartida);
             ultimoEstadoPartidaValido = true;
 
-            if (!PartidaFinalizada)
-            {
-                ActualizarAvisosAldeanos(
-                    estadoPartida);
-            }
-
             if (vistaHud != null)
             {
                 var recursos =
@@ -2251,238 +2236,16 @@ public bool PuedeCancelarAccion =>
             }
         }
 
-        private void ReiniciarSeguimientoAldeanos()
+        private void NotificarAldeanoDisponible()
         {
-            aldeanosConTarea.Clear();
-            posicionesAldeanos.Clear();
-            avisosAldeanoPendientes.Clear();
-            quietudAldeanos.Clear();
-
-            seguimientoAldeanosInicializado =
-                false;
-        }
-
-        private void ActualizarAvisosAldeanos(
-            EstadoPartidaDto estadoPartida)
-        {
-            UnidadEstadoDto[] unidades =
-                estadoPartida?
-                    .jugadorHumano?
-                    .unidades;
-
-            if (unidades == null)
-                return;
-
-            var idsActuales =
-                new HashSet<string>();
-
-            int quedaronLibres =
-                0;
-
-            foreach (UnidadEstadoDto unidad
-                     in unidades)
-            {
-                if (unidad == null ||
-                    unidad.tipo != "Aldeano" ||
-                    string.IsNullOrWhiteSpace(
-                        unidad.id))
-                {
-                    continue;
-                }
-
-                idsActuales.Add(
-                    unidad.id);
-
-                bool tieneTarea =
-                    TieneTareaAldeano(
-                        unidad);
-
-                bool seMovio =
-                    SeMovioDesdeSnapshotAnterior(
-                        unidad);
-
-                if (seguimientoAldeanosInicializado &&
-                    aldeanosConTarea.TryGetValue(
-                        unidad.id,
-                        out bool teniaTarea) &&
-                    teniaTarea &&
-                    !tieneTarea)
-                {
-                    avisosAldeanoPendientes.Add(
-                        unidad.id);
-
-                    quietudAldeanos[
-                        unidad.id] =
-                        0;
-                }
-
-                if (tieneTarea)
-                {
-                    avisosAldeanoPendientes.Remove(
-                        unidad.id);
-
-                    quietudAldeanos.Remove(
-                        unidad.id);
-                }
-                else if (avisosAldeanoPendientes.Contains(
-                             unidad.id))
-                {
-                    if (seMovio)
-                    {
-                        // Un Aldeano que todavía cambia de casilla no se
-                        // considera "parado", aunque su paseo automático sea
-                        // de baja prioridad y no tenga OrdenActiva.
-                        quietudAldeanos[
-                            unidad.id] =
-                            0;
-                    }
-                    else
-                    {
-                        int quietud =
-                            quietudAldeanos.TryGetValue(
-                                unidad.id,
-                                out int actual)
-                                ? actual + 1
-                                : 1;
-
-                        quietudAldeanos[
-                            unidad.id] =
-                            quietud;
-
-                        if (quietud >=
-                            SnapshotsQuietudParaAviso)
-                        {
-                            quedaronLibres++;
-
-                            avisosAldeanoPendientes.Remove(
-                                unidad.id);
-
-                            quietudAldeanos.Remove(
-                                unidad.id);
-                        }
-                    }
-                }
-
-                aldeanosConTarea[
-                    unidad.id] =
-                    tieneTarea;
-
-                GuardarPosicionAldeano(
-                    unidad);
-            }
-
-            if (!seguimientoAldeanosInicializado)
-            {
-                seguimientoAldeanosInicializado =
-                    true;
-
-                return;
-            }
-
-            LimpiarSeguimientoAldeanosAusentes(
-                idsActuales);
-
-            if (quedaronLibres <= 0 ||
-                vistaHud == null)
+            if (vistaHud == null ||
+                PartidaFinalizada)
             {
                 return;
             }
 
             vistaHud.MostrarAvisoTemporal(
-                quedaronLibres == 1
-                    ? "Un Aldeano ha quedado sin tarea."
-                    : $"{quedaronLibres} Aldeanos han quedado sin tarea.");
-        }
-
-        private static bool TieneTareaAldeano(
-            UnidadEstadoDto unidad)
-        {
-            if (unidad == null)
-                return false;
-
-            // Cualquier orden real mantiene al Aldeano ocupado. Esto incluye
-            // Mover, Recolectar y Construir; el paseo ambiental MOVER_IDLE no
-            // crea OrdenActiva y se detecta por cambio de coordenada.
-            if (!string.IsNullOrWhiteSpace(
-                    unidad.ordenActiva))
-            {
-                return true;
-            }
-
-            return !string.IsNullOrWhiteSpace(
-                       unidad.estado) &&
-                   unidad.estado !=
-                       "Idle";
-        }
-
-        private bool SeMovioDesdeSnapshotAnterior(
-            UnidadEstadoDto unidad)
-        {
-            if (unidad?.coordenada == null ||
-                !posicionesAldeanos.TryGetValue(
-                    unidad.id,
-                    out CoordenadaEstadoDto anterior) ||
-                anterior == null)
-            {
-                return false;
-            }
-
-            return anterior.x !=
-                       unidad.coordenada.x ||
-                   anterior.y !=
-                       unidad.coordenada.y;
-        }
-
-        private void GuardarPosicionAldeano(
-            UnidadEstadoDto unidad)
-        {
-            if (unidad?.coordenada == null)
-                return;
-
-            posicionesAldeanos[
-                unidad.id] =
-                new CoordenadaEstadoDto
-                {
-                    x =
-                        unidad.coordenada.x,
-
-                    y =
-                        unidad.coordenada.y
-                };
-        }
-
-        private void LimpiarSeguimientoAldeanosAusentes(
-            HashSet<string> idsActuales)
-        {
-            var eliminados =
-                new List<string>();
-
-            foreach (string id
-                     in aldeanosConTarea.Keys)
-            {
-                if (!idsActuales.Contains(
-                        id))
-                {
-                    eliminados.Add(
-                        id);
-                }
-            }
-
-            foreach (string id
-                     in eliminados)
-            {
-                aldeanosConTarea.Remove(
-                    id);
-
-                posicionesAldeanos.Remove(
-                    id);
-
-                avisosAldeanoPendientes.Remove(
-                    id);
-
-                quietudAldeanos.Remove(
-                    id);
-            }
+                "Aldeano disponible para una nueva tarea.");
         }
 
         private IniciarPartidaDto CrearPartidaPrueba()
