@@ -476,23 +476,23 @@ namespace ImperiosEnGuerra.Vistas
                         unidad.alcance);
 
                     int saltoLogico =
-                        Mathf.Max(
-                            Mathf.Abs(
-                                unidad.coordenada.x -
-                                xAnterior),
-                            Mathf.Abs(
-                                unidad.coordenada.y -
-                                yAnterior));
+                        Mathf.Abs(
+                            unidad.coordenada.x -
+                            xAnterior) +
+                        Mathf.Abs(
+                            unidad.coordenada.y -
+                            yAnterior);
 
                     Vector3 destinoVisual =
                         PosicionVisual(
                             unidad.coordenada.x,
                             unidad.coordenada.y);
 
-                    if (saltoLogico > 1)
+                    if (saltoLogico > 3)
                     {
-                        // Si hubo una pausa larga o se perdió algún snapshot,
-                        // no se interpola atravesando el mapa en diagonal.
+                        // Si Unity perdió varios snapshots, el Modelo sigue
+                        // siendo la fuente de verdad. Se resincroniza sin
+                        // intentar recorrer visualmente un camino atrasado.
                         existente.transform.position =
                             destinoVisual;
 
@@ -1167,28 +1167,69 @@ namespace ImperiosEnGuerra.Vistas
                     movimiento;
             }
 
-            if ((entidad.transform.position -
-                 destino).sqrMagnitude <=
-                0.0001f)
+            Vector3 origen =
+                movimiento.Destinos.Count > 0
+                    ? movimiento.Destinos.Last()
+                    : entidad.transform.position;
+
+            if ((origen - destino)
+                .sqrMagnitude <= 0.0001f)
             {
                 return;
             }
 
-            if (movimiento.Destinos.Count > 0 &&
-                (movimiento.Destinos.Last() -
-                 destino).sqrMagnitude <=
-                0.0001f)
-            {
-                return;
-            }
+            float distanciaVisual =
+                Mathf.Abs(
+                    origen.x -
+                    destino.x) +
+                Mathf.Abs(
+                    origen.y -
+                    destino.y);
 
-            // No acumulamos una cola infinita si Unity estuvo detenido.
-            if (movimiento.Destinos.Count >= 4)
+            // Si la Vista quedó muy atrasada no intenta reproducir una cola
+            // histórica: se alinea con el Modelo y continúa desde ahí.
+            if (movimiento.Destinos.Count >= 3 ||
+                distanciaVisual >
+                    espacioCasilla * 3.1f)
             {
                 movimiento.Destinos.Clear();
+
                 entidad.transform.position =
                     destino;
+
                 return;
+            }
+
+            bool cambiaX =
+                Mathf.Abs(
+                    origen.x -
+                    destino.x) >
+                0.0001f;
+
+            bool cambiaY =
+                Mathf.Abs(
+                    origen.y -
+                    destino.y) >
+                0.0001f;
+
+            if (cambiaX &&
+                cambiaY)
+            {
+                // El pathfinding lógico es ortogonal. Si un snapshot saltó
+                // una casilla intermedia, reconstruimos dos tramos rectos en
+                // vez de interpolar visualmente una diagonal.
+                Vector3 intermedio =
+                    new Vector3(
+                        destino.x,
+                        origen.y,
+                        destino.z);
+
+                if ((origen - intermedio)
+                    .sqrMagnitude > 0.0001f)
+                {
+                    movimiento.Destinos.Enqueue(
+                        intermedio);
+                }
             }
 
             movimiento.Destinos.Enqueue(
