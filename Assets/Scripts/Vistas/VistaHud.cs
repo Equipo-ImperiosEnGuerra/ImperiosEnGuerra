@@ -173,13 +173,16 @@ namespace ImperiosEnGuerra.Vistas
             if (panel == null)
                 return;
 
+            // El jugador humano inicia en la esquina inferior izquierda.
+            // El HUD contextual se ubica arriba al centro para no ocultar
+            // visualmente su Centro Urbano ni las unidades cercanas.
             ConfigurarRect(
                 panel,
-                Vector2.zero,
-                Vector2.zero,
-                Vector2.zero,
-                new Vector2(12f, 12f),
-                new Vector2(382f, 182f));
+                new Vector2(0.5f, 1f),
+                new Vector2(0.5f, 1f),
+                new Vector2(0.5f, 1f),
+                new Vector2(-191f, -240f),
+                new Vector2(191f, -58f));
 
             ConfigurarRectHijo(
                 panel,
