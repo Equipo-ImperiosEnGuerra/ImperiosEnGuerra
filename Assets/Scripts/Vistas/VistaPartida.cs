@@ -54,7 +54,16 @@ namespace ImperiosEnGuerra.Vistas
             entidadesPorId =
                 new Dictionary<string, EntidadSeleccionableVista>();
 
+        private bool movimientoVisualPausado;
+
         public event System.Action AntesDeLimpiarContenido;
+
+        public void EstablecerPausaVisual(
+            bool pausada)
+        {
+            movimientoVisualPausado =
+                pausada;
+        }
 
         public void Renderizar(EstadoPartidaDto estado)
         {
@@ -1238,7 +1247,8 @@ namespace ImperiosEnGuerra.Vistas
 
         private void Update()
         {
-            if (movimientosVisuales.Count == 0)
+            if (movimientoVisualPausado ||
+                movimientosVisuales.Count == 0)
             {
                 return;
             }
