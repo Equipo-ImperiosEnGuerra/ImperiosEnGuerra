@@ -127,7 +127,7 @@ app.MapPost(
                 new[]
                 {
                     (
-                        $"{nombreBaseMaquina} Roja",
+                        $"{nombreBaseMaquina} Morada",
                         centroMaquina
                     ),
                     (
