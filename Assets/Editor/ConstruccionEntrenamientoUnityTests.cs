@@ -272,7 +272,7 @@ public class ConstruccionEntrenamientoUnityTests
         Assert.That(
             mensaje.text,
             Is.EqualTo(
-                "Selecciona una casilla para crear Arquero."));
+                "Selecciona una casilla de referencia para Arquero."));
     }
 
     [Test]
@@ -309,6 +309,118 @@ public class ConstruccionEntrenamientoUnityTests
                 acciones,
                 "accionPendiente"),
             Is.Null);
+    }
+
+    [Test]
+    public void CentroUrbanoEntrenando_MuestraProgresoYCola()
+    {
+        centroUrbano.ActualizarEntrenamientoVisual(
+            "Arquero",
+            40,
+            2,
+            true);
+
+        Assert.That(
+            centroUrbano.EntrenamientoVisible,
+            Is.True);
+
+        Assert.That(
+            centroUrbano.TipoUnidadEntrenando,
+            Is.EqualTo("Arquero"));
+
+        Assert.That(
+            centroUrbano.ProgresoEntrenamiento,
+            Is.EqualTo(40));
+
+        Assert.That(
+            centroUrbano.TamanoColaEntrenamiento,
+            Is.EqualTo(2));
+
+        TextMesh indicador =
+            centroUrbano.GetComponentInChildren<TextMesh>(
+                true);
+
+        Assert.That(
+            indicador,
+            Is.Not.Null);
+
+        Assert.That(
+            indicador.text,
+            Does.Contain("Entrenando Arquero 40%"));
+
+        Assert.That(
+            indicador.text,
+            Does.Contain("Cola: 2"));
+    }
+
+    [Test]
+    public void CentroUrbanoSinEntrenamiento_OcultaIndicador()
+    {
+        centroUrbano.ActualizarEntrenamientoVisual(
+            "Guerrero",
+            70,
+            1,
+            true);
+
+        centroUrbano.ActualizarEntrenamientoVisual(
+            "",
+            0,
+            0,
+            true);
+
+        Assert.That(
+            centroUrbano.EntrenamientoVisible,
+            Is.False);
+
+        Assert.That(
+            centroUrbano.TamanoColaEntrenamiento,
+            Is.Zero);
+    }
+
+    [Test]
+    public void ConstruccionEnCurso_NoBloqueaOtraOrdenDeConstruccion()
+    {
+        CampoAutomatico(
+            conexion,
+            "ConstruccionEnCurso",
+            true);
+
+        Invocar(
+            seleccion,
+            "Seleccionar",
+            aldeano);
+
+        Invocar(
+            acciones,
+            "PrepararAccion",
+            "Construir");
+
+        Assert.That(
+            seleccion.CapturandoDestino,
+            Is.True);
+    }
+
+    [Test]
+    public void EntrenamientoEnCurso_NoBloqueaOtraOrdenDeCola()
+    {
+        CampoAutomatico(
+            conexion,
+            "EntrenamientoEnCurso",
+            true);
+
+        Invocar(
+            seleccion,
+            "Seleccionar",
+            centroUrbano);
+
+        Invocar(
+            acciones,
+            "PrepararAccion",
+            "Entrenar");
+
+        Assert.That(
+            selectorEntrenamiento.activeSelf,
+            Is.True);
     }
 
     [Test]
@@ -482,6 +594,19 @@ public class ConstruccionEntrenamientoUnityTests
         objeto.GetType()
             .GetField(
                 nombre,
+                BindingFlags.Instance |
+                BindingFlags.NonPublic)
+            .SetValue(objeto, valor);
+    }
+
+    private static void CampoAutomatico(
+        object objeto,
+        string nombre,
+        object valor)
+    {
+        objeto.GetType()
+            .GetField(
+                $"<{nombre}>k__BackingField",
                 BindingFlags.Instance |
                 BindingFlags.NonPublic)
             .SetValue(objeto, valor);

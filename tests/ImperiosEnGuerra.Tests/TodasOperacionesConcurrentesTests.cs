@@ -42,8 +42,11 @@ public class TodasOperacionesConcurrentesTests
                     UnidadId = aldeanoMovimiento.Id.ToString(),
                     Destino = new CoordenadaRequest
                     {
-                        X = 3,
-                        Y = 3
+                        // Destino independiente de las zonas usadas por
+                        // construcción y recolección. Esta prueba valida
+                        // convivencia concurrente, no colisión intencional.
+                        X = 5,
+                        Y = 0
                     }
                 });
 
@@ -167,7 +170,8 @@ public class TodasOperacionesConcurrentesTests
 
         Assert.That(
             resultado.Resultado.Exito,
-            Is.True);
+            Is.True,
+            $"{nombre}: {resultado.Resultado.Mensaje}");
     }
 
 
@@ -194,6 +198,10 @@ public class TodasOperacionesConcurrentesTests
             mapa,
             new RecursosJugador());
 
+        humano.Recursos.Agregar(TipoRecurso.Oro, 500);
+        humano.Recursos.Agregar(TipoRecurso.Madera, 500);
+        humano.Recursos.Agregar(TipoRecurso.Comida, 500);
+
 
         aldeanoMovimiento =
             new Aldeano(new Coordenada(0,0));
@@ -205,12 +213,14 @@ public class TodasOperacionesConcurrentesTests
             new Aldeano(new Coordenada(0,2));
 
 
+        // Mantener el combate en una zona independiente evita que esta
+        // prueba de convivencia dependa de rutas de recolección/construcción.
         guerrero =
-            new Guerrero(new Coordenada(1,2));
+            new Guerrero(new Coordenada(4,4));
 
 
         enemigo =
-            new Lancero(new Coordenada(4,4));
+            new Lancero(new Coordenada(5,4));
 
 
         humano.AgregarUnidad(aldeanoMovimiento);
@@ -226,8 +236,15 @@ public class TodasOperacionesConcurrentesTests
             new CentroUrbano(
                 new Coordenada(1,1)));
 
+        // La Máquina conserva un Centro Urbano: destruir su última unidad
+        // militar no debe finalizar la partida con la regla AND.
+        maquina.AgregarEdificio(
+            new CentroUrbano(
+                new Coordenada(5,5)));
+
 
         mapa.ObtenerCasilla(1,1).Ocupar();
+        mapa.ObtenerCasilla(5,5).Ocupar();
 
 
         mapa.ColocarRecurso(

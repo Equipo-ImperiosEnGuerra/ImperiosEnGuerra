@@ -80,6 +80,72 @@ public class MovimientoConcurrenteTests
     }
 
     [Test]
+    public async Task CancelarMovimiento_PorUnidad_CancelaWorkerYLiberaOrden()
+    {
+        Partida partida =
+            CrearPartida(
+                out Unidad unidad);
+
+        var estado =
+            new EstadoPartidaService();
+
+        estado.EstablecerPartida(
+            partida);
+
+        using var gestor =
+            new GestorProcesosConcurrentes();
+
+        var servicio =
+            new ServicioAccionesConcurrentes(
+                estado,
+                gestor,
+                TimeSpan.FromSeconds(10));
+
+        ProcesoConcurrente proceso =
+            servicio.IniciarMovimiento(
+                CrearRequest(
+                    unidad,
+                    4,
+                    5));
+
+        Assert.That(
+            servicio.TieneProcesoActivo(
+                unidad.Id),
+            Is.True);
+
+        Assert.That(
+            servicio.CancelarPorUnidad(
+                unidad.Id),
+            Is.True);
+
+        await proceso.Finalizacion;
+
+        Assert.That(
+            servicio.IntentarObtenerResultado(
+                proceso.Id,
+                out ResultadoProcesoConcurrente resultado),
+            Is.True);
+
+        Assert.That(
+            resultado.Estado,
+            Is.EqualTo(
+                EstadoProcesoConcurrente.Cancelado));
+
+        Assert.That(
+            unidad.OrdenActiva,
+            Is.Null);
+
+        Assert.That(
+            unidad.Disponible,
+            Is.True);
+
+        Assert.That(
+            servicio.TieneProcesoActivo(
+                unidad.Id),
+            Is.False);
+    }
+
+    [Test]
     public async Task SolicitudInvalida_SeCompletaConResultadoLogicoRechazado()
     {
         Partida partida = CrearPartida(out Unidad unidad);

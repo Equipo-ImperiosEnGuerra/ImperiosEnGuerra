@@ -1,3 +1,4 @@
+using System.Net.WebSockets;
 using Microsoft.Extensions.Options;
 using ImperiosEnGuerra.Api.Configuracion;
 using ImperiosEnGuerra.Api.Servicios;
@@ -20,9 +21,17 @@ builder.Services.AddSingleton<EstadoPartidaService>();
 builder.Services.AddSingleton<GestorProcesosConcurrentes>();
 builder.Services.AddSingleton<ServicioOrdenesUnidad>();
 builder.Services.AddSingleton<ServicioAccionesConcurrentes>();
+builder.Services.AddSingleton<ServicioReaccionesAutomaticas>();
+builder.Services.AddSingleton<ServicioJugadorMaquina>();
+builder.Services.AddSingleton<ServicioRegeneracionRecursos>();
+builder.Services.AddSingleton<ServicioSesionJuego>();
+builder.Services.AddSingleton<DespachadorMensajesRed>();
+builder.Services.AddSingleton<ServicioRedPartida>();
 
 
 var app = builder.Build();
+
+app.UseWebSockets();
 
 if (app.Environment.IsDevelopment())
 {
@@ -58,11 +67,12 @@ app.MapPost(
     (
         IniciarPartidaRequest request,
         EstadoPartidaService estadoPartida,
-        ServicioAccionesConcurrentes accionesConcurrentes) =>
+        ServicioSesionJuego sesionJuego,
+        ServicioArchivos servicioArchivos) =>
 {
     try
     {
-        accionesConcurrentes.CancelarTodos();
+        sesionJuego.Pausar();
 
         Mapa mapa = new Mapa(
             request.AnchoMapa,
@@ -84,19 +94,58 @@ app.MapPost(
             PartidaRequestMapper.ConvertirRecursos(
                 request.RecursosMaquina);
 
-        var inicializador = new InicializadorPartida();
+        var recursosCompartidos =
+            recursosHumano
+                .Concat(
+                    recursosMaquina)
+                .ToList();
 
-        Partida partida = inicializador.Crear(
-            request.NombreHumano ?? string.Empty,
-            mapa,
-            centroHumano,
-            recursosHumano,
-            request.NombreMaquina ?? string.Empty,
-            mapa,
-            centroMaquina,
-            recursosMaquina);
+        Coordenada centroMaquinaVerde =
+            new Coordenada(
+                request.AnchoMapa - 2,
+                1);
+
+        Coordenada centroMaquinaAmarilla =
+            new Coordenada(
+                1,
+                request.AltoMapa - 2);
+
+        string nombreBaseMaquina =
+            string.IsNullOrWhiteSpace(
+                request.NombreMaquina)
+                ? "CPU"
+                : request.NombreMaquina;
+
+        var inicializador =
+            new InicializadorPartida();
+
+        Partida partida =
+            inicializador.CrearCuatroJugadores(
+                request.NombreHumano ?? string.Empty,
+                mapa,
+                centroHumano,
+                recursosCompartidos,
+                new[]
+                {
+                    (
+                        $"{nombreBaseMaquina} Morada",
+                        centroMaquina
+                    ),
+                    (
+                        $"{nombreBaseMaquina} Verde",
+                        centroMaquinaVerde
+                    ),
+                    (
+                        $"{nombreBaseMaquina} Amarilla",
+                        centroMaquinaAmarilla
+                    )
+                });
+
+        servicioArchivos.GuardarConfiguracionInicial(
+            partida);
 
         estadoPartida.EstablecerPartida(partida);
+        sesionJuego.Activar();
 
         return Results.Ok(new
         {
@@ -122,7 +171,16 @@ app.MapPost(
                 tipo = partida.JugadorMaquina.Tipo.ToString(),
                 edificios = partida.JugadorMaquina.Edificios.Count,
                 unidades = partida.JugadorMaquina.Unidades.Count
-            }
+            },
+
+            jugadores = partida.Jugadores.Select(
+                jugador => new
+                {
+                    nombre = jugador.Nombre,
+                    tipo = jugador.Tipo.ToString(),
+                    edificios = jugador.Edificios.Count,
+                    unidades = jugador.Unidades.Count
+                })
         });
     }
     catch (ArgumentException ex)
@@ -139,12 +197,31 @@ app.MapPost(
             error = ex.Message
         });
     }
+    catch (IOException ex)
+    {
+        return Results.Problem(
+            title: "No se pudo guardar configuracion.txt.",
+            detail: ex.Message,
+            statusCode: StatusCodes.Status500InternalServerError);
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        return Results.Problem(
+            title: "No se pudo guardar configuracion.txt.",
+            detail: ex.Message,
+            statusCode: StatusCodes.Status500InternalServerError);
+    }
 })
 .WithName("IniciarPartida");
 
-app.MapGet("/api/partida", (EstadoPartidaService estadoPartida) =>
+app.MapGet(
+    "/api/partida",
+    (
+        EstadoPartidaService estadoPartida,
+        ServicioSesionJuego sesionJuego) =>
 {
-    EstadoPartidaResponse? respuesta = estadoPartida.ObtenerEstado();
+    EstadoPartidaResponse? respuesta =
+        estadoPartida.ObtenerEstado();
 
     if (respuesta == null)
     {
@@ -154,9 +231,38 @@ app.MapGet("/api/partida", (EstadoPartidaService estadoPartida) =>
         });
     }
 
+    sesionJuego.RegistrarLatido();
+
     return Results.Ok(respuesta);
 })
 .WithName("ObtenerPartidaActiva");
+
+app.MapGet(
+    "/api/sesion/estado",
+    (ServicioSesionJuego sesionJuego) =>
+{
+    return Results.Ok(new
+    {
+        activa = sesionJuego.Activa,
+        ultimoLatidoUtc =
+            sesionJuego.UltimoLatidoUtc
+    });
+})
+.WithName("ObtenerEstadoSesionJuego");
+
+app.MapPost(
+    "/api/sesion/pausar",
+    (ServicioSesionJuego sesionJuego) =>
+{
+    return Results.Ok(new
+    {
+        pausada =
+            sesionJuego.Pausar(),
+        activa =
+            sesionJuego.Activa
+    });
+})
+.WithName("PausarSesionJuego");
 
 app.MapPost(
     "/api/partida/mover",
@@ -174,8 +280,17 @@ app.MapPost(
     "/api/partida/mover-concurrente",
     (
         MoverUnidadRequest? request,
-        ServicioAccionesConcurrentes accionesConcurrentes) =>
+        ServicioAccionesConcurrentes accionesConcurrentes,
+        ServicioReaccionesAutomaticas reaccionesAutomaticas) =>
 {
+    if (Guid.TryParse(
+            request?.UnidadId,
+            out Guid unidadMovimiento))
+    {
+        reaccionesAutomaticas.PrepararOrdenManual(
+            unidadMovimiento);
+    }
+
     var proceso =
         accionesConcurrentes.IniciarMovimiento(request);
 
@@ -258,12 +373,50 @@ app.MapPost(
 })
 .WithName("CancelarProceso");
 
+
+app.MapPost(
+    "/api/partida/unidades/{unidadId:guid}/cancelar-accion",
+    (
+        Guid unidadId,
+        ServicioAccionesConcurrentes accionesConcurrentes,
+        ServicioReaccionesAutomaticas reaccionesAutomaticas) =>
+{
+    reaccionesAutomaticas.SuspenderUnidad(
+        unidadId);
+
+    bool cancelada =
+        accionesConcurrentes.CancelarPorUnidad(
+            unidadId);
+
+    return cancelada
+        ? Results.Ok(new
+        {
+            unidadId,
+            estado = "cancelacion_solicitada"
+        })
+        : Results.NotFound(new
+        {
+            unidadId,
+            error = "La unidad no tiene una acción concurrente activa."
+        });
+})
+.WithName("CancelarAccionUnidad");
+
 app.MapPost(
     "/api/partida/recolectar-concurrente",
     (
         RecolectarRequest? request,
-        ServicioAccionesConcurrentes accionesConcurrentes) =>
+        ServicioAccionesConcurrentes accionesConcurrentes,
+        ServicioReaccionesAutomaticas reaccionesAutomaticas) =>
 {
+    if (Guid.TryParse(
+            request?.AldeanoId,
+            out Guid unidadRecoleccion))
+    {
+        reaccionesAutomaticas.PrepararOrdenManual(
+            unidadRecoleccion);
+    }
+
     var proceso =
         accionesConcurrentes.IniciarRecoleccion(request);
 
@@ -294,8 +447,17 @@ app.MapPost(
     "/api/partida/construir-concurrente",
     (
         ConstruirRequest? request,
-        ServicioAccionesConcurrentes accionesConcurrentes) =>
+        ServicioAccionesConcurrentes accionesConcurrentes,
+        ServicioReaccionesAutomaticas reaccionesAutomaticas) =>
 {
+    if (Guid.TryParse(
+            request?.AldeanoId,
+            out Guid unidadConstruccion))
+    {
+        reaccionesAutomaticas.PrepararOrdenManual(
+            unidadConstruccion);
+    }
+
     var proceso =
         accionesConcurrentes.IniciarConstruccion(request);
 
@@ -359,8 +521,17 @@ app.MapPost(
     "/api/partida/atacar-concurrente",
     (
         AtacarRequest? request,
-        ServicioAccionesConcurrentes accionesConcurrentes) =>
+        ServicioAccionesConcurrentes accionesConcurrentes,
+        ServicioReaccionesAutomaticas reaccionesAutomaticas) =>
 {
+    if (Guid.TryParse(
+            request?.AtacanteId,
+            out Guid unidadAtaque))
+    {
+        reaccionesAutomaticas.PrepararOrdenManual(
+            unidadAtaque);
+    }
+
     ProcesoConcurrente proceso =
         accionesConcurrentes.IniciarAtaque(request);
 
@@ -374,5 +545,158 @@ app.MapPost(
         });
 })
 .WithName("IniciarAtaqueConcurrente");
+
+
+app.MapPost(
+    "/api/partida/curar-concurrente",
+    (
+        CurarRequest? request,
+        ServicioAccionesConcurrentes accionesConcurrentes,
+        ServicioReaccionesAutomaticas reaccionesAutomaticas) =>
+{
+    if (Guid.TryParse(
+            request?.CuradorId,
+            out Guid unidadCuracion))
+    {
+        reaccionesAutomaticas.PrepararOrdenManual(
+            unidadCuracion);
+    }
+
+    ProcesoConcurrente proceso =
+        accionesConcurrentes.IniciarCuracion(request);
+
+    return Results.Accepted(
+        $"/api/procesos/{proceso.Id}",
+        new
+        {
+            procesoId = proceso.Id,
+            nombre = proceso.Nombre,
+            estado = "iniciado"
+        });
+})
+.WithName("IniciarCuracionConcurrente");
+
+
+app.MapGet(
+    "/api/reacciones/estado",
+    (ServicioReaccionesAutomaticas reacciones) =>
+{
+    return Results.Ok(new
+    {
+        activo = reacciones.Activo,
+        unidadesAsignadas =
+            reacciones.UnidadesAsignadas,
+        radioDeteccionMilitar =
+            ImperiosEnGuerra.Modelo.Combate
+                .PlanificadorReaccionAutomatica
+                .RadioDeteccionMilitarPredeterminado
+    });
+})
+.WithName("ObtenerEstadoReaccionesAutomaticas");
+
+
+app.MapGet(
+    "/api/maquina/estado",
+    (ServicioJugadorMaquina jugadorMaquina) =>
+{
+    return Results.Ok(new
+    {
+        activo = jugadorMaquina.Activo,
+        unidadesAsignadas = jugadorMaquina.UnidadesAsignadas
+    });
+})
+.WithName("ObtenerEstadoJugadorMaquina");
+
+app.MapPost(
+    "/api/maquina/iniciar",
+    (ServicioJugadorMaquina jugadorMaquina) =>
+{
+    return Results.Ok(new
+    {
+        iniciado = jugadorMaquina.Iniciar(),
+        activo = jugadorMaquina.Activo
+    });
+})
+.WithName("IniciarJugadorMaquina");
+
+app.MapPost(
+    "/api/maquina/detener",
+    (ServicioJugadorMaquina jugadorMaquina) =>
+{
+    return Results.Ok(new
+    {
+        cancelacionSolicitada = jugadorMaquina.Detener()
+    });
+})
+.WithName("DetenerJugadorMaquina");
+
+app.MapPost(
+    "/api/maquina/paso",
+    (ServicioJugadorMaquina jugadorMaquina) =>
+{
+    ProcesoConcurrente? proceso =
+        jugadorMaquina.EjecutarPaso();
+
+    return proceso == null
+        ? Results.Ok(new
+        {
+            estado = "sin_accion"
+        })
+        : Results.Accepted(
+            $"/api/procesos/{proceso.Id}",
+            new
+            {
+                procesoId = proceso.Id,
+                nombre = proceso.Nombre,
+                estado = "iniciado"
+            });
+})
+.WithName("EjecutarPasoJugadorMaquina");
+
+
+app.MapGet(
+    "/api/red/estado",
+    (ServicioRedPartida red) =>
+{
+    return Results.Ok(new
+    {
+        transporte = "WebSocket",
+        endpoint = "/ws/partida",
+        clientesConectados = red.ClientesConectados
+    });
+})
+.WithName("ObtenerEstadoRed");
+
+app.Map(
+    "/ws/partida",
+    async context =>
+{
+    if (!context.WebSockets.IsWebSocketRequest)
+    {
+        context.Response.StatusCode =
+            StatusCodes.Status400BadRequest;
+
+        await context.Response.WriteAsJsonAsync(
+            new
+            {
+                error =
+                    "Este endpoint requiere una conexión WebSocket."
+            });
+
+        return;
+    }
+
+    ServicioRedPartida red =
+        context.RequestServices
+            .GetRequiredService<ServicioRedPartida>();
+
+    using WebSocket socket =
+        await context.WebSockets
+            .AcceptWebSocketAsync();
+
+    await red.AtenderClienteAsync(
+        socket,
+        context.RequestAborted);
+});
 
 app.Run();

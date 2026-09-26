@@ -20,6 +20,11 @@ namespace ImperiosEnGuerra.Controladores
         private EntidadSeleccionableVista edificioPendiente;
         private string tipoUnidadPendiente;
 
+        private string ultimaEntidadMostrada;
+        private string ultimoEstadoMostrado;
+        private string ultimaOrdenMostrada;
+        private int ultimaVidaMostrada = -1;
+
         private bool EsperandoObjetivo =>
             !string.IsNullOrEmpty(accionPendiente);
 
@@ -77,12 +82,11 @@ namespace ImperiosEnGuerra.Controladores
 
             vistaHud.MostrarSeleccion(entidad);
 
-            vistaHud.MostrarOpciones(
-                PermiteOpcion(entidad, "Mover"),
-                PermiteOpcion(entidad, "Recolectar"),
-                PermiteOpcion(entidad, "Construir"),
-                PermiteOpcion(entidad, "Entrenar"),
-                PermiteOpcion(entidad, "Atacar"));
+            ActualizarOpcionesHud(
+                entidad);
+
+            RegistrarEstadoMostrado(
+                entidad);
 
             vistaHud.MostrarMensaje(
                 cancelar
@@ -92,8 +96,122 @@ namespace ImperiosEnGuerra.Controladores
 
         private void Update()
         {
-            if (EsperandoObjetivo && !ConservaSeleccion())
+            if (EsperandoObjetivo &&
+                !ConservaSeleccion())
+            {
                 CancelarCaptura();
+                return;
+            }
+
+            if (!EsperandoObjetivo)
+            {
+                RefrescarSeleccionSiCambioEstado();
+            }
+        }
+
+        private void RefrescarSeleccionSiCambioEstado()
+        {
+            if (vistaHud == null ||
+                controladorSeleccion == null)
+            {
+                return;
+            }
+
+            EntidadSeleccionableVista entidad =
+                controladorSeleccion.SeleccionActual;
+
+            if (entidad == null)
+            {
+                if (!string.IsNullOrEmpty(
+                        ultimaEntidadMostrada))
+                {
+                    vistaHud.MostrarSeleccion(null);
+                    ActualizarOpcionesHud(null);
+                    RegistrarEstadoMostrado(null);
+                }
+
+                return;
+            }
+
+            string identidad =
+                !string.IsNullOrWhiteSpace(
+                    entidad.IdLogico)
+                    ? entidad.IdLogico
+                    : $"{entidad.Categoria}:{entidad.Propietario}:{entidad.TipoLogico}:{entidad.X}:{entidad.Y}";
+
+            if (identidad == ultimaEntidadMostrada &&
+                entidad.EstadoLogico == ultimoEstadoMostrado &&
+                entidad.OrdenActiva == ultimaOrdenMostrada &&
+                entidad.VidaActual == ultimaVidaMostrada)
+            {
+                return;
+            }
+
+            vistaHud.MostrarSeleccion(
+                entidad);
+
+            ActualizarOpcionesHud(
+                entidad);
+
+            RegistrarEstadoMostrado(
+                entidad);
+        }
+
+        private void ActualizarOpcionesHud(
+            EntidadSeleccionableVista entidad)
+        {
+            if (vistaHud == null)
+                return;
+
+            bool puedeCurar =
+                PermiteOpcion(
+                    entidad,
+                    "Curar");
+
+            vistaHud.MostrarOpciones(
+                PermiteOpcion(entidad, "Mover"),
+                PermiteOpcion(entidad, "Recolectar"),
+                PermiteOpcion(entidad, "Construir"),
+                PermiteOpcion(entidad, "Entrenar"),
+                PermiteOpcion(entidad, "Atacar") || puedeCurar,
+                puedeCurar,
+                PermiteOpcion(entidad, "Cancelar"));
+        }
+
+        private void RegistrarEstadoMostrado(
+            EntidadSeleccionableVista entidad)
+        {
+            if (entidad == null)
+            {
+                ultimaEntidadMostrada =
+                    string.Empty;
+
+                ultimoEstadoMostrado =
+                    string.Empty;
+
+                ultimaOrdenMostrada =
+                    string.Empty;
+
+                ultimaVidaMostrada =
+                    -1;
+
+                return;
+            }
+
+            ultimaEntidadMostrada =
+                !string.IsNullOrWhiteSpace(
+                    entidad.IdLogico)
+                    ? entidad.IdLogico
+                    : $"{entidad.Categoria}:{entidad.Propietario}:{entidad.TipoLogico}:{entidad.X}:{entidad.Y}";
+
+            ultimoEstadoMostrado =
+                entidad.EstadoLogico ?? string.Empty;
+
+            ultimaOrdenMostrada =
+                entidad.OrdenActiva ?? string.Empty;
+
+            ultimaVidaMostrada =
+                entidad.VidaActual;
         }
 
         private bool ConservaSeleccion()
@@ -183,7 +301,9 @@ namespace ImperiosEnGuerra.Controladores
                 if (vistaHud != null)
                 {
                     vistaHud.MostrarMensaje(
-                        "La conexión con la API no está disponible.",
+                        conexionApi == null
+                            ? "Se perdió la conexión con la partida."
+                            : conexionApi.MensajeAccionNoDisponible,
                         true);
                 }
 
@@ -228,15 +348,21 @@ namespace ImperiosEnGuerra.Controladores
             if (vistaHud != null)
             {
                 vistaHud.MostrarMensaje(
-                    "La acción preparada no reconoce un objetivo válido.",
+                    "Ese objetivo no es válido para esta acción.",
                     true);
             }
         }
 
         private void EnviarObjetivoAtaque(EntidadSeleccionableVista objetivo)
         {
-            if (accionPendiente != "Atacar")
+            bool curando =
+                accionPendiente == "Curar";
+
+            if (accionPendiente != "Atacar" &&
+                !curando)
+            {
                 return;
+            }
 
             if (!ConservaSeleccion())
             {
@@ -244,19 +370,29 @@ namespace ImperiosEnGuerra.Controladores
                 return;
             }
 
-            if (!EsObjetivoAtaqueValido(objetivo))
+            bool objetivoValido =
+                curando
+                    ? EsObjetivoCuracionValido(
+                        objetivo,
+                        unidadIdPendiente)
+                    : EsObjetivoAtaqueValido(
+                        objetivo);
+
+            if (!objetivoValido)
             {
                 if (vistaHud != null)
                 {
                     vistaHud.MostrarMensaje(
-                        "Selecciona una unidad enemiga válida como objetivo.",
+                        curando
+                            ? "Selecciona una unidad aliada herida."
+                            : "Selecciona una unidad o edificio enemigo.",
                         true);
                 }
 
                 return;
             }
 
-            string atacanteId = unidadIdPendiente;
+            string actorId = unidadIdPendiente;
             string objetivoId = objetivo.IdLogico;
 
             LimpiarCaptura();
@@ -267,15 +403,38 @@ namespace ImperiosEnGuerra.Controladores
                 if (vistaHud != null)
                 {
                     vistaHud.MostrarMensaje(
-                        "La conexión con la API no está disponible.",
+                        conexionApi == null
+                            ? "Se perdió la conexión con la partida."
+                            : conexionApi.MensajeAccionNoDisponible,
                         true);
                 }
 
                 return;
             }
 
+            if (curando)
+            {
+                if (vistaHud != null)
+                {
+                    vistaHud.MostrarMensaje(
+                        $"Curando a {objetivo.TipoLogico}...");
+                }
+
+                conexionApi.Curar(
+                    actorId,
+                    objetivoId);
+
+                return;
+            }
+
+            if (vistaHud != null)
+            {
+                vistaHud.MostrarMensaje(
+                    $"Atacando {objetivo.TipoLogico}. La unidad se acercará si es necesario.");
+            }
+
             conexionApi.Atacar(
-                atacanteId,
+                actorId,
                 objetivoId);
         }
 
@@ -284,9 +443,26 @@ namespace ImperiosEnGuerra.Controladores
         {
             return objetivo != null &&
                 objetivo.isActiveAndEnabled &&
-                objetivo.Categoria == CategoriaEntidadVisual.Unidad &&
-                objetivo.Propietario == "Maquina" &&
+                (objetivo.Categoria == CategoriaEntidadVisual.Unidad ||
+                 objetivo.Categoria == CategoriaEntidadVisual.Edificio) &&
+                objetivo.Propietario != null &&
+                objetivo.Propietario.StartsWith("Maquina") &&
                 !string.IsNullOrWhiteSpace(objetivo.IdLogico);
+        }
+
+        private static bool EsObjetivoCuracionValido(
+            EntidadSeleccionableVista objetivo,
+            string curadorId)
+        {
+            return objetivo != null &&
+                objetivo.isActiveAndEnabled &&
+                objetivo.Categoria == CategoriaEntidadVisual.Unidad &&
+                objetivo.Propietario == "Humano" &&
+                !string.IsNullOrWhiteSpace(objetivo.IdLogico) &&
+                objetivo.IdLogico != curadorId &&
+                objetivo.VidaMaxima > 0 &&
+                objetivo.VidaActual > 0 &&
+                objetivo.VidaActual < objetivo.VidaMaxima;
         }
 
         private bool PuedeIniciarAccion(string accion)
@@ -312,6 +488,9 @@ namespace ImperiosEnGuerra.Controladores
             if (accion == "Atacar")
                 return conexionApi.PuedeIniciarAtaque;
 
+            if (accion == "Curar")
+                return conexionApi.PuedeIniciarCuracion;
+
             return false;
         }
 
@@ -335,6 +514,21 @@ namespace ImperiosEnGuerra.Controladores
             if (entidad.Categoria != CategoriaEntidadVisual.Unidad)
                 return false;
 
+            if (accion == "Cancelar")
+            {
+                return !string.IsNullOrWhiteSpace(
+                    entidad.OrdenActiva);
+            }
+
+            // Una unidad mantiene una sola orden lógica a la vez. Esto no
+            // bloquea a otras unidades: el jugador puede seleccionarlas y
+            // ordenarles acciones concurrentes de forma independiente.
+            if (!string.IsNullOrWhiteSpace(
+                    entidad.OrdenActiva))
+            {
+                return false;
+            }
+
             if (accion == "Mover")
                 return true;
 
@@ -344,11 +538,15 @@ namespace ImperiosEnGuerra.Controladores
                 return entidad.TipoLogico == "Aldeano";
             }
 
-            return accion == "Atacar" &&
-                (entidad.TipoLogico == "Guerrero" ||
-                 entidad.TipoLogico == "Lancero" ||
-                 entidad.TipoLogico == "Arquero" ||
-                 entidad.TipoLogico == "Monje");
+            if (accion == "Atacar")
+            {
+                return entidad.TipoLogico == "Guerrero" ||
+                    entidad.TipoLogico == "Lancero" ||
+                    entidad.TipoLogico == "Arquero";
+            }
+
+            return accion == "Curar" &&
+                entidad.TipoLogico == "Monje";
         }
 
         private void PrepararAccion(string accion)
@@ -363,11 +561,57 @@ namespace ImperiosEnGuerra.Controladores
                     ? null
                     : controladorSeleccion.SeleccionActual;
 
+            if (accion == "Atacar" &&
+                entidad != null &&
+                entidad.TipoLogico == "Monje")
+            {
+                accion = "Curar";
+            }
+
             if (!PermiteOpcion(entidad, accion))
             {
                 vistaHud.MostrarMensaje(
-                    "Selecciona una entidad humana apropiada para esta opción.",
+                    "Esta unidad no puede realizar esa acción.",
                     true);
+
+                return;
+            }
+
+            if (accion == "Cancelar")
+            {
+                if (string.IsNullOrWhiteSpace(
+                        entidad.IdLogico))
+                {
+                    vistaHud.MostrarMensaje(
+                        "No se puede dar una orden a esta unidad.",
+                        true);
+
+                    return;
+                }
+
+                if (conexionApi == null ||
+                    !conexionApi.PuedeCancelarAccion)
+                {
+                    vistaHud.MostrarMensaje(
+                        conexionApi == null
+                            ? "Se perdió la conexión con la partida."
+                            : conexionApi.MensajeAccionNoDisponible,
+                        true);
+
+                    return;
+                }
+
+                string orden =
+                    string.IsNullOrWhiteSpace(
+                        entidad.OrdenActiva)
+                        ? "acción"
+                        : entidad.OrdenActiva;
+
+                conexionApi.CancelarAccionUnidad(
+                    entidad.IdLogico);
+
+                vistaHud.MostrarMensaje(
+                    $"Cancelando {orden}...");
 
                 return;
             }
@@ -377,7 +621,9 @@ namespace ImperiosEnGuerra.Controladores
                 if (!PuedeIniciarAccion(accion))
                 {
                     vistaHud.MostrarMensaje(
-                        "La conexión no está disponible o esa acción ya está en curso.",
+                        conexionApi == null
+                            ? "Se perdió la conexión con la partida."
+                            : conexionApi.MensajeAccionNoDisponible,
                         true);
 
                     return;
@@ -385,6 +631,16 @@ namespace ImperiosEnGuerra.Controladores
 
                 edificioPendiente = entidad;
                 accionPendiente = accion;
+
+                if (conexionApi != null)
+                {
+                    vistaHud.ConfigurarCostosEntrenamiento(
+                        conexionApi.DescribirCostoUnidadCompacto("Aldeano"),
+                        conexionApi.DescribirCostoUnidadCompacto("Guerrero"),
+                        conexionApi.DescribirCostoUnidadCompacto("Lancero"),
+                        conexionApi.DescribirCostoUnidadCompacto("Arquero"),
+                        conexionApi.DescribirCostoUnidadCompacto("Monje"));
+                }
 
                 vistaHud.MostrarSelectorEntrenamiento(true);
 
@@ -394,12 +650,15 @@ namespace ImperiosEnGuerra.Controladores
                 return;
             }
 
-            if (accion == "Atacar")
+            if (accion == "Atacar" ||
+                accion == "Curar")
             {
                 if (string.IsNullOrWhiteSpace(entidad.IdLogico))
                 {
                     vistaHud.MostrarMensaje(
-                        "La unidad atacante no tiene identidad disponible.",
+                        accion == "Curar"
+                            ? "No se puede dar una orden a este Monje."
+                            : "No se puede dar una orden a esta unidad.",
                         true);
 
                     return;
@@ -408,7 +667,9 @@ namespace ImperiosEnGuerra.Controladores
                 if (!PuedeIniciarAccion(accion))
                 {
                     vistaHud.MostrarMensaje(
-                        "La conexión no está disponible o esa acción ya está en curso.",
+                        conexionApi == null
+                            ? "Se perdió la conexión con la partida."
+                            : conexionApi.MensajeAccionNoDisponible,
                         true);
 
                     return;
@@ -421,7 +682,9 @@ namespace ImperiosEnGuerra.Controladores
                 controladorSeleccion.IniciarCapturaObjetivoEntidad();
 
                 vistaHud.MostrarMensaje(
-                    "Selecciona una unidad enemiga como objetivo.");
+                    accion == "Curar"
+                        ? "Selecciona una unidad aliada herida para curarla."
+                        : "Selecciona una unidad o edificio enemigo como objetivo.");
 
                 return;
             }
@@ -433,7 +696,7 @@ namespace ImperiosEnGuerra.Controladores
                 if (string.IsNullOrWhiteSpace(entidad.IdLogico))
                 {
                     vistaHud.MostrarMensaje(
-                        "La unidad seleccionada no tiene identidad disponible.",
+                        "No se puede dar una orden a esta unidad.",
                         true);
 
                     return;
@@ -442,7 +705,9 @@ namespace ImperiosEnGuerra.Controladores
                 if (!PuedeIniciarAccion(accion))
                 {
                     vistaHud.MostrarMensaje(
-                        "La conexión no está disponible o esa acción ya está en curso.",
+                        conexionApi == null
+                            ? "Se perdió la conexión con la partida."
+                            : conexionApi.MensajeAccionNoDisponible,
                         true);
 
                     return;
@@ -452,7 +717,14 @@ namespace ImperiosEnGuerra.Controladores
                 unidadIdPendiente = entidad.IdLogico;
                 accionPendiente = accion;
 
-                controladorSeleccion.IniciarCapturaDestino();
+                if (accion == "Recolectar")
+                {
+                    controladorSeleccion.IniciarCapturaRecurso();
+                }
+                else
+                {
+                    controladorSeleccion.IniciarCapturaDestino();
+                }
 
                 if (accion == "Mover")
                 {
@@ -466,15 +738,29 @@ namespace ImperiosEnGuerra.Controladores
                 }
                 else
                 {
+                    string costo =
+                        conexionApi == null
+                            ? string.Empty
+                            : conexionApi.DescribirCostoConstruccion();
+
+                    string mensajeConstruccion =
+                        "Selecciona una casilla para construir el Centro Urbano.";
+
+                    if (!string.IsNullOrWhiteSpace(costo))
+                    {
+                        mensajeConstruccion +=
+                            " " + costo;
+                    }
+
                     vistaHud.MostrarMensaje(
-                        "Selecciona una casilla para construir el Centro Urbano.");
+                        mensajeConstruccion);
                 }
 
                 return;
             }
 
             vistaHud.MostrarMensaje(
-                $"Intención {accion} preparada. Ejecución pendiente de una fase posterior.");
+                $"Esta acción aún no está disponible.");
         }
 
         private void SeleccionarTipoUnidad(string tipoUnidad)
@@ -494,8 +780,23 @@ namespace ImperiosEnGuerra.Controladores
 
             controladorSeleccion.IniciarCapturaDestino();
 
+            string costo =
+                conexionApi == null
+                    ? string.Empty
+                    : conexionApi.DescribirCostoUnidad(
+                        tipoUnidad);
+
+            string mensajeEntrenamiento =
+                $"Selecciona una casilla de referencia para {tipoUnidad}.";
+
+            if (!string.IsNullOrWhiteSpace(costo))
+            {
+                mensajeEntrenamiento +=
+                    " " + costo;
+            }
+
             vistaHud.MostrarMensaje(
-                $"Selecciona una casilla para crear {tipoUnidad}.");
+                mensajeEntrenamiento);
         }
 
         private static string ObtenerMensajeCancelacion(string accion)
@@ -511,6 +812,9 @@ namespace ImperiosEnGuerra.Controladores
 
             if (accion == "Atacar")
                 return "Ataque cancelado.";
+
+            if (accion == "Curar")
+                return "Curación cancelada.";
 
             return "Movimiento cancelado.";
         }

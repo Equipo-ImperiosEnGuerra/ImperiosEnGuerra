@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,6 +16,7 @@ namespace ImperiosEnGuerra.Vistas
         [SerializeField] private Button construir;
         [SerializeField] private Button entrenar;
         [SerializeField] private Button atacar;
+        [SerializeField] private Button cancelar;
         [SerializeField] private GameObject selectorEntrenamiento;
         [SerializeField] private Button entrenarAldeano;
         [SerializeField] private Button entrenarGuerrero;
@@ -22,8 +24,522 @@ namespace ImperiosEnGuerra.Vistas
         [SerializeField] private Button entrenarArquero;
         [SerializeField] private Button entrenarMonje;
 
+        private GameObject pantallaResultadoFinal;
+        private Text tituloResultadoFinal;
+        private Text detalleResultadoFinal;
+        private GameObject avisoTemporal;
+        private Text avisoTemporalTexto;
+        private Coroutine avisoTemporalRutina;
+
         public event Action<string> AccionSolicitada;
         public event Action<string> TipoUnidadSolicitado;
+        public event Action VolverMenuSolicitado;
+        public event Action SalirSolicitado;
+
+        private void Awake()
+        {
+            CrearBotonCancelarSiFalta();
+            AplicarLayoutCompacto();
+            ConfigurarRaycastsNoBloqueantes();
+            CrearAvisoTemporal();
+            CrearPantallaResultadoFinal();
+        }
+
+        public void MostrarAvisoTemporal(
+            string texto,
+            float duracionSegundos = 2.75f)
+        {
+            if (string.IsNullOrWhiteSpace(
+                    texto))
+            {
+                return;
+            }
+
+            CrearAvisoTemporal();
+
+            if (avisoTemporalTexto != null)
+            {
+                avisoTemporalTexto.text =
+                    texto;
+            }
+
+            if (avisoTemporal != null)
+            {
+                avisoTemporal.SetActive(
+                    true);
+            }
+
+            if (!Application.isPlaying ||
+                !isActiveAndEnabled)
+            {
+                return;
+            }
+
+            if (avisoTemporalRutina != null)
+            {
+                StopCoroutine(
+                    avisoTemporalRutina);
+            }
+
+            avisoTemporalRutina =
+                StartCoroutine(
+                    OcultarAvisoDespues(
+                        Mathf.Max(
+                            0.5f,
+                            duracionSegundos)));
+        }
+
+        private void CrearAvisoTemporal()
+        {
+            if (avisoTemporal != null)
+                return;
+
+            Transform existente =
+                transform.Find(
+                    "AvisoAldeano");
+
+            if (existente != null)
+            {
+                avisoTemporal =
+                    existente.gameObject;
+
+                avisoTemporalTexto =
+                    existente.GetComponentInChildren<Text>(
+                        true);
+
+                return;
+            }
+
+            avisoTemporal =
+                new GameObject(
+                    "AvisoAldeano",
+                    typeof(RectTransform),
+                    typeof(Image));
+
+            avisoTemporal.transform.SetParent(
+                transform,
+                false);
+
+            RectTransform rect =
+                avisoTemporal.GetComponent<RectTransform>();
+
+            rect.anchorMin =
+                new Vector2(
+                    0.5f,
+                    1f);
+
+            rect.anchorMax =
+                rect.anchorMin;
+
+            rect.pivot =
+                new Vector2(
+                    0.5f,
+                    1f);
+
+            rect.anchoredPosition =
+                new Vector2(
+                    0f,
+                    -58f);
+
+            rect.sizeDelta =
+                new Vector2(
+                    350f,
+                    34f);
+
+            Image fondo =
+                avisoTemporal.GetComponent<Image>();
+
+            fondo.color =
+                new Color(
+                    0.04f,
+                    0.07f,
+                    0.11f,
+                    0.88f);
+
+            fondo.raycastTarget =
+                false;
+
+            GameObject textoObjeto =
+                new GameObject(
+                    "Texto",
+                    typeof(RectTransform),
+                    typeof(Text));
+
+            textoObjeto.transform.SetParent(
+                avisoTemporal.transform,
+                false);
+
+            RectTransform textoRect =
+                textoObjeto.GetComponent<RectTransform>();
+
+            textoRect.anchorMin =
+                Vector2.zero;
+
+            textoRect.anchorMax =
+                Vector2.one;
+
+            textoRect.offsetMin =
+                new Vector2(
+                    10f,
+                    2f);
+
+            textoRect.offsetMax =
+                new Vector2(
+                    -10f,
+                    -2f);
+
+            avisoTemporalTexto =
+                textoObjeto.GetComponent<Text>();
+
+            avisoTemporalTexto.font =
+                Resources.GetBuiltinResource<Font>(
+                    "LegacyRuntime.ttf");
+
+            avisoTemporalTexto.fontSize =
+                15;
+
+            avisoTemporalTexto.alignment =
+                TextAnchor.MiddleCenter;
+
+            avisoTemporalTexto.color =
+                Color.white;
+
+            avisoTemporalTexto.raycastTarget =
+                false;
+
+            avisoTemporal.SetActive(
+                false);
+        }
+
+        private IEnumerator OcultarAvisoDespues(
+            float duracionSegundos)
+        {
+            yield return
+                new WaitForSecondsRealtime(
+                    duracionSegundos);
+
+            if (avisoTemporal != null)
+            {
+                avisoTemporal.SetActive(
+                    false);
+            }
+
+            avisoTemporalRutina =
+                null;
+        }
+
+        private void CrearBotonCancelarSiFalta()
+        {
+            if (cancelar != null)
+                return;
+
+            RectTransform panel =
+                transform.Find("PanelContextual")
+                    as RectTransform;
+
+            if (panel == null ||
+                atacar == null)
+            {
+                return;
+            }
+
+            GameObject objeto =
+                Instantiate(
+                    atacar.gameObject,
+                    panel,
+                    false);
+
+            objeto.name = "Cancelar";
+
+            cancelar =
+                objeto.GetComponent<Button>();
+
+            if (cancelar != null)
+            {
+                cancelar.onClick.RemoveAllListeners();
+            }
+
+            Text etiqueta =
+                objeto.GetComponentInChildren<Text>(
+                    true);
+
+            if (etiqueta != null)
+            {
+                etiqueta.text = "Cancelar";
+            }
+
+            objeto.SetActive(false);
+        }
+
+        private void ConfigurarRaycastsNoBloqueantes()
+        {
+            // Los fondos y textos informativos del HUD son decorativos.
+            // No deben impedir seleccionar unidades/casillas que queden
+            // visualmente detrás del panel. Los Button conservan su Image
+            // con raycastTarget=true y siguen siendo interactivos.
+            Transform panel =
+                transform.Find(
+                    "PanelContextual");
+
+            if (panel != null)
+            {
+                Image fondoPanel =
+                    panel.GetComponent<Image>();
+
+                if (fondoPanel != null)
+                {
+                    fondoPanel.raycastTarget =
+                        false;
+                }
+
+                DesactivarRaycastGrafico(
+                    panel.Find("Seleccion"));
+
+                DesactivarRaycastGrafico(
+                    panel.Find("Mensaje"));
+
+                Transform selector =
+                    panel.Find(
+                        "SelectorEntrenamiento");
+
+                if (selector != null)
+                {
+                    Image fondoSelector =
+                        selector.GetComponent<Image>();
+
+                    if (fondoSelector != null)
+                    {
+                        fondoSelector.raycastTarget =
+                            false;
+                    }
+                }
+            }
+
+            Transform barraRecursos =
+                transform.Find(
+                    "BarraRecursos");
+
+            if (barraRecursos != null)
+            {
+                Image fondoBarra =
+                    barraRecursos.GetComponent<Image>();
+
+                if (fondoBarra != null)
+                {
+                    fondoBarra.raycastTarget =
+                        false;
+                }
+
+                DesactivarRaycastGrafico(
+                    barraRecursos.Find(
+                        "Recursos"));
+            }
+        }
+
+        private static void DesactivarRaycastGrafico(
+            Transform objetivo)
+        {
+            if (objetivo == null)
+                return;
+
+            Graphic grafico =
+                objetivo.GetComponent<Graphic>();
+
+            if (grafico != null)
+            {
+                grafico.raycastTarget =
+                    false;
+            }
+        }
+
+        private void AplicarLayoutCompacto()
+        {
+            RectTransform panel =
+                transform.Find("PanelContextual")
+                    as RectTransform;
+
+            if (panel == null)
+                return;
+
+            // El jugador pidió mantener este HUD en la parte inferior
+            // izquierda. Se aprovecha la franja libre lateral y se conserva
+            // un ancho compacto para no invadir el mapa.
+            ConfigurarRect(
+                panel,
+                Vector2.zero,
+                Vector2.zero,
+                Vector2.zero,
+                new Vector2(12f, 12f),
+                new Vector2(282f, 242f));
+
+            ConfigurarRectHijo(
+                panel,
+                "Seleccion",
+                new Vector2(0f, 1f),
+                new Vector2(1f, 1f),
+                new Vector2(0.5f, 1f),
+                new Vector2(12f, -64f),
+                new Vector2(-12f, -8f));
+
+            ConfigurarRectHijo(
+                panel,
+                "Mensaje",
+                new Vector2(0f, 1f),
+                new Vector2(1f, 1f),
+                new Vector2(0.5f, 1f),
+                new Vector2(12f, -106f),
+                new Vector2(-12f, -68f));
+
+            string[] acciones =
+            {
+                "Mover",
+                "Recolectar",
+                "Construir",
+                "Entrenar",
+                "Atacar",
+                "Cancelar"
+            };
+
+            for (int i = 0; i < acciones.Length; i++)
+            {
+                int columna =
+                    i % 3;
+
+                int fila =
+                    i / 3;
+
+                float x =
+                    12f + columna * 82f;
+
+                float y =
+                    12f + fila * 36f;
+
+                RectTransform boton =
+                    panel.Find(
+                        acciones[i])
+                    as RectTransform;
+
+                if (boton == null)
+                    continue;
+
+                ConfigurarRect(
+                    boton,
+                    Vector2.zero,
+                    Vector2.zero,
+                    Vector2.zero,
+                    new Vector2(x, y),
+                    new Vector2(x + 76f, y + 32f));
+
+                Text etiqueta =
+                    boton.GetComponentInChildren<Text>(
+                        true);
+
+                if (etiqueta != null)
+                {
+                    etiqueta.fontSize = 11;
+                    etiqueta.resizeTextMinSize = 8;
+                    etiqueta.resizeTextMaxSize = 11;
+                }
+            }
+
+            RectTransform selector =
+                panel.Find(
+                    "SelectorEntrenamiento")
+                as RectTransform;
+
+            if (selector != null)
+            {
+                ConfigurarRect(
+                    selector,
+                    Vector2.zero,
+                    Vector2.zero,
+                    Vector2.zero,
+                    new Vector2(12f, 84f),
+                    new Vector2(258f, 126f));
+
+                string[] tipos =
+                {
+                    "Aldeano",
+                    "Guerrero",
+                    "Lancero",
+                    "Arquero",
+                    "Monje"
+                };
+
+                for (int i = 0; i < tipos.Length; i++)
+                {
+                    RectTransform botonTipo =
+                        selector.Find(
+                            tipos[i])
+                        as RectTransform;
+
+                    if (botonTipo == null)
+                        continue;
+
+                    float x =
+                        i * 49f;
+
+                    ConfigurarRect(
+                        botonTipo,
+                        Vector2.zero,
+                        Vector2.zero,
+                        Vector2.zero,
+                        new Vector2(x, 2f),
+                        new Vector2(x + 47f, 40f));
+
+                    Text etiqueta =
+                        botonTipo.GetComponentInChildren<Text>(
+                            true);
+
+                    if (etiqueta != null)
+                    {
+                        etiqueta.fontSize = 10;
+                        etiqueta.resizeTextMinSize = 7;
+                        etiqueta.resizeTextMaxSize = 10;
+                    }
+                }
+            }
+        }
+
+        private static void ConfigurarRectHijo(
+            RectTransform padre,
+            string nombre,
+            Vector2 anchorMin,
+            Vector2 anchorMax,
+            Vector2 pivote,
+            Vector2 offsetMin,
+            Vector2 offsetMax)
+        {
+            RectTransform rect =
+                padre.Find(nombre)
+                    as RectTransform;
+
+            if (rect == null)
+                return;
+
+            ConfigurarRect(
+                rect,
+                anchorMin,
+                anchorMax,
+                pivote,
+                offsetMin,
+                offsetMax);
+        }
+
+        private static void ConfigurarRect(
+            RectTransform rect,
+            Vector2 anchorMin,
+            Vector2 anchorMax,
+            Vector2 pivote,
+            Vector2 offsetMin,
+            Vector2 offsetMax)
+        {
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.pivot = pivote;
+            rect.offsetMin = offsetMin;
+            rect.offsetMax = offsetMax;
+        }
 
         private void OnEnable()
         {
@@ -32,6 +548,7 @@ namespace ImperiosEnGuerra.Vistas
             if (construir != null) construir.onClick.AddListener(SolicitarConstruir);
             if (entrenar != null) entrenar.onClick.AddListener(SolicitarEntrenar);
             if (atacar != null) atacar.onClick.AddListener(SolicitarAtacar);
+            if (cancelar != null) cancelar.onClick.AddListener(SolicitarCancelar);
 
             if (entrenarAldeano != null)
                 entrenarAldeano.onClick.AddListener(SolicitarEntrenarAldeano);
@@ -55,6 +572,7 @@ namespace ImperiosEnGuerra.Vistas
             if (construir != null) construir.onClick.RemoveListener(SolicitarConstruir);
             if (entrenar != null) entrenar.onClick.RemoveListener(SolicitarEntrenar);
             if (atacar != null) atacar.onClick.RemoveListener(SolicitarAtacar);
+            if (cancelar != null) cancelar.onClick.RemoveListener(SolicitarCancelar);
 
             if (entrenarAldeano != null)
                 entrenarAldeano.onClick.RemoveListener(SolicitarEntrenarAldeano);
@@ -77,6 +595,7 @@ namespace ImperiosEnGuerra.Vistas
         private void SolicitarConstruir() => AccionSolicitada?.Invoke("Construir");
         private void SolicitarEntrenar() => AccionSolicitada?.Invoke("Entrenar");
         private void SolicitarAtacar() => AccionSolicitada?.Invoke("Atacar");
+        private void SolicitarCancelar() => AccionSolicitada?.Invoke("Cancelar");
 
         private void SolicitarEntrenarAldeano() =>
             TipoUnidadSolicitado?.Invoke("Aldeano");
@@ -105,32 +624,187 @@ namespace ImperiosEnGuerra.Vistas
                 return;
             }
 
+            string nombre =
+                entidad.TipoLogico == "CentroUrbano"
+                    ? "Centro Urbano"
+                    : entidad.TipoLogico;
+
+            string bando =
+                entidad.Propietario != null &&
+                entidad.Propietario.StartsWith(
+                    "Maquina")
+                    ? DescribirFaccionEnemiga(
+                        entidad.Propietario)
+                    : "Tu bando";
+
             string texto =
-                $"{entidad.TipoLogico}\n" +
-                $"Propietario: {entidad.Propietario}\n" +
-                $"Coordenada: ({entidad.X},{entidad.Y})";
+                $"{nombre}\n" +
+                $"Bando: {bando}\n" +
+                $"Posición: ({entidad.X},{entidad.Y})";
+
+            if (entidad.VidaMaxima > 0)
+            {
+                texto +=
+                    $"\nVida: {entidad.VidaActual}/{entidad.VidaMaxima}";
+            }
 
             if (entidad.Categoria == CategoriaEntidadVisual.Unidad)
             {
                 string estado =
-                    string.IsNullOrWhiteSpace(entidad.EstadoLogico)
-                        ? "Desconocido"
-                        : entidad.EstadoLogico;
+                    TraducirEstado(
+                        entidad.EstadoLogico);
 
                 string orden =
-                    string.IsNullOrWhiteSpace(entidad.OrdenActiva)
-                        ? "Ninguna"
-                        : entidad.OrdenActiva;
+                    TraducirOrden(
+                        entidad.OrdenActiva);
 
                 texto +=
-                    $"\nEstado: {estado}" +
-                    $"\nOrden: {orden}";
+                    $"\nEstado: {estado}";
+
+                if (!string.IsNullOrWhiteSpace(
+                        orden))
+                {
+                    texto +=
+                        $"\nOrden: {orden}";
+                }
+
+                if (entidad.Danio > 0)
+                {
+                    texto +=
+                        $"\nDaño: {entidad.Danio}" +
+                        $" | Alcance: {entidad.Alcance}";
+                }
             }
 
-            if (entidad.Propietario == "Maquina")
-                texto += " — Enemigo";
-
             seleccion.text = texto;
+        }
+
+        private static string DescribirFaccionEnemiga(
+            string propietario)
+        {
+            if (string.IsNullOrWhiteSpace(
+                    propietario))
+            {
+                return "Enemigo";
+            }
+
+            int separador =
+                propietario.IndexOf('_');
+
+            if (separador < 0 ||
+                separador >=
+                    propietario.Length - 1)
+            {
+                return "Enemigo";
+            }
+
+            return $"Enemigo {propietario.Substring(separador + 1)}";
+        }
+
+        private static string TraducirEstado(
+            string estado)
+        {
+            switch (estado)
+            {
+                case "Idle":
+                    return "En espera";
+                case "Moviendo":
+                    return "En movimiento";
+                case "Recolectando":
+                    return "Recolectando";
+                case "Construyendo":
+                    return "Construyendo";
+                case "Atacando":
+                    return "En combate";
+                case "Curando":
+                    return "Curando";
+                default:
+                    return string.IsNullOrWhiteSpace(
+                            estado)
+                        ? "En espera"
+                        : estado;
+            }
+        }
+
+        private static string TraducirOrden(
+            string orden)
+        {
+            switch (orden)
+            {
+                case "Mover":
+                    return "Mover";
+                case "Recolectar":
+                    return "Recolectar";
+                case "Construir":
+                    return "Construir";
+                case "Atacar":
+                    return "Atacar";
+                case "Curar":
+                    return "Curar";
+                default:
+                    return string.IsNullOrWhiteSpace(
+                            orden)
+                        ? string.Empty
+                        : orden;
+            }
+        }
+
+        public void ConfigurarCostosEntrenamiento(
+            string aldeano,
+            string guerrero,
+            string lancero,
+            string arquero,
+            string monje)
+        {
+            ConfigurarEtiquetaEntrenamiento(
+                entrenarAldeano,
+                "Aldeano",
+                aldeano);
+
+            ConfigurarEtiquetaEntrenamiento(
+                entrenarGuerrero,
+                "Guerrero",
+                guerrero);
+
+            ConfigurarEtiquetaEntrenamiento(
+                entrenarLancero,
+                "Lancero",
+                lancero);
+
+            ConfigurarEtiquetaEntrenamiento(
+                entrenarArquero,
+                "Arquero",
+                arquero);
+
+            ConfigurarEtiquetaEntrenamiento(
+                entrenarMonje,
+                "Monje",
+                monje);
+        }
+
+        private static void ConfigurarEtiquetaEntrenamiento(
+            Button boton,
+            string tipo,
+            string costo)
+        {
+            if (boton == null)
+                return;
+
+            Text etiqueta =
+                boton.GetComponentInChildren<Text>(
+                    true);
+
+            if (etiqueta == null)
+                return;
+
+            etiqueta.text =
+                string.IsNullOrWhiteSpace(costo)
+                    ? tipo
+                    : $"{tipo}\n{costo}";
+
+            etiqueta.fontSize = 10;
+            etiqueta.resizeTextMinSize = 7;
+            etiqueta.resizeTextMaxSize = 10;
         }
 
         public void MostrarSelectorEntrenamiento(bool mostrar)
@@ -140,13 +814,355 @@ namespace ImperiosEnGuerra.Vistas
         }
 
         public void MostrarOpciones(bool puedeMover, bool puedeRecolectar, bool puedeConstruir,
-            bool puedeEntrenar, bool puedeAtacar)
+            bool puedeEntrenar, bool puedeAtacar, bool mostrarComoCurar = false,
+            bool puedeCancelar = false)
         {
             if (mover != null) mover.gameObject.SetActive(puedeMover);
             if (recolectar != null) recolectar.gameObject.SetActive(puedeRecolectar);
             if (construir != null) construir.gameObject.SetActive(puedeConstruir);
             if (entrenar != null) entrenar.gameObject.SetActive(puedeEntrenar);
-            if (atacar != null) atacar.gameObject.SetActive(puedeAtacar);
+            if (cancelar != null) cancelar.gameObject.SetActive(puedeCancelar);
+            if (atacar != null)
+            {
+                atacar.gameObject.SetActive(puedeAtacar);
+
+                Text etiqueta =
+                    atacar.GetComponentInChildren<Text>(
+                        true);
+
+                if (etiqueta != null)
+                {
+                    etiqueta.text =
+                        mostrarComoCurar
+                            ? "Curar"
+                            : "Atacar";
+                }
+            }
+        }
+
+        public void MostrarResultadoFinal(
+            string ganador,
+            string ganadorNombre,
+            string motivo)
+        {
+            MostrarOpciones(
+                false,
+                false,
+                false,
+                false,
+                false);
+
+            MostrarSelectorEntrenamiento(
+                false);
+
+            bool victoriaHumana =
+                ganador == "Humano";
+
+            string titulo =
+                victoriaHumana
+                    ? "VICTORIA"
+                    : "DERROTA";
+
+            string detalle;
+
+            if (victoriaHumana)
+            {
+                detalle =
+                    "Has derrotado a las tres facciones enemigas.\n" +
+                    "Ya no conservan Centros Urbanos ni unidades militares.";
+            }
+            else if (!string.IsNullOrWhiteSpace(
+                         ganador))
+            {
+                detalle =
+                    "Tu imperio ha caído.\n" +
+                    "Ya no conservas Centros Urbanos ni unidades militares.";
+            }
+            else
+            {
+                detalle =
+                    string.IsNullOrWhiteSpace(
+                        motivo)
+                        ? "La batalla ha terminado."
+                        : motivo;
+            }
+
+            MostrarMensaje(
+                detalle,
+                !victoriaHumana);
+
+            CrearPantallaResultadoFinal();
+
+            if (tituloResultadoFinal != null)
+                tituloResultadoFinal.text = titulo;
+
+            if (detalleResultadoFinal != null)
+            {
+                detalleResultadoFinal.text =
+                    detalle;
+            }
+
+            if (pantallaResultadoFinal != null)
+            {
+                pantallaResultadoFinal.SetActive(true);
+                pantallaResultadoFinal.transform.SetAsLastSibling();
+            }
+        }
+
+        public void OcultarResultadoFinal()
+        {
+            if (pantallaResultadoFinal != null)
+                pantallaResultadoFinal.SetActive(false);
+        }
+
+        private void CrearPantallaResultadoFinal()
+        {
+            if (pantallaResultadoFinal != null)
+                return;
+
+            Transform existente =
+                transform.Find(
+                    "PantallaResultadoFinal");
+
+            if (existente != null)
+            {
+                pantallaResultadoFinal =
+                    existente.gameObject;
+            }
+            else
+            {
+                pantallaResultadoFinal =
+                    new GameObject(
+                        "PantallaResultadoFinal",
+                        typeof(RectTransform),
+                        typeof(Image));
+
+                pantallaResultadoFinal.transform.SetParent(
+                    transform,
+                    false);
+            }
+
+            RectTransform rect =
+                pantallaResultadoFinal
+                    .GetComponent<RectTransform>();
+
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.pivot =
+                new Vector2(
+                    0.5f,
+                    0.5f);
+
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            Image fondo =
+                pantallaResultadoFinal
+                    .GetComponent<Image>();
+
+            fondo.color =
+                new Color(
+                    0.02f,
+                    0.025f,
+                    0.04f,
+                    0.97f);
+
+            fondo.raycastTarget = true;
+
+            tituloResultadoFinal =
+                CrearTextoResultado(
+                    pantallaResultadoFinal.transform,
+                    "Titulo",
+                    "DERROTA",
+                    54,
+                    new Vector2(0f, 90f),
+                    new Vector2(700f, 90f));
+
+            tituloResultadoFinal.alignment =
+                TextAnchor.MiddleCenter;
+
+            detalleResultadoFinal =
+                CrearTextoResultado(
+                    pantallaResultadoFinal.transform,
+                    "Detalle",
+                    "",
+                    22,
+                    new Vector2(0f, 0f),
+                    new Vector2(760f, 120f));
+
+            detalleResultadoFinal.alignment =
+                TextAnchor.MiddleCenter;
+
+            Button volverMenu =
+                CrearBotonResultado(
+                    pantallaResultadoFinal.transform,
+                    "VolverMenu",
+                    "VOLVER AL MENÚ",
+                    new Vector2(-115f, -125f));
+
+            Button salir =
+                CrearBotonResultado(
+                    pantallaResultadoFinal.transform,
+                    "Salir",
+                    "SALIR",
+                    new Vector2(115f, -125f));
+
+            volverMenu.onClick.RemoveAllListeners();
+            volverMenu.onClick.AddListener(
+                () => VolverMenuSolicitado?.Invoke());
+
+            salir.onClick.RemoveAllListeners();
+            salir.onClick.AddListener(
+                () => SalirSolicitado?.Invoke());
+
+            pantallaResultadoFinal.SetActive(false);
+        }
+
+        private static Text CrearTextoResultado(
+            Transform padre,
+            string nombre,
+            string contenido,
+            int tamano,
+            Vector2 posicion,
+            Vector2 dimensiones)
+        {
+            Transform existente =
+                padre.Find(nombre);
+
+            GameObject objeto =
+                existente == null
+                    ? new GameObject(
+                        nombre,
+                        typeof(RectTransform),
+                        typeof(Text))
+                    : existente.gameObject;
+
+            if (existente == null)
+            {
+                objeto.transform.SetParent(
+                    padre,
+                    false);
+            }
+
+            RectTransform rect =
+                objeto.GetComponent<RectTransform>();
+
+            rect.anchorMin =
+                new Vector2(
+                    0.5f,
+                    0.5f);
+
+            rect.anchorMax =
+                rect.anchorMin;
+
+            rect.pivot =
+                new Vector2(
+                    0.5f,
+                    0.5f);
+
+            rect.anchoredPosition =
+                posicion;
+
+            rect.sizeDelta =
+                dimensiones;
+
+            Text texto =
+                objeto.GetComponent<Text>();
+
+            texto.font =
+                Resources.GetBuiltinResource<Font>(
+                    "LegacyRuntime.ttf");
+
+            texto.fontSize = tamano;
+            texto.color = Color.white;
+            texto.text = contenido;
+            texto.raycastTarget = false;
+            texto.resizeTextForBestFit = true;
+            texto.resizeTextMinSize = 16;
+            texto.resizeTextMaxSize = tamano;
+
+            return texto;
+        }
+
+        private static Button CrearBotonResultado(
+            Transform padre,
+            string nombre,
+            string textoBoton,
+            Vector2 posicion)
+        {
+            Transform existente =
+                padre.Find(nombre);
+
+            GameObject objeto =
+                existente == null
+                    ? new GameObject(
+                        nombre,
+                        typeof(RectTransform),
+                        typeof(Image),
+                        typeof(Button))
+                    : existente.gameObject;
+
+            if (existente == null)
+            {
+                objeto.transform.SetParent(
+                    padre,
+                    false);
+            }
+
+            RectTransform rect =
+                objeto.GetComponent<RectTransform>();
+
+            rect.anchorMin =
+                new Vector2(
+                    0.5f,
+                    0.5f);
+
+            rect.anchorMax =
+                rect.anchorMin;
+
+            rect.pivot =
+                new Vector2(
+                    0.5f,
+                    0.5f);
+
+            rect.anchoredPosition =
+                posicion;
+
+            rect.sizeDelta =
+                new Vector2(
+                    210f,
+                    54f);
+
+            Image imagen =
+                objeto.GetComponent<Image>();
+
+            imagen.color =
+                new Color(
+                    0.24f,
+                    0.30f,
+                    0.38f,
+                    1f);
+
+            Button boton =
+                objeto.GetComponent<Button>();
+
+            boton.targetGraphic = imagen;
+
+            Text etiqueta =
+                CrearTextoResultado(
+                    objeto.transform,
+                    "Texto",
+                    textoBoton,
+                    19,
+                    Vector2.zero,
+                    new Vector2(
+                        200f,
+                        48f));
+
+            etiqueta.alignment =
+                TextAnchor.MiddleCenter;
+
+            return boton;
         }
 
         public void MostrarMensaje(string texto, bool error = false)

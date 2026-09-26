@@ -108,7 +108,30 @@ public class MovimientoUnityTests
     }
 
     [Test]
-    public void MovimientoEnCurso_BloqueaSegundoMovimiento()
+    public void UnidadConOrdenActiva_NoAceptaSegundaOrdenSimultanea()
+    {
+        unidad.ActualizarDatosLogicos(
+            1,
+            1,
+            "Moviendo",
+            "Mover");
+
+        Invocar(
+            acciones,
+            "PrepararAccion",
+            "Mover");
+
+        Assert.That(
+            seleccion.CapturandoDestino,
+            Is.False);
+
+        Assert.That(
+            mensaje.text,
+            Does.Contain("entidad humana apropiada"));
+    }
+
+    [Test]
+    public void MovimientoEnCurso_NoBloqueaPrepararOtraOrden()
     {
         CampoAutomatico(
             conexion,
@@ -122,11 +145,11 @@ public class MovimientoUnityTests
 
         Assert.That(
             seleccion.CapturandoDestino,
-            Is.False);
+            Is.True);
 
         Assert.That(
             mensaje.text,
-            Does.Contain("esa acción ya está en curso"));
+            Is.EqualTo("Selecciona una casilla destino."));
     }
 
     [Test]
@@ -181,6 +204,58 @@ public class MovimientoUnityTests
         Assert.That(vista.TryObtenerCoordenadaLogica(new Vector3(mundoX, mundoY), out int x, out int y), Is.True);
         Assert.That(x, Is.EqualTo(esperadoX));
         Assert.That(y, Is.EqualTo(esperadoY));
+    }
+
+    [Test]
+    public void VistaMovimiento_ActualizaDatosSinTeletransportarSprite()
+    {
+        Vector3 posicionInicial =
+            new Vector3(2f, 2f, 0f);
+
+        unidad.transform.position =
+            posicionInicial;
+
+        Assert.That(
+            vista.ActualizarMovimientoUnidad(
+                IdModelo,
+                2,
+                1,
+                "Moviendo",
+                "Mover"),
+            Is.True);
+
+        Assert.That(
+            unidad.X,
+            Is.EqualTo(2));
+
+        Assert.That(
+            unidad.Y,
+            Is.EqualTo(1));
+
+        Assert.That(
+            unidad.EstadoLogico,
+            Is.EqualTo("Moviendo"));
+
+        Assert.That(
+            unidad.OrdenActiva,
+            Is.EqualTo("Mover"));
+
+        Assert.That(
+            unidad.transform.position,
+            Is.EqualTo(posicionInicial));
+    }
+
+    [Test]
+    public void VistaMovimiento_IdDesconocido_NoCreaMovimiento()
+    {
+        Assert.That(
+            vista.ActualizarMovimientoUnidad(
+                "id-inexistente",
+                4,
+                4,
+                "Moviendo",
+                "Mover"),
+            Is.False);
     }
 
     private void ComprobarCancelacion()

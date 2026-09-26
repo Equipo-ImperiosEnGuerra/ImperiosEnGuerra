@@ -11,8 +11,10 @@ namespace ImperiosEnGuerra.Modelo.Unidades
         /// Inicializa la base del soldado delegando la posición y la disponibilidad inicial en su clase base.
         /// </summary>
         /// <param name="coordenada">Posición lógica inicial, conservada sin validación.</param>
-        protected Soldado(Coordenada coordenada)
-            : base(coordenada)
+        protected Soldado(
+            Coordenada coordenada,
+            double velocidadMovimiento = 1d)
+            : base(coordenada, velocidadMovimiento)
         {
         }
     }

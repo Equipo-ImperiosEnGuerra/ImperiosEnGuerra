@@ -28,6 +28,7 @@ namespace ImperiosEnGuerra.Tests
         [TestCase(TipoAccionJuego.Construir)]
         [TestCase(TipoAccionJuego.Entrenar)]
         [TestCase(TipoAccionJuego.Atacar)]
+        [TestCase(TipoAccionJuego.Curar)]
         public void Solicitud_ConservaTipo(TipoAccionJuego tipo)
         {
             Assert.That(new SolicitudAccion(tipo).Tipo, Is.EqualTo(tipo));

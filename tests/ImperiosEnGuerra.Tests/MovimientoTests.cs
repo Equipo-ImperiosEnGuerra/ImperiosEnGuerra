@@ -50,7 +50,6 @@ public class MovimientoTests
     }
 
     [TestCase("inexistente")]
-    [TestCase("maquina")]
     [TestCase("no disponible")]
     [TestCase("nulo")]
     [TestCase("ocupada")]
@@ -93,6 +92,60 @@ public class MovimientoTests
         foreach (var anterior in posiciones)
             Assert.That(anterior.Unidad.Coordenada, Is.SameAs(anterior.Posicion));
         Assert.That(CapturarOcupacion(), Is.EqualTo(ocupacion));
+    }
+
+    [Test]
+    public void UnidadMaquina_MovimientoValido_UsaSuPropioMapa()
+    {
+        var mapaMaquina =
+            new Mapa(6, 6);
+
+        var maquina =
+            new Jugador(
+                "Máquina",
+                TipoJugador.Maquina,
+                mapaMaquina,
+                new RecursosJugador());
+
+        var unidadMaquina =
+            new Guerrero(
+                new Coordenada(1, 1));
+
+        maquina.AgregarUnidad(
+            unidadMaquina);
+
+        partida =
+            new Partida(
+                partida.JugadorHumano,
+                maquina);
+
+        ResultadoAccion resultado =
+            operacion.Ejecutar(
+                partida,
+                new SolicitudMovimiento(
+                    unidadMaquina.Id,
+                    new Coordenada(4, 5)));
+
+        Assert.That(
+            resultado.Exito,
+            Is.True,
+            resultado.Mensaje);
+
+        Assert.That(
+            unidadMaquina.Coordenada.X,
+            Is.EqualTo(4));
+
+        Assert.That(
+            unidadMaquina.Coordenada.Y,
+            Is.EqualTo(5));
+
+        Assert.That(
+            unidad.Coordenada.X,
+            Is.EqualTo(1));
+
+        Assert.That(
+            unidad.Coordenada.Y,
+            Is.EqualTo(1));
     }
 
     [TestCase(-1, 0)]

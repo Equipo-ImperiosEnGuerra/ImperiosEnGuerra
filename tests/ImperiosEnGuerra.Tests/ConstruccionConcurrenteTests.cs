@@ -56,6 +56,114 @@ public class ConstruccionConcurrenteTests
     }
 
     [Test]
+    public async Task ConstruccionConcurrenteMaquina_UsaRecursosYMapaPropios()
+    {
+        var mapaHumano =
+            new Mapa(6, 6);
+
+        var mapaMaquina =
+            new Mapa(6, 6);
+
+        var humano =
+            new Jugador(
+                "Humano",
+                TipoJugador.Humano,
+                mapaHumano,
+                new RecursosJugador());
+
+        var maquina =
+            new Jugador(
+                "Máquina",
+                TipoJugador.Maquina,
+                mapaMaquina,
+                new RecursosJugador());
+
+        maquina.Recursos.Agregar(
+            TipoRecurso.Oro,
+            100);
+
+        maquina.Recursos.Agregar(
+            TipoRecurso.Madera,
+            100);
+
+        maquina.Recursos.Agregar(
+            TipoRecurso.Comida,
+            100);
+
+        var aldeanoMaquina =
+            new Aldeano(
+                new Coordenada(1, 1));
+
+        maquina.AgregarUnidad(
+            aldeanoMaquina);
+
+        var partida =
+            new Partida(
+                humano,
+                maquina);
+
+        var estado =
+            new EstadoPartidaService();
+
+        estado.EstablecerPartida(
+            partida);
+
+        using var gestor =
+            new GestorProcesosConcurrentes();
+
+        var servicio =
+            new ServicioAccionesConcurrentes(
+                estado,
+                gestor,
+                TimeSpan.Zero);
+
+        ProcesoConcurrente proceso =
+            servicio.IniciarConstruccion(
+                CrearRequest(
+                    aldeanoMaquina,
+                    3,
+                    3));
+
+        await proceso.Finalizacion;
+
+        Assert.That(
+            servicio.IntentarObtenerResultado(
+                proceso.Id,
+                out ResultadoProcesoConcurrente resultado),
+            Is.True);
+
+        Assert.That(
+            resultado.Estado,
+            Is.EqualTo(
+                EstadoProcesoConcurrente.Completado));
+
+        Assert.That(
+            resultado.Resultado?.Exito,
+            Is.True,
+            resultado.Resultado?.Mensaje);
+
+        Assert.That(
+            partida.JugadorMaquina.Edificios.Count,
+            Is.EqualTo(1));
+
+        Assert.That(
+            partida.JugadorHumano.Edificios,
+            Is.Empty);
+
+        Assert.That(
+            mapaMaquina
+                .ObtenerCasilla(3, 3)
+                .EstaOcupada,
+            Is.True);
+
+        Assert.That(
+            mapaHumano
+                .ObtenerCasilla(3, 3)
+                .EstaOcupada,
+            Is.False);
+    }
+
+    [Test]
     public async Task CancelarConstruccion_AntesDeAplicar_NoOcupaCasilla()
     {
         Partida partida = CrearPartida(out Aldeano aldeano, out _);
@@ -125,9 +233,14 @@ public class ConstruccionConcurrenteTests
             servicio.IniciarConstruccion(
                 CrearRequest(segundo, 4, 4));
 
+        // No se afirma ProcesosActivos == 2 porque uno de los workers
+        // puede detectar inmediatamente que la casilla ya fue reservada y
+        // finalizar antes de que el hilo de prueba lea el contador. Lo que
+        // importa para esta prueba es que se hayan lanzado dos procesos
+        // independientes y que el estado final preserve una sola construcción.
         Assert.That(
-            gestor.ProcesosActivos,
-            Is.EqualTo(2));
+            procesoA.Id,
+            Is.Not.EqualTo(procesoB.Id));
 
         await Task.WhenAll(
             procesoA.Finalizacion,
@@ -244,6 +357,10 @@ public class ConstruccionConcurrenteTests
             TipoJugador.Maquina,
             mapa,
             new RecursosJugador());
+
+        humano.Recursos.Agregar(TipoRecurso.Oro, 500);
+        humano.Recursos.Agregar(TipoRecurso.Madera, 500);
+        humano.Recursos.Agregar(TipoRecurso.Comida, 500);
 
         primero = new Aldeano(
             new Coordenada(1, 1));

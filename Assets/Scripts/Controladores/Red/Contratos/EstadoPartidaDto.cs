@@ -6,9 +6,33 @@ namespace ImperiosEnGuerra.Controladores.Red.Contratos
     public class EstadoPartidaDto
     {
         public string estado;
+        public string ganador;
+        public string ganadorNombre;
+        public string motivoFinalizacion;
         public MapaEstadoDto mapa;
         public JugadorEstadoDto jugadorHumano;
         public JugadorEstadoDto jugadorMaquina;
+        public JugadorEstadoDto[] jugadores;
+        public EconomiaEstadoDto economia;
+    }
+
+    [Serializable]
+    public class EconomiaEstadoDto
+    {
+        public CostoEstadoDto centroUrbano;
+        public CostoEstadoDto aldeano;
+        public CostoEstadoDto guerrero;
+        public CostoEstadoDto lancero;
+        public CostoEstadoDto arquero;
+        public CostoEstadoDto monje;
+    }
+
+    [Serializable]
+    public class CostoEstadoDto
+    {
+        public int oro;
+        public int madera;
+        public int comida;
     }
 
     [Serializable]
@@ -24,8 +48,10 @@ namespace ImperiosEnGuerra.Controladores.Red.Contratos
     {
         public string nombre;
         public string tipo;
+        public string faccion;
         public RecursosJugadorEstadoDto recursos;
         public EdificioEstadoDto[] edificios;
+        public ObraConstruccionEstadoDto[] obrasConstruccion;
         public UnidadEstadoDto[] unidades;
     }
 
@@ -42,13 +68,35 @@ namespace ImperiosEnGuerra.Controladores.Red.Contratos
     {
         public string tipo;
         public CoordenadaEstadoDto coordenada;
+        public int cantidadRestante;
     }
 
     [Serializable]
     public class EdificioEstadoDto
     {
+        public string id;
+        public string tipo;
+        public int vidaActual;
+        public int vidaMaxima;
+        public CoordenadaEstadoDto coordenada;
+        public EntrenamientoEstadoDto[] colaEntrenamiento;
+    }
+
+    [Serializable]
+    public class EntrenamientoEstadoDto
+    {
+        public string id;
+        public string tipoUnidad;
+        public int progreso;
+    }
+
+    [Serializable]
+    public class ObraConstruccionEstadoDto
+    {
+        public string id;
         public string tipo;
         public CoordenadaEstadoDto coordenada;
+        public int progreso;
     }
 
     [Serializable]
@@ -58,9 +106,17 @@ namespace ImperiosEnGuerra.Controladores.Red.Contratos
         public string tipo;
         public CoordenadaEstadoDto coordenada;
         public bool disponible;
+        public int vidaActual;
+        public int vidaMaxima;
+        public int danio;
+        public int alcance;
 
         public string estado;
         public string ordenActiva;
+
+        public int capacidadCarga;
+        public int cargaActual;
+        public string tipoCarga;
 }
 
     [Serializable]

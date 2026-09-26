@@ -323,6 +323,108 @@ namespace ImperiosEnGuerra.Tests.Editor
         }
 
         [Test]
+        public void Recurso_IniciaConCantidadPredeterminada()
+        {
+            Recurso recurso =
+                new Recurso(
+                    TipoRecurso.Oro,
+                    new Coordenada(2, 3));
+
+            Assert.That(
+                recurso.CantidadRestante,
+                Is.EqualTo(
+                    Recurso.CantidadInicialPredeterminada));
+
+            Assert.That(
+                recurso.Agotado,
+                Is.False);
+        }
+
+        [Test]
+        public void Recurso_Extraer_NoSuperaCantidadDisponible()
+        {
+            Recurso recurso =
+                new Recurso(
+                    TipoRecurso.Madera,
+                    new Coordenada(1, 1),
+                    5);
+
+            Assert.That(
+                recurso.Extraer(3),
+                Is.EqualTo(3));
+
+            Assert.That(
+                recurso.Extraer(10),
+                Is.EqualTo(2));
+
+            Assert.That(
+                recurso.CantidadRestante,
+                Is.Zero);
+
+            Assert.That(
+                recurso.Agotado,
+                Is.True);
+        }
+
+        [Test]
+        public async Task Recurso_ExtraccionConcurrente_NoDuplicaCantidad()
+        {
+            Recurso recurso =
+                new Recurso(
+                    TipoRecurso.Comida,
+                    new Coordenada(1, 1),
+                    1000);
+
+            const int cantidadTareas = 8;
+            const int intentosPorTarea = 200;
+
+            Task<int>[] tareas =
+                new Task<int>[cantidadTareas];
+
+            for (int i = 0; i < cantidadTareas; i++)
+            {
+                tareas[i] = Task.Run(() =>
+                {
+                    int extraido = 0;
+
+                    for (int intento = 0;
+                         intento < intentosPorTarea;
+                         intento++)
+                    {
+                        extraido +=
+                            recurso.Extraer(1);
+                    }
+
+                    return extraido;
+                });
+            }
+
+            int[] resultados =
+                await Task.WhenAll(tareas);
+
+            Assert.That(
+                resultados.Sum(),
+                Is.EqualTo(1000));
+
+            Assert.That(
+                recurso.CantidadRestante,
+                Is.Zero);
+        }
+
+        [TestCase(0)]
+        [TestCase(-1)]
+        public void Recurso_CantidadInicialNoPositiva_Lanza(
+            int cantidad)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () =>
+                    new Recurso(
+                        TipoRecurso.Oro,
+                        new Coordenada(1, 1),
+                        cantidad));
+        }
+
+        [Test]
         public void Recurso_RechazaCoordenadaNull()
         {
             Assert.Throws<ArgumentNullException>(() => new Recurso(TipoRecurso.Oro, null));

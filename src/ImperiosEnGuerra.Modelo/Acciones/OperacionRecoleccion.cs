@@ -20,19 +20,18 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                 return ResultadoAccion.Fallido(
                     "La solicitud de recolección es obligatoria.");
 
-            if (partida.JugadorMaquina.Unidades.Any(
-                u => u.Id == solicitud.AldeanoId))
-            {
-                return ResultadoAccion.Fallido(
-                    "No se puede recolectar con una unidad de la máquina.");
-            }
+            Jugador propietario =
+                partida.BuscarJugadorPorUnidad(
+                    solicitud.AldeanoId);
 
-            Unidad unidad = partida.JugadorHumano.Unidades
-                .FirstOrDefault(u => u.Id == solicitud.AldeanoId);
-
-            if (unidad == null)
+            if (propietario == null)
                 return ResultadoAccion.Fallido(
-                    "No existe una unidad humana con ese ID.");
+                    "No existe una unidad con ese ID.");
+
+            Unidad unidad =
+                propietario.Unidades
+                    .First(
+                        u => u.Id == solicitud.AldeanoId);
 
             if (!(unidad is Aldeano))
                 return ResultadoAccion.Fallido(
@@ -48,7 +47,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                 return ResultadoAccion.Fallido(
                     "El objetivo de recolección es obligatorio.");
 
-            Mapa mapa = partida.JugadorHumano.Mapa;
+            Mapa mapa = propietario.Mapa;
 
             if (!mapa.EstaDentroDeLimites(objetivo))
                 return ResultadoAccion.Fallido(
@@ -63,6 +62,10 @@ namespace ImperiosEnGuerra.Modelo.Acciones
             if (!Enum.IsDefined(typeof(TipoRecurso), recurso.Tipo))
                 return ResultadoAccion.Fallido(
                     "El objetivo no contiene un tipo de recurso válido.");
+
+            if (recurso.Agotado)
+                return ResultadoAccion.Fallido(
+                    "El recurso objetivo está agotado.");
 
             return ResultadoAccion.Exitoso(
                 $"Recolección de {recurso.Tipo} preparada.");

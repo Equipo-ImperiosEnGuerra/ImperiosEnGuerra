@@ -122,7 +122,7 @@ public class AtaqueUnityTests
         Assert.That(
             mensaje.text,
             Is.EqualTo(
-                "Selecciona una unidad enemiga como objetivo."));
+                "Selecciona una unidad o edificio enemigo como objetivo."));
     }
 
     [Test]
@@ -238,6 +238,59 @@ public class AtaqueUnityTests
         Assert.That(
             mensaje.text,
             Is.EqualTo("Ataque cancelado."));
+    }
+
+    [Test]
+    public void ClicEnMapaVacio_CancelaModoObjetivo()
+    {
+        Invocar(
+            acciones,
+            "PrepararAccion",
+            "Atacar");
+
+        Invocar(
+            seleccion,
+            "ProcesarObjetivoEntidad",
+            new object[] { null });
+
+        Assert.That(
+            seleccion.CapturandoObjetivoEntidad,
+            Is.False);
+
+        Assert.That(
+            LeerCampo(
+                acciones,
+                "accionPendiente"),
+            Is.Null);
+    }
+
+    [Test]
+    public void ClicEnEntidadNoValida_SaleDelModoObjetivoYLaSelecciona()
+    {
+        Invocar(
+            acciones,
+            "PrepararAccion",
+            "Atacar");
+
+        Invocar(
+            seleccion,
+            "ProcesarObjetivoEntidad",
+            objetivoPropio);
+
+        Assert.That(
+            seleccion.CapturandoObjetivoEntidad,
+            Is.False);
+
+        Assert.That(
+            LeerCampo(
+                acciones,
+                "accionPendiente"),
+            Is.Null);
+
+        Assert.That(
+            seleccion.SeleccionActual,
+            Is.SameAs(
+                objetivoPropio));
     }
 
     [Test]

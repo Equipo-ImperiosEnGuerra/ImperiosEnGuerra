@@ -53,11 +53,84 @@ public class EntrenamientoConcurrenteTests
             partida.JugadorHumano.Unidades[0],
             Is.TypeOf<Guerrero>());
 
+        Coordenada spawn =
+            partida.JugadorHumano.Unidades[0]
+                .Coordenada;
+
+        Assert.That(
+            Math.Abs(spawn.X - 1) +
+            Math.Abs(spawn.Y - 1),
+            Is.EqualTo(1));
+
         Assert.That(
             partida.JugadorHumano.Mapa
-                .ObtenerCasilla(2, 2)
+                .ObtenerCasilla(spawn.X, spawn.Y)
                 .EstaOcupada,
             Is.True);
+    }
+
+    [Test]
+    public async Task EntrenamientoConcurrenteMaquina_UsaColaYSpawnPropios()
+    {
+        Partida partida =
+            CrearPartida();
+
+        var estado =
+            new EstadoPartidaService();
+
+        estado.EstablecerPartida(
+            partida);
+
+        using var gestor =
+            new GestorProcesosConcurrentes();
+
+        var servicio =
+            new ServicioAccionesConcurrentes(
+                estado,
+                gestor,
+                TimeSpan.Zero);
+
+        ProcesoConcurrente proceso =
+            servicio.IniciarEntrenamiento(
+                CrearRequestMaquina(
+                    "Arquero",
+                    4,
+                    4));
+
+        await proceso.Finalizacion;
+
+        Assert.That(
+            servicio.IntentarObtenerResultado(
+                proceso.Id,
+                out ResultadoProcesoConcurrente resultado),
+            Is.True);
+
+        Assert.That(
+            resultado.Estado,
+            Is.EqualTo(
+                EstadoProcesoConcurrente.Completado));
+
+        Assert.That(
+            resultado.Resultado?.Exito,
+            Is.True,
+            resultado.Resultado?.Mensaje);
+
+        Assert.That(
+            partida.JugadorMaquina.Unidades.Count,
+            Is.EqualTo(1));
+
+        Assert.That(
+            partida.JugadorHumano.Unidades,
+            Is.Empty);
+
+        Coordenada spawn =
+            partida.JugadorMaquina.Unidades[0]
+                .Coordenada;
+
+        Assert.That(
+            Math.Abs(spawn.X - 5) +
+            Math.Abs(spawn.Y - 5),
+            Is.EqualTo(1));
     }
 
     [Test]
@@ -106,7 +179,7 @@ public class EntrenamientoConcurrenteTests
     }
 
     [Test]
-    public async Task DosEntrenamientos_MismaCasilla_SoloUnoSeAplica()
+    public async Task DosEntrenamientos_SeEncolanYAmbosUsanSpawnSeguro()
     {
         Partida partida = CrearPartida();
 
@@ -118,7 +191,7 @@ public class EntrenamientoConcurrenteTests
         var servicio = new ServicioAccionesConcurrentes(
             estado,
             gestor,
-            TimeSpan.FromMilliseconds(100));
+            TimeSpan.Zero);
 
         ProcesoConcurrente primero =
             servicio.IniciarEntrenamiento(
@@ -128,46 +201,20 @@ public class EntrenamientoConcurrenteTests
             servicio.IniciarEntrenamiento(
                 CrearRequest("Monje", 3, 3));
 
-        Assert.That(
-            gestor.ProcesosActivos,
-            Is.EqualTo(2));
-
         await Task.WhenAll(
             primero.Finalizacion,
             segundo.Finalizacion);
 
-        var resultados =
-            new List<ResultadoProcesoConcurrente>();
-
-        while (servicio.IntentarObtenerResultado(
-            out ResultadoProcesoConcurrente resultado))
-        {
-            resultados.Add(resultado);
-        }
-
-        Assert.That(resultados.Count, Is.EqualTo(2));
-
-        Assert.That(
-            resultados.Count(
-                r => r.Resultado != null &&
-                     r.Resultado.Exito),
-            Is.EqualTo(1));
-
-        Assert.That(
-            resultados.Count(
-                r => r.Resultado != null &&
-                     !r.Resultado.Exito),
-            Is.EqualTo(1));
-
         Assert.That(
             partida.JugadorHumano.Unidades.Count,
-            Is.EqualTo(1));
+            Is.EqualTo(2));
 
         Assert.That(
-            partida.JugadorHumano.Mapa
-                .ObtenerCasilla(3, 3)
-                .EstaOcupada,
-            Is.True);
+            partida.JugadorHumano.Unidades[0].Coordenada.X ==
+            partida.JugadorHumano.Unidades[1].Coordenada.X &&
+            partida.JugadorHumano.Unidades[0].Coordenada.Y ==
+            partida.JugadorHumano.Unidades[1].Coordenada.Y,
+            Is.False);
     }
 
     private static Partida CrearPartida()
@@ -186,6 +233,14 @@ public class EntrenamientoConcurrenteTests
             mapa,
             new RecursosJugador());
 
+        humano.Recursos.Agregar(TipoRecurso.Oro, 500);
+        humano.Recursos.Agregar(TipoRecurso.Madera, 500);
+        humano.Recursos.Agregar(TipoRecurso.Comida, 500);
+
+        maquina.Recursos.Agregar(TipoRecurso.Oro, 500);
+        maquina.Recursos.Agregar(TipoRecurso.Madera, 500);
+        maquina.Recursos.Agregar(TipoRecurso.Comida, 500);
+
         humano.AgregarEdificio(
             new CentroUrbano(
                 new Coordenada(1, 1)));
@@ -198,6 +253,27 @@ public class EntrenamientoConcurrenteTests
         mapa.ObtenerCasilla(5, 5).Ocupar();
 
         return new Partida(humano, maquina);
+    }
+
+    private static EntrenarRequest CrearRequestMaquina(
+        string tipoUnidad,
+        int x,
+        int y)
+    {
+        return new EntrenarRequest
+        {
+            EdificioOrigen = new CoordenadaRequest
+            {
+                X = 5,
+                Y = 5
+            },
+            TipoUnidad = tipoUnidad,
+            Destino = new CoordenadaRequest
+            {
+                X = x,
+                Y = y
+            }
+        };
     }
 
     private static EntrenarRequest CrearRequest(

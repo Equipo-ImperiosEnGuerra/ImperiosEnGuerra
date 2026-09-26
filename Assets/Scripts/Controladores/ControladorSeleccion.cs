@@ -20,23 +20,51 @@ namespace ImperiosEnGuerra.Controladores
                 : string.Empty;
         public event System.Action<EntidadSeleccionableVista> SeleccionCambio;
         public bool CapturandoDestino { get; private set; }
+        public bool CapturandoRecurso { get; private set; }
         public bool CapturandoObjetivoEntidad { get; private set; }
         public event System.Action<int, int> DestinoSeleccionado;
         public event System.Action<EntidadSeleccionableVista> ObjetivoEntidadSeleccionado;
         public event System.Action CapturaCancelada;
         private VistaPartida vistaSuscrita;
 
+        public bool InteraccionBloqueada { get; private set; }
+
+        public void BloquearInteraccion()
+        {
+            InteraccionBloqueada = true;
+            CancelarCapturaDestino();
+            LimpiarSeleccion();
+        }
+
+        public void DesbloquearInteraccion()
+        {
+            InteraccionBloqueada = false;
+        }
+
         public void IniciarCapturaDestino()
         {
             CapturandoObjetivoEntidad = false;
+            CapturandoRecurso = false;
             CapturandoDestino = true;
         }
 
-        public void FinalizarCapturaDestino() => CapturandoDestino = false;
+        public void IniciarCapturaRecurso()
+        {
+            CapturandoObjetivoEntidad = false;
+            CapturandoRecurso = true;
+            CapturandoDestino = true;
+        }
+
+        public void FinalizarCapturaDestino()
+        {
+            CapturandoDestino = false;
+            CapturandoRecurso = false;
+        }
 
         public void IniciarCapturaObjetivoEntidad()
         {
             CapturandoDestino = false;
+            CapturandoRecurso = false;
             CapturandoObjetivoEntidad = true;
         }
 
@@ -46,6 +74,7 @@ namespace ImperiosEnGuerra.Controladores
         private void CancelarCapturaDestino()
         {
             CapturandoDestino = false;
+            CapturandoRecurso = false;
             CapturandoObjetivoEntidad = false;
             CapturaCancelada?.Invoke();
         }
@@ -77,6 +106,9 @@ namespace ImperiosEnGuerra.Controladores
 
         private void Update()
         {
+            if (InteraccionBloqueada)
+                return;
+
             if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
                 if (CapturandoDestino || CapturandoObjetivoEntidad)
@@ -119,6 +151,36 @@ namespace ImperiosEnGuerra.Controladores
                 new Vector3(pantalla.x, pantalla.y, -camara.transform.position.z));
             if (CapturandoDestino)
             {
+                if (CapturandoRecurso)
+                {
+                    EntidadSeleccionableVista recurso =
+                        ObtenerRecursoEn(mundo);
+
+                    if (recurso != null)
+                    {
+                        DestinoSeleccionado?.Invoke(
+                            recurso.X,
+                            recurso.Y);
+
+                        return;
+                    }
+
+                    // Si mientras espera un recurso el jugador hace clic
+                    // sobre otra entidad, cambia la selección en lugar de
+                    // quedar atrapado en el modo Recolectar.
+                    EntidadSeleccionableVista entidad =
+                        ObtenerEntidadEn(mundo);
+
+                    if (entidad != null)
+                    {
+                        CancelarCapturaDestino();
+                        Seleccionar(
+                            entidad);
+                    }
+
+                    return;
+                }
+
                 if (vistaPartida.TryObtenerCoordenadaLogica(mundo, out int x, out int y))
                     DestinoSeleccionado?.Invoke(x, y);
                 // El clic de destino se consume incluso si queda fuera del mapa.
@@ -129,11 +191,79 @@ namespace ImperiosEnGuerra.Controladores
 
             if (CapturandoObjetivoEntidad)
             {
-                ObjetivoEntidadSeleccionado?.Invoke(candidata);
+                ProcesarObjetivoEntidad(
+                    candidata);
+
                 return;
             }
 
             Seleccionar(candidata);
+        }
+
+        private void ProcesarObjetivoEntidad(
+            EntidadSeleccionableVista candidata)
+        {
+            if (!CapturandoObjetivoEntidad)
+                return;
+
+            if (candidata == null)
+            {
+                CancelarCapturaDestino();
+                return;
+            }
+
+            ObjetivoEntidadSeleccionado?.Invoke(
+                candidata);
+
+            // Un objetivo válido consume la captura desde ControladorAcciones.
+            // Si sigue activa, el clic fue sobre una entidad no válida para
+            // esa orden: se cancela la intención y se selecciona normalmente.
+            if (CapturandoObjetivoEntidad)
+            {
+                CancelarCapturaDestino();
+                Seleccionar(
+                    candidata);
+            }
+        }
+
+        private EntidadSeleccionableVista ObtenerRecursoEn(
+            Vector3 mundo)
+        {
+            Physics2D.SyncTransforms();
+
+            EntidadSeleccionableVista candidata = null;
+            float mejorDistancia = float.PositiveInfinity;
+
+            foreach (Collider2D collider in Physics2D.OverlapPointAll(mundo))
+            {
+                var entidad =
+                    collider.GetComponent<EntidadSeleccionableVista>();
+
+                if (entidad == null ||
+                    !entidad.isActiveAndEnabled ||
+                    entidad.Categoria != CategoriaEntidadVisual.Recurso ||
+                    !entidad.transform.IsChildOf(vistaPartida.transform) ||
+                    entidad.Renderer == null ||
+                    !entidad.Renderer.enabled)
+                {
+                    continue;
+                }
+
+                Vector2 centroVisual =
+                    entidad.Renderer.bounds.center;
+
+                float distancia =
+                    ((Vector2)mundo - centroVisual).sqrMagnitude;
+
+                if (candidata == null ||
+                    distancia < mejorDistancia)
+                {
+                    candidata = entidad;
+                    mejorDistancia = distancia;
+                }
+            }
+
+            return candidata;
         }
 
         private EntidadSeleccionableVista ObtenerEntidadEn(Vector3 mundo)

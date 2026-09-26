@@ -84,6 +84,249 @@ public class RecoleccionUnityTests
     }
 
     [Test]
+    public void HudContextual_FondoNoBloqueaClicksDelMapa()
+    {
+        var hudRaiz =
+            new GameObject(
+                "HudRaycast",
+                typeof(RectTransform));
+
+        try
+        {
+            var panel =
+                new GameObject(
+                    "PanelContextual",
+                    typeof(RectTransform),
+                    typeof(Image));
+
+            panel.transform.SetParent(
+                hudRaiz.transform,
+                false);
+
+            var seleccionTexto =
+                new GameObject(
+                    "Seleccion",
+                    typeof(RectTransform),
+                    typeof(Text));
+
+            seleccionTexto.transform.SetParent(
+                panel.transform,
+                false);
+
+            var mensajeTexto =
+                new GameObject(
+                    "Mensaje",
+                    typeof(RectTransform),
+                    typeof(Text));
+
+            mensajeTexto.transform.SetParent(
+                panel.transform,
+                false);
+
+            var mover =
+                new GameObject(
+                    "Mover",
+                    typeof(RectTransform),
+                    typeof(Image),
+                    typeof(Button));
+
+            mover.transform.SetParent(
+                panel.transform,
+                false);
+
+            hudRaiz.AddComponent<VistaHud>();
+
+            Assert.That(
+                panel.GetComponent<Image>()
+                    .raycastTarget,
+                Is.False,
+                "El fondo informativo no debe bloquear unidades detrás del HUD.");
+
+            Assert.That(
+                seleccionTexto.GetComponent<Text>()
+                    .raycastTarget,
+                Is.False);
+
+            Assert.That(
+                mensajeTexto.GetComponent<Text>()
+                    .raycastTarget,
+                Is.False);
+
+            Assert.That(
+                mover.GetComponent<Image>()
+                    .raycastTarget,
+                Is.True,
+                "Los botones sí deben seguir recibiendo clics.");
+
+            RectTransform panelRect =
+                panel.GetComponent<RectTransform>();
+
+            Assert.That(
+                panelRect.anchorMin,
+                Is.EqualTo(
+                    Vector2.zero));
+
+            Assert.That(
+                panelRect.anchorMax,
+                Is.EqualTo(
+                    Vector2.zero));
+
+            Assert.That(
+                panelRect.pivot,
+                Is.EqualTo(
+                    Vector2.zero));
+
+            Assert.That(
+                panelRect.offsetMin,
+                Is.EqualTo(
+                    new Vector2(
+                        12f,
+                        12f)));
+
+            Assert.That(
+                panelRect.offsetMax,
+                Is.EqualTo(
+                    new Vector2(
+                        282f,
+                        242f)),
+                "El HUD contextual debe quedar compacto abajo a la izquierda.");
+        }
+        finally
+        {
+            Object.DestroyImmediate(
+                hudRaiz);
+        }
+    }
+
+    [Test]
+    public void AldeanoQuieto_DuranteDosSnapshots_MuestraAviso()
+    {
+        var estado =
+            new EstadoPartidaDto
+            {
+                jugadorHumano =
+                    new JugadorEstadoDto
+                    {
+                        unidades =
+                            new[]
+                            {
+                                new UnidadEstadoDto
+                                {
+                                    id = IdAldeano,
+                                    tipo = "Aldeano",
+                                    estado = "Idle",
+                                    ordenActiva = "",
+                                    coordenada =
+                                        new CoordenadaEstadoDto
+                                        {
+                                            x = 1,
+                                            y = 1
+                                        }
+                                }
+                            }
+                    }
+            };
+
+        Invocar(
+            conexion,
+            "ActualizarAvisosAldeanosQuietos",
+            estado);
+
+        Invocar(
+            conexion,
+            "ActualizarAvisosAldeanosQuietos",
+            estado);
+
+        Invocar(
+            conexion,
+            "ActualizarAvisosAldeanosQuietos",
+            estado);
+
+        Transform aviso =
+            raiz.transform.Find(
+                "AvisoAldeano");
+
+        Assert.That(
+            aviso,
+            Is.Not.Null);
+
+        Assert.That(
+            aviso.gameObject.activeSelf,
+            Is.True);
+
+        Text textoAviso =
+            aviso.GetComponentInChildren<Text>(
+                true);
+
+        Assert.That(
+            textoAviso.text,
+            Does.Contain(
+                "Aldeano quieto"));
+
+        RectTransform rect =
+            aviso.GetComponent<RectTransform>();
+
+        Assert.That(
+            rect.sizeDelta.x,
+            Is.LessThanOrEqualTo(350f));
+
+        Assert.That(
+            rect.anchorMin.y,
+            Is.EqualTo(1f));
+    }
+
+    [Test]
+    public void AldeanoQueSigueMoviendose_NoMuestraAvisoQuieto()
+    {
+        for (int x = 1; x <= 4; x++)
+        {
+            var estado =
+                new EstadoPartidaDto
+                {
+                    jugadorHumano =
+                        new JugadorEstadoDto
+                        {
+                            unidades =
+                                new[]
+                                {
+                                    new UnidadEstadoDto
+                                    {
+                                        id = IdAldeano,
+                                        tipo = "Aldeano",
+                                        estado = "Idle",
+                                        ordenActiva = "",
+                                        coordenada =
+                                            new CoordenadaEstadoDto
+                                            {
+                                                x = x,
+                                                y = 1
+                                            }
+                                    }
+                                }
+                        }
+                };
+
+            Invocar(
+                conexion,
+                "ActualizarAvisosAldeanosQuietos",
+                estado);
+        }
+
+        Transform aviso =
+            raiz.transform.Find(
+                "AvisoAldeano");
+
+        Assert.That(
+            aviso,
+            Is.Not.Null);
+
+        Assert.That(
+            aviso.gameObject.activeSelf,
+            Is.False,
+            "Mientras el Aldeano siga cambiando de casilla no debe considerarse quieto.");
+    }
+
+    [Test]
     public void AldeanoHumano_PreparaRecoleccion()
     {
         Invocar(
@@ -93,6 +336,10 @@ public class RecoleccionUnityTests
 
         Assert.That(
             seleccion.CapturandoDestino,
+            Is.True);
+
+        Assert.That(
+            seleccion.CapturandoRecurso,
             Is.True);
 
         Assert.That(
@@ -114,6 +361,67 @@ public class RecoleccionUnityTests
         Assert.That(
             conexion.RecoleccionEnCurso,
             Is.False);
+    }
+
+    [Test]
+    public void CapturaRecurso_EntreCollidersSuperpuestos_UsaElMasCercano()
+    {
+        Texture2D textura =
+            new Texture2D(8, 8);
+
+        Sprite sprite =
+            Sprite.Create(
+                textura,
+                new Rect(0, 0, 8, 8),
+                new Vector2(0.5f, 0.5f),
+                1f);
+
+        try
+        {
+            EntidadSeleccionableVista oro =
+                CrearRecursoVisual(
+                    "Oro",
+                    0,
+                    0,
+                    Vector3.zero,
+                    sprite);
+
+            EntidadSeleccionableVista madera =
+                CrearRecursoVisual(
+                    "Madera",
+                    2,
+                    0,
+                    new Vector3(2f, 0f, 0f),
+                    sprite);
+
+            EntidadSeleccionableVista resultado =
+                (EntidadSeleccionableVista)
+                InvocarConRetorno(
+                    seleccion,
+                    "ObtenerRecursoEn",
+                    new Vector3(1.8f, 0f, 0f));
+
+            Assert.That(
+                resultado,
+                Is.SameAs(madera));
+
+            Assert.That(
+                resultado.TipoLogico,
+                Is.EqualTo("Madera"));
+
+            Assert.That(
+                resultado.X,
+                Is.EqualTo(2));
+
+            Assert.That(
+                oro,
+                Is.Not.SameAs(resultado));
+        }
+        finally
+        {
+            Object.DestroyImmediate(sprite);
+            Object.DestroyImmediate(textura);
+        }
     }
 
     [Test]
@@ -318,6 +626,79 @@ public class RecoleccionUnityTests
     }
 
     [Test]
+    public void RecoleccionEnCurso_NoBloqueaPrepararOtroAldeano()
+    {
+        CampoAutomatico(
+            conexion,
+            "RecoleccionEnCurso",
+            true);
+
+        Invocar(
+            acciones,
+            "PrepararAccion",
+            "Recolectar");
+
+        Assert.That(
+            seleccion.CapturandoDestino,
+            Is.True);
+
+        Assert.That(
+            seleccion.CapturandoRecurso,
+            Is.True);
+    }
+
+    [Test]
+    public void UnidadConOrdenActiva_PermiteCancelar()
+    {
+        aldeano.Configurar(
+            CategoriaEntidadVisual.Unidad,
+            IdAldeano,
+            "Aldeano",
+            "Humano",
+            1,
+            1,
+            "Recolectando",
+            "Recolectar");
+
+        MethodInfo metodo =
+            typeof(ControladorAcciones)
+                .GetMethod(
+                    "PermiteOpcion",
+                    BindingFlags.Static |
+                    BindingFlags.NonPublic);
+
+        Assert.That(
+            metodo,
+            Is.Not.Null);
+
+        bool permiteCancelar =
+            (bool)metodo.Invoke(
+                null,
+                new object[]
+                {
+                    aldeano,
+                    "Cancelar"
+                });
+
+        bool permiteMover =
+            (bool)metodo.Invoke(
+                null,
+                new object[]
+                {
+                    aldeano,
+                    "Mover"
+                });
+
+        Assert.That(
+            permiteCancelar,
+            Is.True);
+
+        Assert.That(
+            permiteMover,
+            Is.False);
+    }
+
+    [Test]
     public void CambioSeleccion_CancelaRecoleccion()
     {
         Invocar(
@@ -340,6 +721,67 @@ public class RecoleccionUnityTests
         Assert.That(
             conexion.RecoleccionEnCurso,
             Is.False);
+    }
+
+    private EntidadSeleccionableVista CrearRecursoVisual(
+        string tipo,
+        int x,
+        int y,
+        Vector3 posicion,
+        Sprite sprite)
+    {
+        var objeto =
+            new GameObject(
+                "Recurso_" + tipo,
+                typeof(SpriteRenderer),
+                typeof(BoxCollider2D),
+                typeof(EntidadSeleccionableVista));
+
+        objeto.transform.SetParent(
+            vista.transform);
+
+        objeto.transform.position =
+            posicion;
+
+        SpriteRenderer renderer =
+            objeto.GetComponent<SpriteRenderer>();
+
+        renderer.sprite =
+            sprite;
+
+        EntidadSeleccionableVista entidad =
+            objeto.GetComponent<EntidadSeleccionableVista>();
+
+        entidad.Configurar(
+            CategoriaEntidadVisual.Recurso,
+            "",
+            tipo,
+            "",
+            x,
+            y);
+
+        BoxCollider2D collider =
+            objeto.GetComponent<BoxCollider2D>();
+
+        collider.size =
+            sprite.bounds.size;
+
+        return entidad;
+    }
+
+    private static object InvocarConRetorno(
+        object objeto,
+        string nombre,
+        params object[] argumentos)
+    {
+        return objeto.GetType()
+            .GetMethod(
+                nombre,
+                BindingFlags.Instance |
+                BindingFlags.NonPublic)
+            .Invoke(
+                objeto,
+                argumentos);
     }
 
     private static object LeerCampo(

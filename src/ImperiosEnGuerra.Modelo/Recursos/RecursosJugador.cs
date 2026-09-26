@@ -106,5 +106,53 @@ namespace ImperiosEnGuerra.Modelo.Recursos
                 return true;
             }
         }
+        /// <summary>
+        /// Descuenta un costo completo bajo un único lock para impedir doble gasto.
+        /// </summary>
+        public bool IntentarGastar(
+            CostoRecursos costo)
+        {
+            if (costo == null)
+            {
+                return false;
+            }
+
+            lock (sincronizacion)
+            {
+                if (cantidades[TipoRecurso.Oro] < costo.Oro ||
+                    cantidades[TipoRecurso.Madera] < costo.Madera ||
+                    cantidades[TipoRecurso.Comida] < costo.Comida)
+                {
+                    return false;
+                }
+
+                cantidades[TipoRecurso.Oro] -= costo.Oro;
+                cantidades[TipoRecurso.Madera] -= costo.Madera;
+                cantidades[TipoRecurso.Comida] -= costo.Comida;
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// Reintegra un costo previamente reservado. Se usa por la política
+        /// de cancelación de la Etapa 4.5: reembolso completo si la orden no termina.
+        /// </summary>
+        public void Reintegrar(
+            CostoRecursos costo)
+        {
+            if (costo == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(costo));
+            }
+
+            lock (sincronizacion)
+            {
+                cantidades[TipoRecurso.Oro] += costo.Oro;
+                cantidades[TipoRecurso.Madera] += costo.Madera;
+                cantidades[TipoRecurso.Comida] += costo.Comida;
+            }
+        }
+
     }
 }

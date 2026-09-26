@@ -157,13 +157,15 @@ namespace ImperiosEnGuerra.Tests.Editor
             string maquina = contenido.Substring(inicioMaquina);
             VerificarLineas(humano,
                 "Nombre=Ana", "Tipo=Humano", "Mapa=5x4",
-                "Oro=11", "Madera=12", "Comida=13", "Edificios:",
-                "CentroUrbano=(0,0)", "RecursosMapa:",
+                "Oro=11", "Madera=32", "Comida=43", "Edificios:",
+                "CentroUrbano=(0,0)", "Unidades:",
+                "Aldeano=(0,1)", "Aldeano=(0,2)", "RecursosMapa:",
                 "Oro=(1,0)", "Madera=(2,0)", "Comida=(3,0)");
             VerificarLineas(maquina,
                 "Nombre=Rival", "Tipo=Maquina", "Mapa=6x5",
-                "Oro=21", "Madera=22", "Comida=23", "Edificios:",
-                "CentroUrbano=(5,4)", "RecursosMapa:",
+                "Oro=21", "Madera=42", "Comida=53", "Edificios:",
+                "CentroUrbano=(5,4)", "Unidades:",
+                "Aldeano=(4,4)", "Aldeano=(5,3)", "RecursosMapa:",
                 "Oro=(1,1)", "Madera=(2,1)", "Comida=(3,1)");
 
             servicio.GuardarConfiguracionInicial(partida);

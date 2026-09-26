@@ -57,7 +57,7 @@ namespace ImperiosEnGuerra.Servicios
 
         /// <summary>
         /// Genera una descripción determinista del estado recibido de ambos jugadores y la guarda mediante GuardarConfiguracion.
-        /// Incluye nombres, tipos, dimensiones, saldos, edificios y recursos físicos; usa números con cultura invariable y saltos de línea LF.
+        /// Incluye nombres, tipos, dimensiones, saldos, edificios, unidades y recursos físicos; usa números con cultura invariable y saltos de línea LF.
         /// </summary>
         /// <param name="partida">Partida cuyo estado actual se registra como configuración inicial.</param>
         /// <exception cref="ArgumentNullException">La partida es nula.</exception>
@@ -72,9 +72,48 @@ namespace ImperiosEnGuerra.Servicios
 
             StringBuilder texto = new StringBuilder();
             texto.Append("PARTIDA\n");
-            AgregarJugador(texto, "JUGADOR_HUMANO", partida.JugadorHumano);
-            texto.Append('\n');
-            AgregarJugador(texto, "JUGADOR_MAQUINA", partida.JugadorMaquina);
+
+            for (int i = 0;
+                 i < partida.Jugadores.Count;
+                 i++)
+            {
+                Jugador jugador =
+                    partida.Jugadores[i];
+
+                string seccion;
+
+                if (ReferenceEquals(
+                        jugador,
+                        partida.JugadorHumano))
+                {
+                    seccion =
+                        "JUGADOR_HUMANO";
+                }
+                else
+                {
+                    int indiceMaquina =
+                        partida.JugadoresMaquina
+                            .ToList()
+                            .IndexOf(
+                                jugador);
+
+                    seccion =
+                        indiceMaquina <= 0
+                            ? "JUGADOR_MAQUINA"
+                            : $"JUGADOR_MAQUINA_{indiceMaquina + 1}";
+                }
+
+                AgregarJugador(
+                    texto,
+                    seccion,
+                    jugador);
+
+                if (i <
+                    partida.Jugadores.Count - 1)
+                {
+                    texto.Append('\n');
+                }
+            }
 
             GuardarConfiguracion(texto.ToString());
         }
@@ -106,6 +145,24 @@ namespace ImperiosEnGuerra.Servicios
                 texto.AppendFormat(CultureInfo.InvariantCulture,
                     "{0}=({1},{2})\n", edificio.GetType().Name,
                     edificio.Coordenada.X, edificio.Coordenada.Y);
+            }
+
+            texto.Append("Unidades:\n");
+            foreach (var unidad in jugador.Unidades
+                .OrderBy(unidad => unidad.GetType().Name, StringComparer.Ordinal)
+                .ThenBy(unidad => unidad.Coordenada?.X ?? int.MinValue)
+                .ThenBy(unidad => unidad.Coordenada?.Y ?? int.MinValue))
+            {
+                if (unidad.Coordenada == null)
+                {
+                    texto.Append(unidad.GetType().Name)
+                        .Append("=(sin_posicion)\n");
+                    continue;
+                }
+
+                texto.AppendFormat(CultureInfo.InvariantCulture,
+                    "{0}=({1},{2})\n", unidad.GetType().Name,
+                    unidad.Coordenada.X, unidad.Coordenada.Y);
             }
 
             texto.Append("RecursosMapa:\n");
@@ -166,6 +223,85 @@ namespace ImperiosEnGuerra.Servicios
             }
 
             File.WriteAllText(Path.Combine(directorioBase, ArchivoResultadoFinal), contenido);
+        }
+
+        /// <summary>
+        /// Guarda el resultado estructurado de una partida ya finalizada.
+        /// </summary>
+        public void GuardarResultadoPartidaFinalizada(Partida partida)
+        {
+            if (partida == null)
+                throw new ArgumentNullException(nameof(partida));
+
+            if (!partida.Finalizada ||
+                partida.Ganador == null)
+            {
+                throw new InvalidOperationException(
+                    "La partida debe estar finalizada y tener un ganador antes de guardar el resultado.");
+            }
+
+            Jugador[] perdedores =
+                ReferenceEquals(
+                    partida.Ganador,
+                    partida.JugadorHumano)
+                    ? partida.JugadoresMaquina
+                        .ToArray()
+                    : new[]
+                    {
+                        partida.JugadorHumano
+                    };
+
+            StringBuilder texto =
+                new StringBuilder();
+
+            texto.Append("RESULTADO_FINAL\n");
+            texto.Append("Estado=Finalizada\n");
+            texto.Append("ReglaVictoria=AND\n");
+            texto.Append("GanadorTipo=")
+                .Append(partida.Ganador.Tipo)
+                .Append('\n');
+            texto.Append("GanadorNombre=")
+                .Append(partida.Ganador.Nombre)
+                .Append('\n');
+
+            if (perdedores.Length > 0)
+            {
+                texto.Append("PerdedorTipo=")
+                    .Append(perdedores[0].Tipo)
+                    .Append('\n');
+
+                texto.Append("PerdedorNombre=")
+                    .Append(perdedores[0].Nombre)
+                    .Append('\n');
+            }
+
+            texto.Append("Perdedores=")
+                .Append(perdedores.Length)
+                .Append('\n');
+
+            for (int i = 0;
+                 i < perdedores.Length;
+                 i++)
+            {
+                texto.Append("Perdedor")
+                    .Append(i + 1)
+                    .Append("Tipo=")
+                    .Append(perdedores[i].Tipo)
+                    .Append('\n');
+
+                texto.Append("Perdedor")
+                    .Append(i + 1)
+                    .Append("Nombre=")
+                    .Append(perdedores[i].Nombre)
+                    .Append('\n');
+            }
+
+            texto.Append("Motivo=")
+                .Append(partida.MotivoFinalizacion)
+                .Append('\n');
+
+            GuardarResultadoFinal(
+                texto.ToString());
         }
     }
 }
