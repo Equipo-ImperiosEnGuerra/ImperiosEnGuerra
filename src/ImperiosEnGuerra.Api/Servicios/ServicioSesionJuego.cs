@@ -15,6 +15,7 @@ public sealed class ServicioSesionJuego : IDisposable
     private readonly ServicioAccionesConcurrentes acciones;
     private readonly ServicioJugadorMaquina jugadorMaquina;
     private readonly ServicioReaccionesAutomaticas reacciones;
+    private readonly ServicioRegeneracionRecursos regeneracionRecursos;
     private readonly TimeSpan tiempoMaximoSinLatido;
     private readonly TimeSpan intervaloRevision;
     private readonly object sincronizacion = new();
@@ -32,12 +33,14 @@ public sealed class ServicioSesionJuego : IDisposable
         EstadoPartidaService estadoPartida,
         ServicioAccionesConcurrentes acciones,
         ServicioJugadorMaquina jugadorMaquina,
-        ServicioReaccionesAutomaticas reacciones)
+        ServicioReaccionesAutomaticas reacciones,
+        ServicioRegeneracionRecursos regeneracionRecursos)
         : this(
             estadoPartida,
             acciones,
             jugadorMaquina,
             reacciones,
+            regeneracionRecursos,
             TimeSpan.FromSeconds(5),
             TimeSpan.FromSeconds(1))
     {
@@ -48,6 +51,7 @@ public sealed class ServicioSesionJuego : IDisposable
         ServicioAccionesConcurrentes acciones,
         ServicioJugadorMaquina jugadorMaquina,
         ServicioReaccionesAutomaticas reacciones,
+        ServicioRegeneracionRecursos regeneracionRecursos,
         TimeSpan tiempoMaximoSinLatido,
         TimeSpan intervaloRevision)
     {
@@ -70,6 +74,11 @@ public sealed class ServicioSesionJuego : IDisposable
             reacciones
             ?? throw new ArgumentNullException(
                 nameof(reacciones));
+
+        this.regeneracionRecursos =
+            regeneracionRecursos
+            ?? throw new ArgumentNullException(
+                nameof(regeneracionRecursos));
 
         if (tiempoMaximoSinLatido <= TimeSpan.Zero)
         {
@@ -181,6 +190,7 @@ public sealed class ServicioSesionJuego : IDisposable
 
         jugadorMaquina.Detener();
         reacciones.Detener();
+        regeneracionRecursos.Detener();
         acciones.CancelarTodos();
 
         return estabaActiva;
@@ -190,6 +200,7 @@ public sealed class ServicioSesionJuego : IDisposable
     {
         jugadorMaquina.Iniciar();
         reacciones.Iniciar();
+        regeneracionRecursos.Iniciar();
     }
 
     private async Task MonitorearAsync(
@@ -223,6 +234,7 @@ public sealed class ServicioSesionJuego : IDisposable
                 {
                     jugadorMaquina.Detener();
                     reacciones.Detener();
+                    regeneracionRecursos.Detener();
                     acciones.CancelarTodos();
                 }
             }
