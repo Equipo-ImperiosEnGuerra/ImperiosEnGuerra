@@ -104,19 +104,24 @@ public sealed class ServicioJugadorMaquina : IDisposable
 
     public bool Detener()
     {
-        CancellationTokenSource? actual;
-
         lock (sincronizacion)
         {
-            actual =
+            CancellationTokenSource? actual =
                 cancelacion;
+
+            if (actual == null)
+                return false;
+
+            try
+            {
+                actual.Cancel();
+                return true;
+            }
+            catch (ObjectDisposedException)
+            {
+                return false;
+            }
         }
-
-        if (actual == null)
-            return false;
-
-        actual.Cancel();
-        return true;
     }
 
     public ProcesoConcurrente? EjecutarPaso()
@@ -519,21 +524,25 @@ public sealed class ServicioJugadorMaquina : IDisposable
 
     public void Dispose()
     {
-        CancellationTokenSource? actual;
-
         lock (sincronizacion)
         {
             if (dispuesto)
                 return;
 
             dispuesto = true;
-            actual =
-                cancelacion;
+
+            try
+            {
+                cancelacion?.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // El ciclo pudo finalizar y disponer su token justo antes.
+                // Dispose debe seguir siendo idempotente y seguro.
+            }
         }
 
         estadoPartida.PartidaFinalizada -=
             DetenerPorFinalizacion;
-
-        actual?.Cancel();
     }
 }
