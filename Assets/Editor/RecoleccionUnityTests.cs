@@ -215,7 +215,13 @@ public class RecoleccionUnityTests
                                     id = IdAldeano,
                                     tipo = "Aldeano",
                                     estado = "Recolectando",
-                                    ordenActiva = "Recolectar"
+                                    ordenActiva = "Recolectar",
+                                    coordenada =
+                                        new CoordenadaEstadoDto
+                                        {
+                                            x = 1,
+                                            y = 1
+                                        }
                                 }
                             }
                     }
@@ -235,7 +241,13 @@ public class RecoleccionUnityTests
                                     id = IdAldeano,
                                     tipo = "Aldeano",
                                     estado = "Idle",
-                                    ordenActiva = ""
+                                    ordenActiva = "",
+                                    coordenada =
+                                        new CoordenadaEstadoDto
+                                        {
+                                            x = 1,
+                                            y = 1
+                                        }
                                 }
                             }
                     }
@@ -258,6 +270,16 @@ public class RecoleccionUnityTests
             avisoAntes.gameObject.activeSelf,
             Is.False,
             "El primer snapshot solo debe inicializar el seguimiento.");
+
+        Invocar(
+            conexion,
+            "ActualizarAvisosAldeanos",
+            libre);
+
+        Invocar(
+            conexion,
+            "ActualizarAvisosAldeanos",
+            libre);
 
         Invocar(
             conexion,
@@ -291,6 +313,163 @@ public class RecoleccionUnityTests
         Assert.That(
             rect.anchorMin.y,
             Is.EqualTo(1f));
+    }
+
+    [Test]
+    public void AldeanoEnMovimiento_NoMuestraAvisoSinTarea()
+    {
+        var trabajando =
+            new EstadoPartidaDto
+            {
+                jugadorHumano =
+                    new JugadorEstadoDto
+                    {
+                        unidades =
+                            new[]
+                            {
+                                new UnidadEstadoDto
+                                {
+                                    id = IdAldeano,
+                                    tipo = "Aldeano",
+                                    estado = "Recolectando",
+                                    ordenActiva = "Recolectar",
+                                    coordenada =
+                                        new CoordenadaEstadoDto
+                                        {
+                                            x = 1,
+                                            y = 1
+                                        }
+                                }
+                            }
+                    }
+            };
+
+        var moviendo =
+            new EstadoPartidaDto
+            {
+                jugadorHumano =
+                    new JugadorEstadoDto
+                    {
+                        unidades =
+                            new[]
+                            {
+                                new UnidadEstadoDto
+                                {
+                                    id = IdAldeano,
+                                    tipo = "Aldeano",
+                                    estado = "Moviendo",
+                                    ordenActiva = "Mover",
+                                    coordenada =
+                                        new CoordenadaEstadoDto
+                                        {
+                                            x = 2,
+                                            y = 1
+                                        }
+                                }
+                            }
+                    }
+            };
+
+        Invocar(
+            conexion,
+            "ActualizarAvisosAldeanos",
+            trabajando);
+
+        Invocar(
+            conexion,
+            "ActualizarAvisosAldeanos",
+            moviendo);
+
+        Transform aviso =
+            raiz.transform.Find(
+                "AvisoAldeano");
+
+        Assert.That(
+            aviso,
+            Is.Not.Null);
+
+        Assert.That(
+            aviso.gameObject.activeSelf,
+            Is.False,
+            "Mover sigue siendo una tarea activa y no debe disparar el aviso.");
+    }
+
+    [Test]
+    public void AldeanoIdleQueSigueCambiandoDeCasilla_NoMuestraAviso()
+    {
+        var trabajando =
+            new EstadoPartidaDto
+            {
+                jugadorHumano =
+                    new JugadorEstadoDto
+                    {
+                        unidades =
+                            new[]
+                            {
+                                new UnidadEstadoDto
+                                {
+                                    id = IdAldeano,
+                                    tipo = "Aldeano",
+                                    estado = "Recolectando",
+                                    ordenActiva = "Recolectar",
+                                    coordenada =
+                                        new CoordenadaEstadoDto
+                                        {
+                                            x = 1,
+                                            y = 1
+                                        }
+                                }
+                            }
+                    }
+            };
+
+        Invocar(
+            conexion,
+            "ActualizarAvisosAldeanos",
+            trabajando);
+
+        for (int x = 2; x <= 5; x++)
+        {
+            var paseo =
+                new EstadoPartidaDto
+                {
+                    jugadorHumano =
+                        new JugadorEstadoDto
+                        {
+                            unidades =
+                                new[]
+                                {
+                                    new UnidadEstadoDto
+                                    {
+                                        id = IdAldeano,
+                                        tipo = "Aldeano",
+                                        estado = "Idle",
+                                        ordenActiva = "",
+                                        coordenada =
+                                            new CoordenadaEstadoDto
+                                            {
+                                                x = x,
+                                                y = 1
+                                            }
+                                    }
+                                }
+                        }
+                };
+
+            Invocar(
+                conexion,
+                "ActualizarAvisosAldeanos",
+                paseo);
+        }
+
+        Transform aviso =
+            raiz.transform.Find(
+                "AvisoAldeano");
+
+        Assert.That(
+            aviso.gameObject.activeSelf,
+            Is.False,
+            "El paseo automático puede verse como Idle, pero mientras cambie de casilla no está parado.");
     }
 
     [Test]
