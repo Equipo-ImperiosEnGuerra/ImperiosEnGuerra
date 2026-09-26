@@ -112,7 +112,7 @@ namespace ImperiosEnGuerra.Vistas
                     Vector2.one,
                     Vector2.zero,
                     Vector2.zero,
-                    new Color(0.025f, 0.035f, 0.055f, 0.985f));
+                    new Color(0.018f, 0.03f, 0.052f, 0.992f));
 
             fondo.raycastTarget = true;
 
@@ -134,55 +134,111 @@ namespace ImperiosEnGuerra.Vistas
                 CrearContenedorCentrado(
                     padre,
                     "Principal",
-                    new Vector2(650f, 520f));
+                    new Vector2(700f, 560f));
+
+            CrearBarraDecorativa(
+                panel.transform,
+                "LineaSuperior",
+                new Vector2(0f, 242f),
+                new Vector2(590f, 4f),
+                new Color(0.85f, 0.65f, 0.22f, 1f));
 
             CrearTexto(
                 panel.transform,
                 "Titulo",
                 "IMPERIOS EN GUERRA",
-                48,
-                new Vector2(0f, 180f),
-                new Vector2(600f, 74f),
+                50,
+                new Vector2(0f, 188f),
+                new Vector2(620f, 78f),
                 TextAnchor.MiddleCenter);
 
-            CrearTexto(
+            Text subtitulo =
+                CrearTexto(
+                    panel.transform,
+                    "Subtitulo",
+                    "Construye · reúne recursos · conquista",
+                    21,
+                    new Vector2(0f, 132f),
+                    new Vector2(590f, 40f),
+                    TextAnchor.MiddleCenter);
+
+            subtitulo.color =
+                new Color(0.78f, 0.84f, 0.9f);
+
+            Text desafio =
+                CrearTexto(
+                    panel.transform,
+                    "Desafio",
+                    "1 HUMANO  •  3 IMPERIOS",
+                    16,
+                    new Vector2(0f, 92f),
+                    new Vector2(420f, 32f),
+                    TextAnchor.MiddleCenter);
+
+            desafio.color =
+                new Color(0.95f, 0.78f, 0.34f);
+
+            CrearBarraDecorativa(
                 panel.transform,
-                "Subtitulo",
-                "Construye, reúne recursos y conquista el campo de batalla",
-                22,
-                new Vector2(0f, 125f),
-                new Vector2(560f, 45f),
-                TextAnchor.MiddleCenter);
+                "FaccionMorada",
+                new Vector2(-48f, 64f),
+                new Vector2(84f, 5f),
+                new Color(0.58f, 0.32f, 0.75f, 1f));
+
+            CrearBarraDecorativa(
+                panel.transform,
+                "FaccionVerde",
+                new Vector2(48f, 64f),
+                new Vector2(84f, 5f),
+                new Color(0.31f, 0.66f, 0.39f, 1f));
+
+            CrearBarraDecorativa(
+                panel.transform,
+                "FaccionAmarilla",
+                new Vector2(144f, 64f),
+                new Vector2(84f, 5f),
+                new Color(0.9f, 0.72f, 0.22f, 1f));
 
             jugar =
                 CrearBoton(
                     panel.transform,
                     "Jugar",
                     "JUGAR",
-                    new Vector2(0f, 35f));
+                    new Vector2(0f, 12f));
 
             Button instrucciones =
                 CrearBoton(
                     panel.transform,
                     "Instrucciones",
                     "INSTRUCCIONES",
-                    new Vector2(0f, -35f));
+                    new Vector2(0f, -62f));
 
             Button salir =
                 CrearBoton(
                     panel.transform,
                     "Salir",
                     "SALIR",
-                    new Vector2(0f, -105f));
+                    new Vector2(0f, -136f));
+
+            CrearTexto(
+                panel.transform,
+                "Recursos",
+                "ORO   •   MADERA   •   COMIDA",
+                15,
+                new Vector2(0f, -190f),
+                new Vector2(500f, 28f),
+                TextAnchor.MiddleCenter)
+                .color =
+                    new Color(0.72f, 0.78f, 0.84f);
 
             estado =
                 CrearTexto(
                     panel.transform,
                     "Estado",
                     "",
-                    17,
-                    new Vector2(0f, -180f),
-                    new Vector2(560f, 64f),
+                    16,
+                    new Vector2(0f, -230f),
+                    new Vector2(590f, 48f),
                     TextAnchor.MiddleCenter);
 
             jugar.onClick.AddListener(
@@ -216,29 +272,31 @@ namespace ImperiosEnGuerra.Vistas
                 TextAnchor.MiddleCenter);
 
             const string instrucciones =
-                "1. EMPIEZA TU ECONOMÍA\n" +
-                "Comienzas con un Centro Urbano y Aldeanos. En la parte superior ves tu Oro, Madera y Comida. Haz clic en un Aldeano, pulsa RECOLECTAR y después haz clic sobre un recurso del mapa. El Aldeano caminará hasta él, recogerá recursos y los llevará a tu Centro Urbano.\n\n" +
+                "1. ECONOMÍA\n" +
+                "Empiezas con Centro Urbano y Aldeanos. Selecciona un Aldeano, pulsa RECOLECTAR y haz clic en Oro, Madera o Comida. Caminará, cargará y depositará el recurso en tu Centro Urbano.\n\n" +
                 "2. SELECCIONAR Y MOVER\n" +
-                "Haz clic sobre una unidad o edificio de tu bando. Sus datos y acciones aparecen abajo a la izquierda. Para mover una unidad, pulsa MOVER y luego haz clic en la casilla de destino. Si cambias de idea, puedes seleccionar otra unidad o usar CANCELAR cuando exista una orden activa.\n\n" +
+                "Haz clic en una unidad propia. Pulsa MOVER y elige una casilla. Una unidad solo mantiene una orden activa; puedes cancelar una orden y dar otra.\n\n" +
                 "3. CONSTRUIR Y ENTRENAR\n" +
-                "Selecciona un Aldeano y pulsa CONSTRUIR para levantar un nuevo Centro Urbano en una casilla válida. Para crear tropas, selecciona un Centro Urbano, pulsa ENTRENAR y elige Aldeano, Guerrero, Lancero, Arquero o Monje. El juego muestra el progreso y la cola de entrenamiento.\n\n" +
+                "Con un Aldeano pulsa CONSTRUIR para levantar un Centro Urbano. Con un Centro Urbano pulsa ENTRENAR para crear Aldeanos, Guerreros, Lanceros, Arqueros o Monjes. Costos, progreso y cola se muestran en pantalla.\n\n" +
                 "4. COMBATIR Y CURAR\n" +
-                "Selecciona un Guerrero, Lancero o Arquero, pulsa ATACAR y elige una unidad o edificio enemigo. Si está lejos, tu tropa se acercará automáticamente. El Monje usa CURAR: selecciona un aliado herido y el Monje se acercará hasta estar a rango. Las unidades con poca vida se resaltan en rojo.\n\n" +
-                "5. NO DEJES ALDEANOS SIN TAREA\n" +
-                "Cuando un Aldeano termine de recolectar o construir, aparecerá un aviso breve arriba para recordarte que está disponible para una nueva tarea.\n\n" +
-                "6. TU ENEMIGO\n" +
-                "Las facciones Morada, Verde y Amarilla compiten por los mismos recursos y atacan únicamente al jugador humano. Primero desarrollan su economía y después lanzan ofensivas escalonadas. Los recursos agotados reaparecen más tarde en otra casilla libre.\n\n" +
-                "7. CONQUISTA Y VICTORIA\n" +
-                "Una facción cae cuando pierde todos sus Centros Urbanos y sus unidades militares. Al eliminar una IA, obtienes automáticamente un nuevo Centro Urbano en la zona conquistada. Ganas al eliminar las tres facciones. Pierdes si te quedas sin Centros Urbanos y sin unidades militares.";
+                "Guerrero, Lancero y Arquero pueden atacar: pulsa ATACAR y elige un enemigo. El Monje puede curar aliados heridos. Las entidades con vida crítica se ven rojas.\n\n" +
+                "5. VARIAS TAREAS A LA VEZ\n" +
+                "Distintas unidades pueden moverse, recolectar, construir, entrenar o combatir al mismo tiempo. Si un Aldeano queda sin tarea, recibirás un aviso.\n\n" +
+                "6. PAUSA\n" +
+                "Pulsa ESC durante la partida para abrir el menú de pausa. Desde allí puedes reanudar o salir.\n\n" +
+                "7. TRES FACCIONES ENEMIGAS\n" +
+                "Morada, Verde y Amarilla desarrollan economía y lanzan ofensivas contra ti. Cada recurso agotado reaparece más tarde en una casilla libre.\n\n" +
+                "8. CONQUISTA Y VICTORIA\n" +
+                "Una facción cae al quedarse sin Centros Urbanos y sin unidades militares. Al eliminar una IA recibes un nuevo Centro Urbano en la zona conquistada. Ganas al eliminar las tres facciones; pierdes bajo la misma condición.";
 
             Text cuerpo =
                 CrearTexto(
                     panel.transform,
                     "Cuerpo",
                     instrucciones,
-                    17,
-                    new Vector2(0f, 18f),
-                    new Vector2(840f, 545f),
+                    15,
+                    new Vector2(0f, 10f),
+                    new Vector2(840f, 548f),
                     TextAnchor.UpperLeft);
 
             cuerpo.horizontalOverflow =
@@ -298,14 +356,74 @@ namespace ImperiosEnGuerra.Vistas
 
             imagen.color =
                 new Color(
-                    0.055f,
-                    0.08f,
-                    0.12f,
-                    0.97f);
+                    0.045f,
+                    0.075f,
+                    0.115f,
+                    0.985f);
 
             imagen.raycastTarget = true;
 
+            Outline borde =
+                objeto.AddComponent<Outline>();
+
+            borde.effectColor =
+                new Color(
+                    0.48f,
+                    0.58f,
+                    0.68f,
+                    0.42f);
+
+            borde.effectDistance =
+                new Vector2(2f, -2f);
+
             return objeto;
+        }
+
+        private static Image CrearBarraDecorativa(
+            Transform padre,
+            string nombre,
+            Vector2 posicion,
+            Vector2 tamano,
+            Color color)
+        {
+            GameObject objeto =
+                new GameObject(
+                    nombre,
+                    typeof(RectTransform),
+                    typeof(Image));
+
+            objeto.transform.SetParent(
+                padre,
+                false);
+
+            RectTransform rect =
+                objeto.GetComponent<RectTransform>();
+
+            rect.anchorMin =
+                new Vector2(0.5f, 0.5f);
+
+            rect.anchorMax =
+                rect.anchorMin;
+
+            rect.pivot =
+                new Vector2(0.5f, 0.5f);
+
+            rect.anchoredPosition =
+                posicion;
+
+            rect.sizeDelta =
+                tamano;
+
+            Image imagen =
+                objeto.GetComponent<Image>();
+
+            imagen.color =
+                color;
+
+            imagen.raycastTarget =
+                false;
+
+            return imagen;
         }
 
         private static Image CrearImagen(
@@ -376,22 +494,72 @@ namespace ImperiosEnGuerra.Vistas
                 posicion;
 
             rect.sizeDelta =
-                new Vector2(300f, 54f);
+                new Vector2(330f, 58f);
 
             Image imagen =
                 objeto.GetComponent<Image>();
 
             imagen.color =
                 new Color(
-                    0.16f,
-                    0.28f,
-                    0.4f,
+                    0.12f,
+                    0.25f,
+                    0.38f,
                     1f);
+
+            Outline borde =
+                objeto.AddComponent<Outline>();
+
+            borde.effectColor =
+                new Color(
+                    0.86f,
+                    0.68f,
+                    0.3f,
+                    0.48f);
+
+            borde.effectDistance =
+                new Vector2(1.5f, -1.5f);
 
             Button boton =
                 objeto.GetComponent<Button>();
 
             boton.targetGraphic = imagen;
+
+            ColorBlock colores =
+                boton.colors;
+
+            colores.normalColor =
+                new Color(
+                    0.12f,
+                    0.25f,
+                    0.38f,
+                    1f);
+
+            colores.highlightedColor =
+                new Color(
+                    0.2f,
+                    0.38f,
+                    0.52f,
+                    1f);
+
+            colores.pressedColor =
+                new Color(
+                    0.08f,
+                    0.18f,
+                    0.29f,
+                    1f);
+
+            colores.selectedColor =
+                colores.highlightedColor;
+
+            colores.disabledColor =
+                new Color(
+                    0.08f,
+                    0.12f,
+                    0.16f,
+                    0.7f);
+
+            boton.colors =
+                colores;
 
             CrearTexto(
                 objeto.transform,

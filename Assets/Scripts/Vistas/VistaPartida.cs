@@ -54,6 +54,16 @@ namespace ImperiosEnGuerra.Vistas
             entidadesPorId =
                 new Dictionary<string, EntidadSeleccionableVista>();
 
+        // Índices mantenidos al crear la Vista. Evitan recorrer y asignar
+        // arreglos de toda la jerarquía varias veces por snapshot.
+        private readonly List<EntidadSeleccionableVista>
+            entidadesSeleccionables =
+                new List<EntidadSeleccionableVista>();
+
+        private readonly List<EntidadSeleccionableVista>
+            recursosSeleccionables =
+                new List<EntidadSeleccionableVista>();
+
         private bool movimientoVisualPausado;
 
         public event System.Action AntesDeLimpiarContenido;
@@ -64,15 +74,16 @@ namespace ImperiosEnGuerra.Vistas
             movimientoVisualPausado =
                 pausada;
 
-            AnimacionRecursoRecoleccion[] recursos =
-                GetComponentsInChildren<AnimacionRecursoRecoleccion>(
-                    true);
-
-            foreach (AnimacionRecursoRecoleccion recurso
-                     in recursos)
+            foreach (EntidadSeleccionableVista recurso
+                     in recursosSeleccionables)
             {
-                recurso?.EstablecerPausada(
-                    pausada);
+                if (recurso == null)
+                    continue;
+
+                recurso
+                    .GetComponent<AnimacionRecursoRecoleccion>()?
+                    .EstablecerPausada(
+                        pausada);
             }
         }
 
@@ -183,14 +194,10 @@ namespace ImperiosEnGuerra.Vistas
         private void SincronizarRecursos(
             RecursoEstadoDto[] recursos)
         {
-            EntidadSeleccionableVista[] entidades =
-                GetComponentsInChildren<EntidadSeleccionableVista>(
-                    true);
-
-            foreach (EntidadSeleccionableVista entidad in entidades)
+            foreach (EntidadSeleccionableVista entidad
+                     in recursosSeleccionables)
             {
-                if (entidad == null ||
-                    entidad.Categoria != CategoriaEntidadVisual.Recurso)
+                if (entidad == null)
                 {
                     continue;
                 }
@@ -249,15 +256,10 @@ namespace ImperiosEnGuerra.Vistas
                 }
             }
 
-            EntidadSeleccionableVista[] entidades =
-                GetComponentsInChildren<EntidadSeleccionableVista>(
-                    true);
-
             foreach (EntidadSeleccionableVista entidad
-                     in entidades)
+                     in recursosSeleccionables)
             {
-                if (entidad == null ||
-                    entidad.Categoria != CategoriaEntidadVisual.Recurso)
+                if (entidad == null)
                 {
                     continue;
                 }
@@ -408,6 +410,12 @@ namespace ImperiosEnGuerra.Vistas
 
                 if (existente != null)
                 {
+                    if (!existente.gameObject.activeSelf)
+                    {
+                        existente.gameObject.SetActive(
+                            true);
+                    }
+
                     existente.ActualizarDatosLogicos(
                         existente.X,
                         existente.Y,
@@ -519,20 +527,37 @@ namespace ImperiosEnGuerra.Vistas
                         Mathf.Clamp01(
                             obra.progreso / 100f));
 
+                string nombreObra =
+                    $"Obra_{propietario}_{obra.tipo}_{obra.coordenada.x}_{obra.coordenada.y}";
+
+                Transform obraExistente =
+                    contenedor.Find(
+                        nombreObra);
+
                 GameObject objeto =
-                    CrearSprite(
-                        $"Obra_{propietario}_{obra.tipo}_{obra.coordenada.x}_{obra.coordenada.y}",
-                        sprite,
-                        obra.coordenada.x,
-                        obra.coordenada.y,
-                        18,
-                        contenedor,
-                        Vector3.one *
-                        escalaEdificios *
-                        factor);
+                    obraExistente == null
+                        ? CrearSprite(
+                            nombreObra,
+                            sprite,
+                            obra.coordenada.x,
+                            obra.coordenada.y,
+                            18,
+                            contenedor,
+                            Vector3.one *
+                            escalaEdificios *
+                            factor)
+                        : obraExistente.gameObject;
 
                 if (objeto == null)
                     continue;
+
+                objeto.SetActive(
+                    true);
+
+                objeto.transform.localScale =
+                    Vector3.one *
+                    escalaEdificios *
+                    factor;
 
                 SpriteRenderer renderer =
                     objeto.GetComponent<SpriteRenderer>();
@@ -582,6 +607,12 @@ namespace ImperiosEnGuerra.Vistas
 
                 if (existente != null)
                 {
+                    if (!existente.gameObject.activeSelf)
+                    {
+                        existente.gameObject.SetActive(
+                            true);
+                    }
+
                     int xAnterior =
                         existente.X;
 
@@ -675,29 +706,33 @@ namespace ImperiosEnGuerra.Vistas
             EdificioEstadoDto[] datos,
             string propietario)
         {
-            EntidadSeleccionableVista[] entidades =
-                GetComponentsInChildren<EntidadSeleccionableVista>(true);
+            var idsPresentes =
+                new HashSet<string>(
+                    datos
+                        .Where(
+                            edificio =>
+                                edificio != null &&
+                                !string.IsNullOrWhiteSpace(
+                                    edificio.id))
+                        .Select(
+                            edificio =>
+                                edificio.id));
 
-            foreach (EntidadSeleccionableVista entidad in entidades)
+            foreach (EntidadSeleccionableVista entidad
+                     in entidadesSeleccionables)
             {
                 if (entidad == null ||
                     entidad.Categoria != CategoriaEntidadVisual.Edificio ||
                     entidad.Propietario != propietario)
-                    continue;
-
-                bool existe = false;
-                foreach (EdificioEstadoDto edificio in datos)
                 {
-                    if (edificio != null &&
-                        edificio.id == entidad.IdLogico)
-                    {
-                        existe = true;
-                        break;
-                    }
+                    continue;
                 }
 
-                if (!existe)
+                if (!idsPresentes.Contains(
+                        entidad.IdLogico))
+                {
                     entidad.gameObject.SetActive(false);
+                }
             }
         }
 
@@ -705,30 +740,34 @@ namespace ImperiosEnGuerra.Vistas
             UnidadEstadoDto[] datos,
             string propietario)
         {
-            EntidadSeleccionableVista[] entidades =
-                GetComponentsInChildren<EntidadSeleccionableVista>(true);
+            var idsPresentes =
+                new HashSet<string>(
+                    datos
+                        .Where(
+                            unidad =>
+                                unidad != null &&
+                                !string.IsNullOrWhiteSpace(
+                                    unidad.id))
+                        .Select(
+                            unidad =>
+                                unidad.id));
 
-            foreach (EntidadSeleccionableVista entidad in entidades)
+            foreach (EntidadSeleccionableVista entidad
+                     in entidadesSeleccionables)
             {
                 if (entidad == null ||
                     entidad.Categoria != CategoriaEntidadVisual.Unidad ||
                     entidad.Propietario != propietario)
-                    continue;
-
-                bool existe = false;
-                foreach (UnidadEstadoDto unidad in datos)
                 {
-                    if (unidad != null &&
-                        unidad.id == entidad.IdLogico)
-                    {
-                        existe = true;
-                        break;
-                    }
+                    continue;
                 }
 
-                if (!existe)
+                if (!idsPresentes.Contains(
+                        entidad.IdLogico))
                 {
-                    movimientosVisuales.Remove(entidad.IdLogico);
+                    movimientosVisuales.Remove(
+                        entidad.IdLogico);
+
                     entidad.gameObject.SetActive(false);
                 }
             }
@@ -761,11 +800,8 @@ namespace ImperiosEnGuerra.Vistas
                 }
             }
 
-            EntidadSeleccionableVista[] entidades =
-                GetComponentsInChildren<EntidadSeleccionableVista>(
-                    true);
-
-            foreach (EntidadSeleccionableVista entidad in entidades)
+            foreach (EntidadSeleccionableVista entidad
+                     in entidadesSeleccionables)
             {
                 if (entidad == null ||
                     entidad.Categoria != categoria ||
@@ -842,6 +878,8 @@ namespace ImperiosEnGuerra.Vistas
             if (edificios == null)
                 return;
 
+            // Las obras se reutilizan entre snapshots. Destruir y recrear
+            // GameObjects cada 0.5 s generaba allocations y picos de GC.
             for (int i = edificios.childCount - 1;
                  i >= 0;
                  i--)
@@ -856,11 +894,6 @@ namespace ImperiosEnGuerra.Vistas
                 }
 
                 objeto.SetActive(false);
-
-                if (Application.isPlaying)
-                    Destroy(objeto);
-                else
-                    DestroyImmediate(objeto);
             }
         }
 
@@ -869,6 +902,8 @@ namespace ImperiosEnGuerra.Vistas
             AntesDeLimpiarContenido?.Invoke();
             movimientosVisuales.Clear();
             entidadesPorId.Clear();
+            entidadesSeleccionables.Clear();
+            recursosSeleccionables.Clear();
             anchoVisual = 0;
             altoVisual = 0;
             if (contenidoGenerado == null)
@@ -1493,6 +1528,16 @@ namespace ImperiosEnGuerra.Vistas
                 vidaMaxima,
                 danio,
                 alcance);
+
+            entidadesSeleccionables.Add(
+                entidad);
+
+            if (categoria ==
+                CategoriaEntidadVisual.Recurso)
+            {
+                recursosSeleccionables.Add(
+                    entidad);
+            }
 
             if (!string.IsNullOrWhiteSpace(
                     idLogico))
