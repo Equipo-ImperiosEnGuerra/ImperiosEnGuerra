@@ -273,18 +273,66 @@ public class ReaccionAutomaticaTests
             reacciones[0].Destino,
             Is.Not.Null);
 
-        int distancia =
-            Math.Max(
-                Math.Abs(
-                    aldeano.Coordenada.X -
-                    reacciones[0].Destino.X),
-                Math.Abs(
-                    aldeano.Coordenada.Y -
-                    reacciones[0].Destino.Y));
+        int deltaX =
+            Math.Abs(
+                aldeano.Coordenada.X -
+                reacciones[0].Destino.X);
+
+        int deltaY =
+            Math.Abs(
+                aldeano.Coordenada.Y -
+                reacciones[0].Destino.Y);
 
         Assert.That(
-            distancia,
-            Is.InRange(1, 2));
+            deltaX + deltaY,
+            Is.EqualTo(1),
+            "El paseo ambiental debe avanzar una sola casilla cardinal.");
+
+        Assert.That(
+            deltaX == 0 || deltaY == 0,
+            Is.True,
+            "El paseo automático no debe generar diagonales.");
+    }
+
+    [Test]
+    public void Servicio_ConVariosAldeanosIdle_IniciaSoloUnPaseo()
+    {
+        humano.AgregarUnidad(
+            new Aldeano(
+                new Coordenada(3, 3)));
+
+        humano.AgregarUnidad(
+            new Aldeano(
+                new Coordenada(6, 6)));
+
+        var estado =
+            new EstadoPartidaService();
+
+        estado.EstablecerPartida(
+            partida);
+
+        using var gestor =
+            new GestorProcesosConcurrentes();
+
+        var acciones =
+            new ServicioAccionesConcurrentes(
+                estado,
+                gestor,
+                TimeSpan.FromSeconds(2));
+
+        using var reacciones =
+            new ServicioReaccionesAutomaticas(
+                estado,
+                acciones,
+                TimeSpan.FromMilliseconds(20));
+
+        int iniciadas =
+            reacciones.EjecutarPaso();
+
+        Assert.That(
+            iniciadas,
+            Is.EqualTo(1),
+            "El paseo ambiental debe limitarse a un Aldeano humano a la vez.");
     }
 
     [Test]
