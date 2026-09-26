@@ -75,6 +75,14 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     "El atacante y el objetivo no comparten el mismo mapa lógico.");
             }
 
+            bool objetivoYaEliminadoAntesDelImpacto =
+                objetivoPropietario.Tipo ==
+                    TipoJugador.Maquina &&
+                new EvaluadorVictoria()
+                    .Evaluar(
+                        objetivoPropietario)
+                    .HayVictoria;
+
             Unidad objetivoUnidad =
                 objetivoPropietario.Unidades
                     .FirstOrDefault(
@@ -166,6 +174,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                         objetivoPropietario);
 
             bool centroConquistaCreado =
+                !objetivoYaEliminadoAntesDelImpacto &&
                 evaluacion.HayVictoria &&
                 ReferenceEquals(
                     propietario,
