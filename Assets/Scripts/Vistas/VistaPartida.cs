@@ -74,8 +74,18 @@ namespace ImperiosEnGuerra.Vistas
 
             RenderizarMapa(estado.mapa, mapa);
             RenderizarRecursos(estado.mapa.recursos, recursos);
-            RenderizarJugador(estado.jugadorHumano, true, edificios, unidades);
-            RenderizarJugador(estado.jugadorMaquina, false, edificios, unidades);
+            foreach (JugadorEstadoDto jugador in
+                     ObtenerJugadoresEstado(
+                         estado))
+            {
+                RenderizarJugador(
+                    jugador,
+                    EsHumano(
+                        jugador),
+                    edificios,
+                    unidades);
+            }
+
             AjustarCamara(estado.mapa);
         }
 
@@ -123,17 +133,17 @@ namespace ImperiosEnGuerra.Vistas
             LimpiarObrasVisuales(
                 edificios);
 
-            SincronizarJugador(
-                estado.jugadorHumano,
-                true,
-                edificios,
-                unidades);
-
-            SincronizarJugador(
-                estado.jugadorMaquina,
-                false,
-                edificios,
-                unidades);
+            foreach (JugadorEstadoDto jugador in
+                     ObtenerJugadoresEstado(
+                         estado))
+            {
+                SincronizarJugador(
+                    jugador,
+                    EsHumano(
+                        jugador),
+                    edificios,
+                    unidades);
+            }
         }
 
         private void SincronizarRecursos(
@@ -204,26 +214,34 @@ namespace ImperiosEnGuerra.Vistas
                 return;
 
             string propietario =
-                humano
-                    ? "Humano"
-                    : "Maquina";
+                ObtenerPropietarioVisual(
+                    jugador,
+                    humano);
+
+            Color colorFaccion =
+                ObtenerColorFaccion(
+                    jugador,
+                    humano);
 
             SincronizarEdificios(
                 jugador.edificios,
                 humano,
                 propietario,
+                colorFaccion,
                 edificios);
 
             SincronizarObras(
                 jugador.obrasConstruccion,
                 humano,
                 propietario,
+                colorFaccion,
                 edificios);
 
             SincronizarUnidades(
                 jugador.unidades,
                 humano,
                 propietario,
+                colorFaccion,
                 unidades);
         }
 
@@ -231,6 +249,7 @@ namespace ImperiosEnGuerra.Vistas
             EdificioEstadoDto[] datos,
             bool humano,
             string propietario,
+            Color colorFaccion,
             Transform contenedor)
         {
             if (datos == null)
@@ -286,6 +305,10 @@ namespace ImperiosEnGuerra.Vistas
                         contenedor,
                         Vector3.one * escalaEdificios);
 
+                AplicarColorFaccion(
+                    objeto,
+                    colorFaccion);
+
                 ConfigurarSeleccionable(
                     objeto,
                     CategoriaEntidadVisual.Edificio,
@@ -338,6 +361,7 @@ namespace ImperiosEnGuerra.Vistas
             ObraConstruccionEstadoDto[] obras,
             bool humano,
             string propietario,
+            Color colorFaccion,
             Transform contenedor)
         {
             if (obras == null)
@@ -385,7 +409,7 @@ namespace ImperiosEnGuerra.Vistas
                 if (renderer != null)
                 {
                     Color color =
-                        renderer.color;
+                        colorFaccion;
 
                     color.a = 0.55f;
                     renderer.color = color;
@@ -397,6 +421,7 @@ namespace ImperiosEnGuerra.Vistas
             UnidadEstadoDto[] datos,
             bool humano,
             string propietario,
+            Color colorFaccion,
             Transform contenedor)
         {
             if (datos == null)
@@ -465,6 +490,10 @@ namespace ImperiosEnGuerra.Vistas
                         30,
                         contenedor,
                         Vector3.one * escalaUnidades);
+
+                AplicarColorFaccion(
+                    objeto,
+                    colorFaccion);
 
                 ConfigurarSeleccionable(
                     objeto,
@@ -744,7 +773,15 @@ namespace ImperiosEnGuerra.Vistas
                 return;
             }
 
-            string propietario = humano ? "Humano" : "Maquina";
+            string propietario =
+                ObtenerPropietarioVisual(
+                    jugador,
+                    humano);
+
+            Color colorFaccion =
+                ObtenerColorFaccion(
+                    jugador,
+                    humano);
             if (jugador.edificios != null)
             {
                 foreach (EdificioEstadoDto edificio in jugador.edificios)
@@ -764,6 +801,11 @@ namespace ImperiosEnGuerra.Vistas
                         humano ? centroHumano : centroMaquina,
                         edificio.coordenada.x, edificio.coordenada.y, 20, edificios,
                         Vector3.one * escalaEdificios);
+
+                    AplicarColorFaccion(
+                        objeto,
+                        colorFaccion);
+
                     ConfigurarSeleccionable(
                         objeto,
                         CategoriaEntidadVisual.Edificio,
@@ -828,7 +870,7 @@ namespace ImperiosEnGuerra.Vistas
                         if (renderer != null)
                         {
                             Color color =
-                                renderer.color;
+                                colorFaccion;
 
                             color.a = 0.55f;
                             renderer.color = color;
@@ -866,6 +908,11 @@ namespace ImperiosEnGuerra.Vistas
                 GameObject objeto = CrearSprite($"Unidad_{propietario}_{unidad.tipo}_{unidad.coordenada.x}_{unidad.coordenada.y}",
                     sprite, unidad.coordenada.x, unidad.coordenada.y, 30, unidades,
                     Vector3.one * escalaUnidades);
+
+                AplicarColorFaccion(
+                    objeto,
+                    colorFaccion);
+
                 ConfigurarSeleccionable(
                     objeto,
                     CategoriaEntidadVisual.Unidad,
@@ -879,6 +926,106 @@ namespace ImperiosEnGuerra.Vistas
                     unidad.vidaMaxima,
                     unidad.danio,
                     unidad.alcance);
+            }
+        }
+
+        private static JugadorEstadoDto[] ObtenerJugadoresEstado(
+            EstadoPartidaDto estado)
+        {
+            if (estado?.jugadores != null &&
+                estado.jugadores.Length > 0)
+            {
+                return estado.jugadores;
+            }
+
+            var jugadores =
+                new List<JugadorEstadoDto>();
+
+            if (estado?.jugadorHumano != null)
+            {
+                jugadores.Add(
+                    estado.jugadorHumano);
+            }
+
+            if (estado?.jugadorMaquina != null)
+            {
+                jugadores.Add(
+                    estado.jugadorMaquina);
+            }
+
+            return jugadores.ToArray();
+        }
+
+        private static bool EsHumano(
+            JugadorEstadoDto jugador)
+        {
+            return jugador != null &&
+                   jugador.tipo == "Humano";
+        }
+
+        private static string ObtenerPropietarioVisual(
+            JugadorEstadoDto jugador,
+            bool humano)
+        {
+            if (humano)
+                return "Humano";
+
+            string faccion =
+                string.IsNullOrWhiteSpace(
+                    jugador?.faccion)
+                    ? "Roja"
+                    : jugador.faccion;
+
+            return $"Maquina_{faccion}";
+        }
+
+        private static Color ObtenerColorFaccion(
+            JugadorEstadoDto jugador,
+            bool humano)
+        {
+            if (humano)
+                return Color.white;
+
+            switch (jugador?.faccion)
+            {
+                case "Verde":
+                    return new Color(
+                        0.48f,
+                        0.95f,
+                        0.52f,
+                        1f);
+
+                case "Amarilla":
+                    return new Color(
+                        1f,
+                        0.88f,
+                        0.35f,
+                        1f);
+
+                case "Roja":
+                default:
+                    return new Color(
+                        1f,
+                        0.48f,
+                        0.48f,
+                        1f);
+            }
+        }
+
+        private static void AplicarColorFaccion(
+            GameObject objeto,
+            Color color)
+        {
+            if (objeto == null)
+                return;
+
+            SpriteRenderer renderer =
+                objeto.GetComponent<SpriteRenderer>();
+
+            if (renderer != null)
+            {
+                renderer.color =
+                    color;
             }
         }
 
