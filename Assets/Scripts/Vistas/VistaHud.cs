@@ -173,16 +173,15 @@ namespace ImperiosEnGuerra.Vistas
             if (panel == null)
                 return;
 
-            // El jugador humano inicia en la esquina inferior izquierda.
-            // El HUD contextual se ubica arriba al centro para no ocultar
-            // visualmente su Centro Urbano ni las unidades cercanas.
+            // El mapa queda centrado y deja una franja libre a la izquierda.
+            // Usamos esa zona para que el HUD no tape el campo de batalla.
             ConfigurarRect(
                 panel,
-                new Vector2(0.5f, 1f),
-                new Vector2(0.5f, 1f),
-                new Vector2(0.5f, 1f),
-                new Vector2(-191f, -240f),
-                new Vector2(191f, -58f));
+                new Vector2(0f, 1f),
+                new Vector2(0f, 1f),
+                new Vector2(0f, 1f),
+                new Vector2(12f, -288f),
+                new Vector2(282f, -58f));
 
             ConfigurarRectHijo(
                 panel,
@@ -214,8 +213,17 @@ namespace ImperiosEnGuerra.Vistas
 
             for (int i = 0; i < acciones.Length; i++)
             {
+                int columna =
+                    i % 3;
+
+                int fila =
+                    i / 3;
+
                 float x =
-                    12f + i * 58f;
+                    12f + columna * 82f;
+
+                float y =
+                    12f + fila * 36f;
 
                 RectTransform boton =
                     panel.Find(
@@ -230,8 +238,8 @@ namespace ImperiosEnGuerra.Vistas
                     Vector2.zero,
                     Vector2.zero,
                     Vector2.zero,
-                    new Vector2(x, 12f),
-                    new Vector2(x + 54f, 48f));
+                    new Vector2(x, y),
+                    new Vector2(x + 76f, y + 32f));
 
                 Text etiqueta =
                     boton.GetComponentInChildren<Text>(
@@ -239,9 +247,9 @@ namespace ImperiosEnGuerra.Vistas
 
                 if (etiqueta != null)
                 {
-                    etiqueta.fontSize = 12;
+                    etiqueta.fontSize = 11;
                     etiqueta.resizeTextMinSize = 8;
-                    etiqueta.resizeTextMaxSize = 12;
+                    etiqueta.resizeTextMaxSize = 11;
                 }
             }
 
@@ -257,8 +265,8 @@ namespace ImperiosEnGuerra.Vistas
                     Vector2.zero,
                     Vector2.zero,
                     Vector2.zero,
-                    new Vector2(12f, 52f),
-                    new Vector2(300f, 98f));
+                    new Vector2(12f, 84f),
+                    new Vector2(258f, 126f));
 
                 string[] tipos =
                 {
@@ -280,7 +288,7 @@ namespace ImperiosEnGuerra.Vistas
                         continue;
 
                     float x =
-                        i * 56f;
+                        i * 49f;
 
                     ConfigurarRect(
                         botonTipo,
@@ -288,7 +296,7 @@ namespace ImperiosEnGuerra.Vistas
                         Vector2.zero,
                         Vector2.zero,
                         new Vector2(x, 2f),
-                        new Vector2(x + 54f, 42f));
+                        new Vector2(x + 47f, 40f));
 
                     Text etiqueta =
                         botonTipo.GetComponentInChildren<Text>(
@@ -296,9 +304,9 @@ namespace ImperiosEnGuerra.Vistas
 
                     if (etiqueta != null)
                     {
-                        etiqueta.fontSize = 11;
-                        etiqueta.resizeTextMinSize = 8;
-                        etiqueta.resizeTextMaxSize = 11;
+                        etiqueta.fontSize = 10;
+                        etiqueta.resizeTextMinSize = 7;
+                        etiqueta.resizeTextMaxSize = 10;
                     }
                 }
             }
