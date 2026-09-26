@@ -46,31 +46,51 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     "La unidad atacante no es una unidad militar ofensiva permitida.");
             }
 
-            if (propietario.Unidades.Any(u => u.Id == solicitud.ObjetivoId) ||
-                propietario.Edificios.Any(e => e.Id == solicitud.ObjetivoId))
-                return ResultadoAccion.Fallido("El objetivo pertenece al mismo jugador que el atacante.");
+            Jugador objetivoPropietario =
+                partida.BuscarJugadorPorUnidad(
+                    solicitud.ObjetivoId)
+                ??
+                partida.BuscarJugadorPorEdificio(
+                    solicitud.ObjetivoId);
 
-            Jugador oponente =
-                partida.ObtenerOponente(
-                    propietario);
+            if (objetivoPropietario == null)
+            {
+                return ResultadoAccion.Fallido(
+                    "No existe la entidad objetivo indicada.");
+            }
 
-            if (oponente == null)
-                return ResultadoAccion.Fallido("No existe un oponente válido.");
+            if (!partida.SonEnemigos(
+                    propietario,
+                    objetivoPropietario))
+            {
+                return ResultadoAccion.Fallido(
+                    "No se puede atacar una entidad aliada.");
+            }
 
-            if (!ReferenceEquals(propietario.Mapa, oponente.Mapa))
-                return ResultadoAccion.Fallido("El atacante y el objetivo no comparten el mismo mapa lógico.");
+            if (!ReferenceEquals(
+                    propietario.Mapa,
+                    objetivoPropietario.Mapa))
+            {
+                return ResultadoAccion.Fallido(
+                    "El atacante y el objetivo no comparten el mismo mapa lógico.");
+            }
 
             Unidad objetivoUnidad =
-                oponente.Unidades
-                    .FirstOrDefault(u => u.Id == solicitud.ObjetivoId);
+                objetivoPropietario.Unidades
+                    .FirstOrDefault(
+                        u => u.Id == solicitud.ObjetivoId);
 
             Edificio objetivoEdificio =
-                oponente.Edificios
-                    .FirstOrDefault(e => e.Id == solicitud.ObjetivoId);
+                objetivoPropietario.Edificios
+                    .FirstOrDefault(
+                        e => e.Id == solicitud.ObjetivoId);
 
             if (objetivoUnidad == null &&
                 objetivoEdificio == null)
-                return ResultadoAccion.Fallido("No existe la entidad enemiga objetivo indicada.");
+            {
+                return ResultadoAccion.Fallido(
+                    "No existe la entidad enemiga objetivo indicada.");
+            }
 
             Coordenada objetivo =
                 objetivoUnidad?.Coordenada ??
@@ -126,24 +146,24 @@ namespace ImperiosEnGuerra.Modelo.Acciones
 
             if (objetivoUnidad != null)
             {
-                if (!oponente.EliminarUnidad(objetivoUnidad))
+                if (!objetivoPropietario.EliminarUnidad(objetivoUnidad))
                     return ResultadoAccion.Fallido("No se pudo retirar la unidad objetivo.");
 
-                LiberarCasilla(oponente.Mapa, objetivoUnidad.Coordenada);
+                LiberarCasilla(objetivoPropietario.Mapa, objetivoUnidad.Coordenada);
             }
             else
             {
-                if (!oponente.EliminarEdificio(objetivoEdificio))
+                if (!objetivoPropietario.EliminarEdificio(objetivoEdificio))
                     return ResultadoAccion.Fallido("No se pudo retirar el edificio objetivo.");
 
-                LiberarCasilla(oponente.Mapa, objetivoEdificio.Coordenada);
+                LiberarCasilla(objetivoPropietario.Mapa, objetivoEdificio.Coordenada);
             }
 
             EvaluacionVictoria evaluacion =
                 new EvaluadorVictoria()
                     .Evaluar(
                         partida,
-                        oponente);
+                        objetivoPropietario);
 
             string mensaje =
                 $"Impacto de {atacante.GetType().Name}: daño {atacante.DanioAtaque}. " +
