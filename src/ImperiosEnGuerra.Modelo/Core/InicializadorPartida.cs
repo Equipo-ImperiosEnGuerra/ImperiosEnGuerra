@@ -235,7 +235,7 @@ namespace ImperiosEnGuerra.Modelo.Core
                     aldeanosMaquina[i]);
             }
 
-            return new Partida(
+            return Partida.CrearMultijugador(
                 jugadorHumano,
                 jugadoresMaquina);
         }
