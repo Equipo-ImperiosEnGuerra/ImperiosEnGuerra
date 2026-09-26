@@ -16,9 +16,10 @@ public sealed class ServicioJugadorMaquina : IDisposable
     private readonly HashSet<string> centrosAsignados =
         new HashSet<string>();
 
-    // La economía puede seguir siendo concurrente, pero la Máquina mantiene
-    // un único frente de combate para no encadenar varias bajas simultáneas.
-    private bool combateAsignado;
+    // Cada facción de Máquina mantiene como máximo un frente de combate,
+    // pero las tres IAs pueden combatir al mismo tiempo de forma independiente.
+    private readonly HashSet<int> combatesAsignados =
+        new HashSet<int>();
 
     private CancellationTokenSource? cancelacion;
     private bool dispuesto;
@@ -128,13 +129,44 @@ public sealed class ServicioJugadorMaquina : IDisposable
     {
         ThrowSiDispuesto();
 
+        ProcesoConcurrente? primero =
+            null;
+
+        int cantidad =
+            estadoPartida.CantidadJugadoresMaquina();
+
+        for (int indice = 0;
+             indice < cantidad;
+             indice++)
+        {
+            ProcesoConcurrente? proceso =
+                EjecutarPasoMaquina(
+                    indice);
+
+            if (primero == null &&
+                proceso != null)
+            {
+                primero =
+                    proceso;
+            }
+        }
+
+        return primero;
+    }
+
+    private ProcesoConcurrente? EjecutarPasoMaquina(
+        int indiceMaquina)
+    {
         Guid[] unidadesExcluidas;
         Coordenada[] centrosExcluidos;
 
         lock (sincronizacion)
         {
-            if (combateAsignado)
+            if (combatesAsignados.Contains(
+                    indiceMaquina))
+            {
                 return null;
+            }
 
             unidadesExcluidas =
                 unidadesAsignadas.ToArray();
@@ -150,6 +182,7 @@ public sealed class ServicioJugadorMaquina : IDisposable
 
         DecisionMaquina decision =
             estadoPartida.PrepararDecisionMaquina(
+                indiceMaquina,
                 unidadesExcluidas,
                 centrosExcluidos);
 
@@ -225,6 +258,7 @@ public sealed class ServicioJugadorMaquina : IDisposable
 
             case TipoDecisionMaquina.Mover:
                 return EjecutarConCombateAsignado(
+                    indiceMaquina,
                     decision.UnidadId,
                     () =>
                         acciones.IniciarMovimiento(
@@ -264,6 +298,7 @@ public sealed class ServicioJugadorMaquina : IDisposable
 
             case TipoDecisionMaquina.Atacar:
                 return EjecutarConCombateAsignado(
+                    indiceMaquina,
                     decision.UnidadId,
                     () =>
                         acciones.IniciarAtaque(
@@ -281,6 +316,7 @@ public sealed class ServicioJugadorMaquina : IDisposable
     }
 
     private ProcesoConcurrente? EjecutarConCombateAsignado(
+        int indiceMaquina,
         Guid unidadId,
         Func<ProcesoConcurrente> iniciar)
     {
@@ -292,14 +328,16 @@ public sealed class ServicioJugadorMaquina : IDisposable
 
         lock (sincronizacion)
         {
-            if (combateAsignado ||
+            if (combatesAsignados.Contains(
+                    indiceMaquina) ||
                 !unidadesAsignadas.Add(
                     unidadId))
             {
                 return null;
             }
 
-            combateAsignado = true;
+            combatesAsignados.Add(
+                indiceMaquina);
         }
 
         try
@@ -316,7 +354,8 @@ public sealed class ServicioJugadorMaquina : IDisposable
                             unidadesAsignadas.Remove(
                                 unidadId);
 
-                            combateAsignado = false;
+                            combatesAsignados.Remove(
+                                indiceMaquina);
                         }
                     },
                     CancellationToken.None,
@@ -332,7 +371,8 @@ public sealed class ServicioJugadorMaquina : IDisposable
                 unidadesAsignadas.Remove(
                     unidadId);
 
-                combateAsignado = false;
+                combatesAsignados.Remove(
+                    indiceMaquina);
             }
 
             throw;
