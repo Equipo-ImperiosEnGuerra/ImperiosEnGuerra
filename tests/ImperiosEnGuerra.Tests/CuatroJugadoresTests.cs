@@ -170,7 +170,7 @@ public class CuatroJugadoresTests
                 new[]
                 {
                     "Azul",
-                    "Roja",
+                    "Morada",
                     "Verde",
                     "Amarilla"
                 }));
