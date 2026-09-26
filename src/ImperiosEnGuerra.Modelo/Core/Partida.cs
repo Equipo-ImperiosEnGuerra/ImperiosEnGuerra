@@ -37,13 +37,25 @@ namespace ImperiosEnGuerra.Modelo.Core
             Jugador jugadorMaquina)
             : this(
                 jugadorHumano,
-                new[] { jugadorMaquina })
+                new[] { jugadorMaquina },
+                true)
         {
         }
 
-        public Partida(
+        public static Partida CrearMultijugador(
             Jugador jugadorHumano,
             IEnumerable<Jugador> jugadoresMaquina)
+        {
+            return new Partida(
+                jugadorHumano,
+                jugadoresMaquina,
+                true);
+        }
+
+        private Partida(
+            Jugador jugadorHumano,
+            IEnumerable<Jugador> jugadoresMaquina,
+            bool multijugador)
         {
             if (jugadorHumano == null)
                 throw new ArgumentNullException(
