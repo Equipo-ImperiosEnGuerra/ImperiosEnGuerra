@@ -199,6 +199,101 @@ public class RecoleccionUnityTests
     }
 
     [Test]
+    public void AldeanoQueTerminaTrabajo_MuestraAvisoTemporal()
+    {
+        var trabajando =
+            new EstadoPartidaDto
+            {
+                jugadorHumano =
+                    new JugadorEstadoDto
+                    {
+                        unidades =
+                            new[]
+                            {
+                                new UnidadEstadoDto
+                                {
+                                    id = IdAldeano,
+                                    tipo = "Aldeano",
+                                    estado = "Recolectando",
+                                    ordenActiva = "Recolectar"
+                                }
+                            }
+                    }
+            };
+
+        var libre =
+            new EstadoPartidaDto
+            {
+                jugadorHumano =
+                    new JugadorEstadoDto
+                    {
+                        unidades =
+                            new[]
+                            {
+                                new UnidadEstadoDto
+                                {
+                                    id = IdAldeano,
+                                    tipo = "Aldeano",
+                                    estado = "Idle",
+                                    ordenActiva = ""
+                                }
+                            }
+                    }
+            };
+
+        Invocar(
+            conexion,
+            "ActualizarAvisosAldeanos",
+            trabajando);
+
+        Transform avisoAntes =
+            raiz.transform.Find(
+                "AvisoAldeano");
+
+        Assert.That(
+            avisoAntes,
+            Is.Not.Null);
+
+        Assert.That(
+            avisoAntes.gameObject.activeSelf,
+            Is.False,
+            "El primer snapshot solo debe inicializar el seguimiento.");
+
+        Invocar(
+            conexion,
+            "ActualizarAvisosAldeanos",
+            libre);
+
+        Transform aviso =
+            raiz.transform.Find(
+                "AvisoAldeano");
+
+        Assert.That(
+            aviso.gameObject.activeSelf,
+            Is.True);
+
+        Text textoAviso =
+            aviso.GetComponentInChildren<Text>(
+                true);
+
+        Assert.That(
+            textoAviso.text,
+            Does.Contain(
+                "sin tarea"));
+
+        RectTransform rect =
+            aviso.GetComponent<RectTransform>();
+
+        Assert.That(
+            rect.sizeDelta.x,
+            Is.LessThanOrEqualTo(350f));
+
+        Assert.That(
+            rect.anchorMin.y,
+            Is.EqualTo(1f));
+    }
+
+    [Test]
     public void AldeanoHumano_PreparaRecoleccion()
     {
         Invocar(
