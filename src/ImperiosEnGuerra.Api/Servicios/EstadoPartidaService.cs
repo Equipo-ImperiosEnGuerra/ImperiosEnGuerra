@@ -770,6 +770,29 @@ public sealed class EstadoPartidaService
     }
 
     public void ReembolsarCosto(
+        Coordenada centroUrbano,
+        CostoRecursos costo)
+    {
+        if (costo == null ||
+            centroUrbano == null)
+        {
+            return;
+        }
+
+        lock (sincronizacion)
+        {
+            Jugador? propietario =
+                partidaActiva?
+                    .BuscarJugadorPorEdificio(
+                        centroUrbano);
+
+            propietario?.Recursos
+                .Reintegrar(
+                    costo);
+        }
+    }
+
+    public void ReembolsarCosto(
         Guid unidadId,
         CostoRecursos costo)
     {
@@ -1385,7 +1408,7 @@ public sealed class EstadoPartidaService
             new BuscadorCasillaSpawn()
                 .Buscar(
                     partidaActiva,
-                    propietario.Tipo,
+                    propietario,
                     centro.Coordenada);
 
         if (spawn == null)
