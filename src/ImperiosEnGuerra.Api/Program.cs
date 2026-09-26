@@ -23,6 +23,7 @@ builder.Services.AddSingleton<ServicioOrdenesUnidad>();
 builder.Services.AddSingleton<ServicioAccionesConcurrentes>();
 builder.Services.AddSingleton<ServicioReaccionesAutomaticas>();
 builder.Services.AddSingleton<ServicioJugadorMaquina>();
+builder.Services.AddSingleton<ServicioRegeneracionRecursos>();
 builder.Services.AddSingleton<ServicioSesionJuego>();
 builder.Services.AddSingleton<DespachadorMensajesRed>();
 builder.Services.AddSingleton<ServicioRedPartida>();
