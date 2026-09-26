@@ -21,6 +21,20 @@ namespace ImperiosEnGuerra.Modelo.IA
         private readonly ConfiguracionEconomia economia =
             new ConfiguracionEconomia();
 
+        private static readonly string[] TiposEjercitoBase =
+        {
+            nameof(Guerrero),
+            nameof(Arquero)
+        };
+
+        private static readonly string[] TiposEjercitoDesarrollado =
+        {
+            nameof(Guerrero),
+            nameof(Arquero),
+            nameof(Lancero),
+            nameof(Monje)
+        };
+
         public DecisionMaquina Preparar(
             Partida partida,
             IReadOnlyCollection<Guid> unidadesExcluidas = null,
@@ -166,24 +180,40 @@ namespace ImperiosEnGuerra.Modelo.IA
                         u is Soldado ||
                         u is Monje);
 
-            if (militaresPropios < 2 &&
+            int objetivoMilitar =
+                centros.Length >= 2 &&
+                aldeanos.Length >= 3
+                    ? 4
+                    : 2;
+
+            string tipoMilitarObjetivo =
+                SeleccionarTipoMilitarObjetivo(
+                    maquina,
+                    objetivoMilitar);
+
+            if (militaresPropios < objetivoMilitar &&
                 centroDisponible != null &&
+                !string.IsNullOrWhiteSpace(
+                    tipoMilitarObjetivo) &&
                 PuedePagarUnidad(
                     maquina,
-                    nameof(Guerrero)))
+                    tipoMilitarObjetivo))
             {
                 return DecisionMaquina.Entrenar(
                     centroDisponible.Coordenada,
-                    nameof(Guerrero));
+                    tipoMilitarObjetivo);
             }
 
-            if (militaresPropios < 2 &&
-                disponibles.Length > 0)
+            if (militaresPropios < objetivoMilitar &&
+                disponibles.Length > 0 &&
+                !string.IsNullOrWhiteSpace(
+                    tipoMilitarObjetivo))
             {
                 DecisionMaquina reposicion =
-                    PrepararRecoleccionParaGuerrero(
+                    PrepararRecoleccionParaUnidadMilitar(
                         maquina,
-                        disponibles);
+                        disponibles,
+                        tipoMilitarObjetivo);
 
                 if (reposicion.Tipo !=
                     TipoDecisionMaquina.Ninguna)
@@ -476,7 +506,7 @@ namespace ImperiosEnGuerra.Modelo.IA
                 maquina.Unidades
                     .Where(
                         u =>
-                            (u is Soldado || u is Monje) &&
+                            u is Soldado &&
                             u.Disponible &&
                             !excluidas.Contains(u.Id))
                     .OrderBy(u => u.Coordenada.X)
@@ -647,24 +677,159 @@ namespace ImperiosEnGuerra.Modelo.IA
                 .FirstOrDefault();
         }
 
-        private DecisionMaquina PrepararRecoleccionParaGuerrero(
+        private string SeleccionarTipoMilitarObjetivo(
             Jugador maquina,
-            IReadOnlyList<Aldeano> disponibles)
+            int objetivoMilitar)
+        {
+            if (maquina == null ||
+                objetivoMilitar <= 0)
+            {
+                return null;
+            }
+
+            int militaresActuales =
+                maquina.Unidades.Count(
+                    unidad =>
+                        unidad is Soldado ||
+                        unidad is Monje);
+
+            if (militaresActuales >=
+                objetivoMilitar)
+            {
+                return null;
+            }
+
+            string[] tipos =
+                objetivoMilitar >= 4
+                    ? TiposEjercitoDesarrollado
+                    : TiposEjercitoBase;
+
+            var candidatos =
+                tipos
+                    .Select(
+                        (tipo, indice) =>
+                            new
+                            {
+                                Tipo = tipo,
+                                Indice = indice,
+                                Cantidad =
+                                    ContarTipoUnidad(
+                                        maquina,
+                                        tipo)
+                            })
+                    .OrderBy(
+                        candidato =>
+                            candidato.Cantidad)
+                    .ThenBy(
+                        candidato =>
+                            candidato.Indice)
+                    .ToArray();
+
+            var pagable =
+                candidatos.FirstOrDefault(
+                    candidato =>
+                        PuedePagarUnidad(
+                            maquina,
+                            candidato.Tipo));
+
+            if (pagable != null)
+            {
+                return pagable.Tipo;
+            }
+
+            return candidatos
+                .OrderBy(
+                    candidato =>
+                        CalcularDeficitUnidad(
+                            maquina,
+                            candidato.Tipo))
+                .ThenBy(
+                    candidato =>
+                        candidato.Cantidad)
+                .ThenBy(
+                    candidato =>
+                        candidato.Indice)
+                .Select(
+                    candidato =>
+                        candidato.Tipo)
+                .FirstOrDefault();
+        }
+
+        private static int ContarTipoUnidad(
+            Jugador maquina,
+            string tipoUnidad)
+        {
+            return maquina.Unidades.Count(
+                unidad =>
+                    unidad != null &&
+                    string.Equals(
+                        unidad.GetType().Name,
+                        tipoUnidad,
+                        StringComparison.OrdinalIgnoreCase));
+        }
+
+        private int CalcularDeficitUnidad(
+            Jugador maquina,
+            string tipoUnidad)
+        {
+            if (!economia.IntentarObtenerCostoUnidad(
+                    tipoUnidad,
+                    out CostoRecursos costo))
+            {
+                return int.MaxValue;
+            }
+
+            int faltaOro =
+                Math.Max(
+                    0,
+                    costo.Oro -
+                    maquina.Recursos.ObtenerCantidad(
+                        TipoRecurso.Oro));
+
+            int faltaMadera =
+                Math.Max(
+                    0,
+                    costo.Madera -
+                    maquina.Recursos.ObtenerCantidad(
+                        TipoRecurso.Madera));
+
+            int faltaComida =
+                Math.Max(
+                    0,
+                    costo.Comida -
+                    maquina.Recursos.ObtenerCantidad(
+                        TipoRecurso.Comida));
+
+            return faltaOro +
+                   faltaMadera +
+                   faltaComida;
+        }
+
+        private DecisionMaquina PrepararRecoleccionParaUnidadMilitar(
+            Jugador maquina,
+            IReadOnlyList<Aldeano> disponibles,
+            string tipoUnidad)
         {
             if (maquina == null ||
                 disponibles == null ||
                 disponibles.Count == 0 ||
+                string.IsNullOrWhiteSpace(
+                    tipoUnidad) ||
                 !economia.IntentarObtenerCostoUnidad(
-                    nameof(Guerrero),
+                    tipoUnidad,
                     out CostoRecursos costo))
             {
                 return DecisionMaquina.SinAccion(
-                    "No fue posible preparar recursos para reponer ejército.");
+                    "No fue posible preparar recursos para ampliar el ejército.");
             }
 
             int oroActual =
                 maquina.Recursos.ObtenerCantidad(
                     TipoRecurso.Oro);
+
+            int maderaActual =
+                maquina.Recursos.ObtenerCantidad(
+                    TipoRecurso.Madera);
 
             int comidaActual =
                 maquina.Recursos.ObtenerCantidad(
@@ -676,6 +841,12 @@ namespace ImperiosEnGuerra.Modelo.IA
                     costo.Oro -
                     oroActual);
 
+            int faltaMadera =
+                Math.Max(
+                    0,
+                    costo.Madera -
+                    maderaActual);
+
             int faltaComida =
                 Math.Max(
                     0,
@@ -683,82 +854,63 @@ namespace ImperiosEnGuerra.Modelo.IA
                     comidaActual);
 
             if (faltaOro == 0 &&
+                faltaMadera == 0 &&
                 faltaComida == 0)
             {
                 return DecisionMaquina.SinAccion(
-                    "La IA ya dispone de recursos para entrenar un Guerrero.");
+                    $"La IA ya dispone de recursos para entrenar {tipoUnidad}.");
             }
 
-            TipoRecurso tipoPrioritario;
-
-            if (faltaOro > 0 &&
-                faltaComida > 0)
-            {
-                double proporcionOro =
-                    costo.Oro <= 0
-                        ? 0d
-                        : (double)faltaOro /
-                          costo.Oro;
-
-                double proporcionComida =
-                    costo.Comida <= 0
-                        ? 0d
-                        : (double)faltaComida /
-                          costo.Comida;
-
-                tipoPrioritario =
-                    proporcionComida >=
-                    proporcionOro
-                        ? TipoRecurso.Comida
-                        : TipoRecurso.Oro;
-            }
-            else
-            {
-                tipoPrioritario =
-                    faltaComida > 0
-                        ? TipoRecurso.Comida
-                        : TipoRecurso.Oro;
-            }
-
-            Recurso recurso =
-                BuscarRecursoMasCercano(
-                    maquina,
-                    disponibles,
-                    tipoPrioritario,
-                    out Aldeano aldeano);
-
-            if (recurso == null)
-            {
-                TipoRecurso alternativo =
-                    tipoPrioritario ==
-                    TipoRecurso.Comida
-                        ? TipoRecurso.Oro
-                        : TipoRecurso.Comida;
-
-                bool alternativoNecesario =
-                    alternativo ==
-                    TipoRecurso.Oro
-                        ? faltaOro > 0
-                        : faltaComida > 0;
-
-                if (alternativoNecesario)
+            var faltantes =
+                new List<(TipoRecurso Tipo, int Cantidad, int Costo)>
                 {
-                    recurso =
-                        BuscarRecursoMasCercano(
-                            maquina,
-                            disponibles,
-                            alternativo,
-                            out aldeano);
+                    (
+                        TipoRecurso.Oro,
+                        faltaOro,
+                        costo.Oro),
+                    (
+                        TipoRecurso.Madera,
+                        faltaMadera,
+                        costo.Madera),
+                    (
+                        TipoRecurso.Comida,
+                        faltaComida,
+                        costo.Comida)
+                }
+                .Where(
+                    faltante =>
+                        faltante.Cantidad > 0)
+                .OrderByDescending(
+                    faltante =>
+                        faltante.Costo <= 0
+                            ? 0d
+                            : (double)faltante.Cantidad /
+                              faltante.Costo)
+                .ThenByDescending(
+                    faltante =>
+                        faltante.Cantidad)
+                .ToList();
+
+            foreach (var faltante in faltantes)
+            {
+                Recurso recurso =
+                    BuscarRecursoMasCercano(
+                        maquina,
+                        disponibles,
+                        faltante.Tipo,
+                        out Aldeano aldeano);
+
+                if (recurso != null &&
+                    aldeano != null)
+                {
+                    return DecisionMaquina.Recolectar(
+                        aldeano.Id,
+                        recurso.Coordenada);
                 }
             }
 
-            return recurso == null ||
-                   aldeano == null
-                ? DecisionMaquina.SinAccion(
-                    "No hay un nodo disponible del recurso necesario para reponer ejército.")
-                : DecisionMaquina.Recolectar(
-                    aldeano.Id,
-                    recurso.Coordenada);
+            return DecisionMaquina.SinAccion(
+                $"No hay un nodo disponible de los recursos necesarios para entrenar {tipoUnidad}.");
         }
 
         private static Recurso BuscarRecursoMasCercano(
