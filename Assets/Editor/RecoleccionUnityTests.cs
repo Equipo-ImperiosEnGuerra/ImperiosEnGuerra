@@ -84,6 +84,88 @@ public class RecoleccionUnityTests
     }
 
     [Test]
+    public void HudContextual_FondoNoBloqueaClicksDelMapa()
+    {
+        var hudRaiz =
+            new GameObject(
+                "HudRaycast",
+                typeof(RectTransform));
+
+        try
+        {
+            var panel =
+                new GameObject(
+                    "PanelContextual",
+                    typeof(RectTransform),
+                    typeof(Image));
+
+            panel.transform.SetParent(
+                hudRaiz.transform,
+                false);
+
+            var seleccionTexto =
+                new GameObject(
+                    "Seleccion",
+                    typeof(RectTransform),
+                    typeof(Text));
+
+            seleccionTexto.transform.SetParent(
+                panel.transform,
+                false);
+
+            var mensajeTexto =
+                new GameObject(
+                    "Mensaje",
+                    typeof(RectTransform),
+                    typeof(Text));
+
+            mensajeTexto.transform.SetParent(
+                panel.transform,
+                false);
+
+            var mover =
+                new GameObject(
+                    "Mover",
+                    typeof(RectTransform),
+                    typeof(Image),
+                    typeof(Button));
+
+            mover.transform.SetParent(
+                panel.transform,
+                false);
+
+            hudRaiz.AddComponent<VistaHud>();
+
+            Assert.That(
+                panel.GetComponent<Image>()
+                    .raycastTarget,
+                Is.False,
+                "El fondo informativo no debe bloquear unidades detrás del HUD.");
+
+            Assert.That(
+                seleccionTexto.GetComponent<Text>()
+                    .raycastTarget,
+                Is.False);
+
+            Assert.That(
+                mensajeTexto.GetComponent<Text>()
+                    .raycastTarget,
+                Is.False);
+
+            Assert.That(
+                mover.GetComponent<Image>()
+                    .raycastTarget,
+                Is.True,
+                "Los botones sí deben seguir recibiendo clics.");
+        }
+        finally
+        {
+            Object.DestroyImmediate(
+                hudRaiz);
+        }
+    }
+
+    [Test]
     public void AldeanoHumano_PreparaRecoleccion()
     {
         Invocar(
