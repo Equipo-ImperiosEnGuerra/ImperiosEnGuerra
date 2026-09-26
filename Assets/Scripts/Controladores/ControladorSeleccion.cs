@@ -161,10 +161,23 @@ namespace ImperiosEnGuerra.Controladores
                         DestinoSeleccionado?.Invoke(
                             recurso.X,
                             recurso.Y);
+
+                        return;
                     }
 
-                    // En recolección solo una entidad Recurso válida puede
-                    // convertirse en objetivo lógico.
+                    // Si mientras espera un recurso el jugador hace clic
+                    // sobre otra entidad, cambia la selección en lugar de
+                    // quedar atrapado en el modo Recolectar.
+                    EntidadSeleccionableVista entidad =
+                        ObtenerEntidadEn(mundo);
+
+                    if (entidad != null)
+                    {
+                        CancelarCapturaDestino();
+                        Seleccionar(
+                            entidad);
+                    }
+
                     return;
                 }
 
