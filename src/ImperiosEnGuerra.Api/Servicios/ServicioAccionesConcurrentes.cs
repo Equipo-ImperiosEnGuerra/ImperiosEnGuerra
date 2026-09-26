@@ -27,6 +27,11 @@ public sealed class ServicioAccionesConcurrentes
         procesosPorUnidad =
             new ConcurrentDictionary<Guid, Guid>();
 
+    // Puerta cooperativa para la pausa del menú. Los workers conservan su
+    // estado y esperan sin tocar el Modelo mientras la partida está pausada.
+    private readonly ManualResetEventSlim puertaPausa =
+        new ManualResetEventSlim(true);
+
     private readonly TimeSpan retardoMovimiento;
     private readonly TimeSpan retardoRecoleccion;
     private readonly TimeSpan retardoConstruccion;
@@ -163,6 +168,20 @@ public sealed class ServicioAccionesConcurrentes
 
         this.estadoPartida.PartidaFinalizada +=
             CancelarTodos;
+    }
+
+
+    public bool PausadoTemporalmente =>
+        !puertaPausa.IsSet;
+
+    public void PausarTemporal()
+    {
+        puertaPausa.Reset();
+    }
+
+    public void ReanudarTemporal()
+    {
+        puertaPausa.Set();
     }
 
 
@@ -2159,22 +2178,58 @@ public sealed class ServicioAccionesConcurrentes
     // ESPERA CANCELABLE
     // ============================================================
 
-    private static void EsperarAntesDeAplicar(
+    private void EsperarAntesDeAplicar(
         CancellationToken token,
         TimeSpan retardo)
     {
         token.ThrowIfCancellationRequested();
+
+        // Un worker pausado no modifica el Modelo. La espera es cooperativa
+        // y responde también a CancellationToken.
+        puertaPausa.Wait(
+            token);
 
         if (retardo <= TimeSpan.Zero)
         {
             return;
         }
 
-        if (token.WaitHandle.WaitOne(
-            retardo))
+        TimeSpan restante =
+            retardo;
+
+        TimeSpan tramoMaximo =
+            TimeSpan.FromMilliseconds(
+                50);
+
+        while (restante > TimeSpan.Zero)
         {
             token.ThrowIfCancellationRequested();
+
+            puertaPausa.Wait(
+                token);
+
+            TimeSpan tramo =
+                restante < tramoMaximo
+                    ? restante
+                    : tramoMaximo;
+
+            if (token.WaitHandle.WaitOne(
+                    tramo))
+            {
+                token.ThrowIfCancellationRequested();
+            }
+
+            // Si la pausa comenzó durante este tramo, no contamos ese tiempo
+            // como progreso de gameplay.
+            if (puertaPausa.IsSet)
+            {
+                restante -=
+                    tramo;
+            }
         }
+
+        puertaPausa.Wait(
+            token);
     }
 
 

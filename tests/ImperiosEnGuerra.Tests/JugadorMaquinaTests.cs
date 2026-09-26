@@ -355,6 +355,184 @@ public class JugadorMaquinaTests
     }
 
     [Test]
+    public void Planificador_Morada_AbreConArquero()
+    {
+        Partida partida =
+            CrearPartidaEstrategica(
+                aldeanos: 3,
+                centros: 2,
+                oro: 10,
+                madera: 0,
+                comida: 10,
+                nombreMaquina: "CPU Morada");
+
+        DecisionMaquina decision =
+            new PlanificadorDecisionMaquina()
+                .Preparar(
+                    partida);
+
+        Assert.That(
+            decision.Tipo,
+            Is.EqualTo(
+                TipoDecisionMaquina.Entrenar));
+
+        Assert.That(
+            decision.TipoUnidad,
+            Is.EqualTo(
+                nameof(Arquero)));
+    }
+
+    [Test]
+    public void Planificador_Verde_AbreConLancero()
+    {
+        Partida partida =
+            CrearPartidaEstrategica(
+                aldeanos: 3,
+                centros: 2,
+                oro: 8,
+                madera: 0,
+                comida: 15,
+                nombreMaquina: "CPU Verde");
+
+        DecisionMaquina decision =
+            new PlanificadorDecisionMaquina()
+                .Preparar(
+                    partida);
+
+        Assert.That(
+            decision.Tipo,
+            Is.EqualTo(
+                TipoDecisionMaquina.Entrenar));
+
+        Assert.That(
+            decision.TipoUnidad,
+            Is.EqualTo(
+                nameof(Lancero)));
+    }
+
+    [Test]
+    public void Planificador_Amarilla_AbreConGuerrero()
+    {
+        Partida partida =
+            CrearPartidaEstrategica(
+                aldeanos: 3,
+                centros: 2,
+                oro: 5,
+                madera: 0,
+                comida: 15,
+                nombreMaquina: "CPU Amarilla");
+
+        DecisionMaquina decision =
+            new PlanificadorDecisionMaquina()
+                .Preparar(
+                    partida);
+
+        Assert.That(
+            decision.Tipo,
+            Is.EqualTo(
+                TipoDecisionMaquina.Entrenar));
+
+        Assert.That(
+            decision.TipoUnidad,
+            Is.EqualTo(
+                nameof(Guerrero)));
+    }
+
+    [Test]
+    public void Planificador_Morada_NoAbandonaArqueroPorGuerreroMasBarato()
+    {
+        Partida partida =
+            CrearPartidaEstrategica(
+                aldeanos: 3,
+                centros: 2,
+                oro: 5,
+                madera: 0,
+                comida: 15,
+                nombreMaquina: "CPU Morada");
+
+        var oro =
+            new Recurso(
+                TipoRecurso.Oro,
+                new Coordenada(7, 7),
+                100);
+
+        Assert.That(
+            partida.JugadorMaquina.Mapa
+                .ColocarRecurso(
+                    oro),
+            Is.True);
+
+        DecisionMaquina decision =
+            new PlanificadorDecisionMaquina()
+                .Preparar(
+                    partida);
+
+        Assert.That(
+            decision.Tipo,
+            Is.EqualTo(
+                TipoDecisionMaquina.Recolectar),
+            "Morada debe reunir Oro para su Arquero en vez de fabricar siempre el Guerrero más barato.");
+
+        Assert.That(
+            decision.Objetivo.X,
+            Is.EqualTo(
+                oro.Coordenada.X));
+
+        Assert.That(
+            decision.Objetivo.Y,
+            Is.EqualTo(
+                oro.Coordenada.Y));
+    }
+
+    [Test]
+    public void Planificador_Morada_ConCuatroRoles_RefuerzaArqueros()
+    {
+        Partida partida =
+            CrearPartidaEstrategica(
+                aldeanos: 3,
+                centros: 2,
+                oro: 10,
+                madera: 0,
+                comida: 10,
+                nombreMaquina: "CPU Morada");
+
+        Jugador maquina =
+            partida.JugadorMaquina;
+
+        maquina.AgregarUnidad(
+            new Arquero(
+                new Coordenada(4, 4)));
+
+        maquina.AgregarUnidad(
+            new Guerrero(
+                new Coordenada(5, 4)));
+
+        maquina.AgregarUnidad(
+            new Lancero(
+                new Coordenada(6, 4)));
+
+        maquina.AgregarUnidad(
+            new Monje(
+                new Coordenada(7, 4)));
+
+        DecisionMaquina decision =
+            new PlanificadorDecisionMaquina()
+                .Preparar(
+                    partida);
+
+        Assert.That(
+            decision.Tipo,
+            Is.EqualTo(
+                TipoDecisionMaquina.Entrenar));
+
+        Assert.That(
+            decision.TipoUnidad,
+            Is.EqualTo(
+                nameof(Arquero)),
+            "Al llegar al quinto militar, Morada debe reforzar su especialidad de rango.");
+    }
+
+    [Test]
     public void Planificador_SinMilitaresYPocoOro_PriorizaOroParaReponerEjercito()
     {
         Partida partida =
@@ -544,6 +722,166 @@ public class JugadorMaquinaTests
             decision.TipoUnidad,
             Is.EqualTo(
                 nameof(Guerrero)));
+    }
+
+    [Test]
+    public void Planificador_ConGuerreroYEconomiaDesarrollada_EntrenaArquero()
+    {
+        Partida partida =
+            CrearPartidaEstrategica(
+                aldeanos: 3,
+                centros: 2,
+                oro: 10,
+                madera: 0,
+                comida: 10);
+
+        partida.JugadorMaquina.AgregarUnidad(
+            new Guerrero(
+                new Coordenada(
+                    4,
+                    4)));
+
+        DecisionMaquina decision =
+            new PlanificadorDecisionMaquina()
+                .Preparar(
+                    partida);
+
+        Assert.That(
+            decision.Tipo,
+            Is.EqualTo(
+                TipoDecisionMaquina.Entrenar));
+
+        Assert.That(
+            decision.TipoUnidad,
+            Is.EqualTo(
+                nameof(Arquero)),
+            "Con un Guerrero existente y recursos de Arquero, la IA debe diversificar su ejército.");
+    }
+
+    [Test]
+    public void Planificador_ConGuerreroYArquero_EntrenaLanceroSiPuedePagarlo()
+    {
+        Partida partida =
+            CrearPartidaEstrategica(
+                aldeanos: 3,
+                centros: 2,
+                oro: 8,
+                madera: 0,
+                comida: 15);
+
+        partida.JugadorMaquina.AgregarUnidad(
+            new Guerrero(
+                new Coordenada(
+                    4,
+                    4)));
+
+        partida.JugadorMaquina.AgregarUnidad(
+            new Arquero(
+                new Coordenada(
+                    5,
+                    4)));
+
+        DecisionMaquina decision =
+            new PlanificadorDecisionMaquina()
+                .Preparar(
+                    partida);
+
+        Assert.That(
+            decision.Tipo,
+            Is.EqualTo(
+                TipoDecisionMaquina.Entrenar));
+
+        Assert.That(
+            decision.TipoUnidad,
+            Is.EqualTo(
+                nameof(Lancero)));
+    }
+
+    [Test]
+    public void Planificador_ConArqueroYaEnEntrenamiento_NoDuplicaElMismoTipo()
+    {
+        Partida partida =
+            CrearPartidaEstrategica(
+                aldeanos: 3,
+                centros: 2,
+                oro: 8,
+                madera: 0,
+                comida: 15);
+
+        partida.JugadorMaquina.AgregarUnidad(
+            new Guerrero(
+                new Coordenada(
+                    4,
+                    4)));
+
+        CentroUrbano centroOcupado =
+            partida.JugadorMaquina.Edificios
+                .OfType<CentroUrbano>()
+                .First();
+
+        centroOcupado.EncolarEntrenamiento(
+            nameof(Arquero));
+
+        DecisionMaquina decision =
+            new PlanificadorDecisionMaquina()
+                .Preparar(
+                    partida);
+
+        Assert.That(
+            decision.Tipo,
+            Is.EqualTo(
+                TipoDecisionMaquina.Entrenar));
+
+        Assert.That(
+            decision.TipoUnidad,
+            Is.EqualTo(
+                nameof(Lancero)),
+            "La IA debe contar las tropas que ya están en entrenamiento para no duplicar composición innecesariamente.");
+    }
+
+    [Test]
+    public void Planificador_ConTresTipos_EntrenaMonjeComoApoyoSiLaEconomiaLoPermite()
+    {
+        Partida partida =
+            CrearPartidaEstrategica(
+                aldeanos: 3,
+                centros: 2,
+                oro: 20,
+                madera: 0,
+                comida: 10);
+
+        partida.JugadorMaquina.AgregarUnidad(
+            new Guerrero(
+                new Coordenada(
+                    4,
+                    4)));
+
+        partida.JugadorMaquina.AgregarUnidad(
+            new Arquero(
+                new Coordenada(
+                    5,
+                    4)));
+
+        partida.JugadorMaquina.AgregarUnidad(
+            new Lancero(
+                new Coordenada(
+                    6,
+                    4)));
+
+        DecisionMaquina decision =
+            new PlanificadorDecisionMaquina()
+                .Preparar(
+                    partida);
+
+        Assert.That(
+            decision.Tipo,
+            Is.EqualTo(
+                TipoDecisionMaquina.Entrenar));
+
+        Assert.That(
+            decision.TipoUnidad,
+            Is.EqualTo(
+                nameof(Monje)));
     }
 
     [Test]
@@ -1173,7 +1511,8 @@ public class JugadorMaquinaTests
         int centros,
         int oro,
         int madera,
-        int comida)
+        int comida,
+        string nombreMaquina = "Máquina")
     {
         var mapaHumano =
             new Mapa(10, 10);
@@ -1190,7 +1529,7 @@ public class JugadorMaquinaTests
 
         var maquina =
             new Jugador(
-                "Máquina",
+                nombreMaquina,
                 TipoJugador.Maquina,
                 mapaMaquina,
                 new RecursosJugador());

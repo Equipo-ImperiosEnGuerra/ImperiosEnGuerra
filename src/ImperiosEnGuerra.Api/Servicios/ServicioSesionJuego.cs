@@ -27,6 +27,7 @@ public sealed class ServicioSesionJuego : IDisposable
 
     private DateTime ultimoLatidoUtc;
     private bool activa;
+    private bool pausaTemporal;
     private bool dispuesto;
 
     public ServicioSesionJuego(
@@ -118,6 +119,17 @@ public sealed class ServicioSesionJuego : IDisposable
         }
     }
 
+    public bool PausadaTemporalmente
+    {
+        get
+        {
+            lock (sincronizacion)
+            {
+                return pausaTemporal;
+            }
+        }
+    }
+
     public DateTime UltimoLatidoUtc
     {
         get
@@ -141,11 +153,13 @@ public sealed class ServicioSesionJuego : IDisposable
 
         lock (sincronizacion)
         {
+            pausaTemporal = false;
             activa = true;
             ultimoLatidoUtc =
                 DateTime.UtcNow;
         }
 
+        acciones.ReanudarTemporal();
         AsegurarServiciosActivos();
         return true;
     }
@@ -163,16 +177,86 @@ public sealed class ServicioSesionJuego : IDisposable
 
         lock (sincronizacion)
         {
+            ultimoLatidoUtc =
+                DateTime.UtcNow;
+
+            // Un GET de snapshot no debe quitar una pausa solicitada
+            // explícitamente desde el menú.
+            if (pausaTemporal)
+            {
+                return true;
+            }
+
             activa = true;
+        }
+
+        AsegurarServiciosActivos();
+        return true;
+    }
+
+    public bool PausarTemporal()
+    {
+        ThrowSiDispuesto();
+
+        if (!estadoPartida.HayPartidaActiva() ||
+            estadoPartida.EstaFinalizada())
+        {
+            return false;
+        }
+
+        bool cambio;
+
+        lock (sincronizacion)
+        {
+            cambio =
+                !pausaTemporal;
+
+            pausaTemporal =
+                true;
+
+            activa =
+                false;
+        }
+
+        acciones.PausarTemporal();
+        jugadorMaquina.Detener();
+        reacciones.Detener();
+        regeneracionRecursos.Detener();
+
+        return cambio;
+    }
+
+    public bool ReanudarTemporal()
+    {
+        ThrowSiDispuesto();
+
+        if (!estadoPartida.HayPartidaActiva() ||
+            estadoPartida.EstaFinalizada())
+        {
+            return false;
+        }
+
+        bool estabaPausada;
+
+        lock (sincronizacion)
+        {
+            estabaPausada =
+                pausaTemporal;
+
+            pausaTemporal =
+                false;
+
+            activa =
+                true;
+
             ultimoLatidoUtc =
                 DateTime.UtcNow;
         }
 
-        // Si el monitor había detenido recientemente los ciclos,
-        // los siguientes latidos los reactivan cuando su cancelación
-        // ya terminó de propagarse.
+        acciones.ReanudarTemporal();
         AsegurarServiciosActivos();
-        return true;
+
+        return estabaPausada;
     }
 
     public bool Pausar()
@@ -182,15 +266,24 @@ public sealed class ServicioSesionJuego : IDisposable
         lock (sincronizacion)
         {
             estabaActiva =
-                activa;
+                activa ||
+                pausaTemporal;
 
             activa =
+                false;
+
+            pausaTemporal =
                 false;
         }
 
         jugadorMaquina.Detener();
         reacciones.Detener();
         regeneracionRecursos.Detener();
+
+        // La pausa dura conserva workers; esta pausa de sesión, usada al
+        // salir/expirar, sí debe cancelarlos y dejar la puerta lista para una
+        // futura partida.
+        acciones.ReanudarTemporal();
         acciones.CancelarTodos();
 
         return estabaActiva;

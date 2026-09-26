@@ -244,6 +244,8 @@ app.MapGet(
     return Results.Ok(new
     {
         activa = sesionJuego.Activa,
+        pausadaTemporalmente =
+            sesionJuego.PausadaTemporalmente,
         ultimoLatidoUtc =
             sesionJuego.UltimoLatidoUtc
     });
@@ -263,6 +265,38 @@ app.MapPost(
     });
 })
 .WithName("PausarSesionJuego");
+
+app.MapPost(
+    "/api/sesion/pausar-temporal",
+    (ServicioSesionJuego sesionJuego) =>
+{
+    return Results.Ok(new
+    {
+        pausada =
+            sesionJuego.PausarTemporal(),
+        activa =
+            sesionJuego.Activa,
+        pausadaTemporalmente =
+            sesionJuego.PausadaTemporalmente
+    });
+})
+.WithName("PausarTemporalmenteSesionJuego");
+
+app.MapPost(
+    "/api/sesion/reanudar",
+    (ServicioSesionJuego sesionJuego) =>
+{
+    return Results.Ok(new
+    {
+        reanudada =
+            sesionJuego.ReanudarTemporal(),
+        activa =
+            sesionJuego.Activa,
+        pausadaTemporalmente =
+            sesionJuego.PausadaTemporalmente
+    });
+})
+.WithName("ReanudarSesionJuego");
 
 app.MapPost(
     "/api/partida/mover",

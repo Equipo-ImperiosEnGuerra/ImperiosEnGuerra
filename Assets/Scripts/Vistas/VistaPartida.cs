@@ -54,7 +54,38 @@ namespace ImperiosEnGuerra.Vistas
             entidadesPorId =
                 new Dictionary<string, EntidadSeleccionableVista>();
 
+        // Índices mantenidos al crear la Vista. Evitan recorrer y asignar
+        // arreglos de toda la jerarquía varias veces por snapshot.
+        private readonly List<EntidadSeleccionableVista>
+            entidadesSeleccionables =
+                new List<EntidadSeleccionableVista>();
+
+        private readonly List<EntidadSeleccionableVista>
+            recursosSeleccionables =
+                new List<EntidadSeleccionableVista>();
+
+        private bool movimientoVisualPausado;
+
         public event System.Action AntesDeLimpiarContenido;
+
+        public void EstablecerPausaVisual(
+            bool pausada)
+        {
+            movimientoVisualPausado =
+                pausada;
+
+            foreach (EntidadSeleccionableVista recurso
+                     in recursosSeleccionables)
+            {
+                if (recurso == null)
+                    continue;
+
+                recurso
+                    .GetComponent<AnimacionRecursoRecoleccion>()?
+                    .EstablecerPausada(
+                        pausada);
+            }
+        }
 
         public void Renderizar(EstadoPartidaDto estado)
         {
@@ -93,6 +124,9 @@ namespace ImperiosEnGuerra.Vistas
                     edificios,
                     unidades);
             }
+
+            ActualizarAnimacionRecursosRecoleccion(
+                estado);
 
             AjustarCamara(estado.mapa);
         }
@@ -152,19 +186,18 @@ namespace ImperiosEnGuerra.Vistas
                     edificios,
                     unidades);
             }
+
+            ActualizarAnimacionRecursosRecoleccion(
+                estado);
         }
 
         private void SincronizarRecursos(
             RecursoEstadoDto[] recursos)
         {
-            EntidadSeleccionableVista[] entidades =
-                GetComponentsInChildren<EntidadSeleccionableVista>(
-                    true);
-
-            foreach (EntidadSeleccionableVista entidad in entidades)
+            foreach (EntidadSeleccionableVista entidad
+                     in recursosSeleccionables)
             {
-                if (entidad == null ||
-                    entidad.Categoria != CategoriaEntidadVisual.Recurso)
+                if (entidad == null)
                 {
                     continue;
                 }
@@ -185,6 +218,98 @@ namespace ImperiosEnGuerra.Vistas
                     entidad.gameObject.SetActive(
                         visible);
                 }
+            }
+        }
+
+        private void ActualizarAnimacionRecursosRecoleccion(
+            EstadoPartidaDto estado)
+        {
+            JugadorEstadoDto[] jugadores =
+                ObtenerJugadoresEstado(
+                    estado);
+
+            var recolectores =
+                new List<UnidadEstadoDto>();
+
+            foreach (JugadorEstadoDto jugador
+                     in jugadores)
+            {
+                if (jugador?.unidades == null)
+                    continue;
+
+                foreach (UnidadEstadoDto unidad
+                         in jugador.unidades)
+                {
+                    if (unidad == null ||
+                        unidad.tipo != "Aldeano" ||
+                        unidad.coordenada == null ||
+                        !string.Equals(
+                            unidad.ordenActiva,
+                            "Recolectar",
+                            System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    recolectores.Add(
+                        unidad);
+                }
+            }
+
+            foreach (EntidadSeleccionableVista entidad
+                     in recursosSeleccionables)
+            {
+                if (entidad == null)
+                {
+                    continue;
+                }
+
+                AnimacionRecursoRecoleccion animacion =
+                    entidad.GetComponent<AnimacionRecursoRecoleccion>();
+
+                if (animacion == null)
+                    continue;
+
+                bool siendoRecolectado =
+                    false;
+
+                if (entidad.gameObject.activeSelf)
+                {
+                    foreach (UnidadEstadoDto aldeano
+                             in recolectores)
+                    {
+                        int distancia =
+                            Mathf.Abs(
+                                aldeano.coordenada.x -
+                                entidad.X) +
+                            Mathf.Abs(
+                                aldeano.coordenada.y -
+                                entidad.Y);
+
+                        bool tipoCompatible =
+                            string.IsNullOrWhiteSpace(
+                                aldeano.tipoCarga) ||
+                            string.Equals(
+                                aldeano.tipoCarga,
+                                entidad.TipoLogico,
+                                System.StringComparison.OrdinalIgnoreCase);
+
+                        if (distancia <= 1 &&
+                            tipoCompatible)
+                        {
+                            siendoRecolectado =
+                                true;
+
+                            break;
+                        }
+                    }
+                }
+
+                animacion.EstablecerRecolectando(
+                    siendoRecolectado);
+
+                animacion.EstablecerPausada(
+                    movimientoVisualPausado);
             }
         }
 
@@ -285,6 +410,12 @@ namespace ImperiosEnGuerra.Vistas
 
                 if (existente != null)
                 {
+                    if (!existente.gameObject.activeSelf)
+                    {
+                        existente.gameObject.SetActive(
+                            true);
+                    }
+
                     existente.ActualizarDatosLogicos(
                         existente.X,
                         existente.Y,
@@ -396,20 +527,37 @@ namespace ImperiosEnGuerra.Vistas
                         Mathf.Clamp01(
                             obra.progreso / 100f));
 
+                string nombreObra =
+                    $"Obra_{propietario}_{obra.tipo}_{obra.coordenada.x}_{obra.coordenada.y}";
+
+                Transform obraExistente =
+                    contenedor.Find(
+                        nombreObra);
+
                 GameObject objeto =
-                    CrearSprite(
-                        $"Obra_{propietario}_{obra.tipo}_{obra.coordenada.x}_{obra.coordenada.y}",
-                        sprite,
-                        obra.coordenada.x,
-                        obra.coordenada.y,
-                        18,
-                        contenedor,
-                        Vector3.one *
-                        escalaEdificios *
-                        factor);
+                    obraExistente == null
+                        ? CrearSprite(
+                            nombreObra,
+                            sprite,
+                            obra.coordenada.x,
+                            obra.coordenada.y,
+                            18,
+                            contenedor,
+                            Vector3.one *
+                            escalaEdificios *
+                            factor)
+                        : obraExistente.gameObject;
 
                 if (objeto == null)
                     continue;
+
+                objeto.SetActive(
+                    true);
+
+                objeto.transform.localScale =
+                    Vector3.one *
+                    escalaEdificios *
+                    factor;
 
                 SpriteRenderer renderer =
                     objeto.GetComponent<SpriteRenderer>();
@@ -459,6 +607,12 @@ namespace ImperiosEnGuerra.Vistas
 
                 if (existente != null)
                 {
+                    if (!existente.gameObject.activeSelf)
+                    {
+                        existente.gameObject.SetActive(
+                            true);
+                    }
+
                     int xAnterior =
                         existente.X;
 
@@ -476,23 +630,23 @@ namespace ImperiosEnGuerra.Vistas
                         unidad.alcance);
 
                     int saltoLogico =
-                        Mathf.Max(
-                            Mathf.Abs(
-                                unidad.coordenada.x -
-                                xAnterior),
-                            Mathf.Abs(
-                                unidad.coordenada.y -
-                                yAnterior));
+                        Mathf.Abs(
+                            unidad.coordenada.x -
+                            xAnterior) +
+                        Mathf.Abs(
+                            unidad.coordenada.y -
+                            yAnterior);
 
                     Vector3 destinoVisual =
                         PosicionVisual(
                             unidad.coordenada.x,
                             unidad.coordenada.y);
 
-                    if (saltoLogico > 1)
+                    if (saltoLogico > 3)
                     {
-                        // Si hubo una pausa larga o se perdió algún snapshot,
-                        // no se interpola atravesando el mapa en diagonal.
+                        // Si Unity perdió varios snapshots, el Modelo sigue
+                        // siendo la fuente de verdad. Se resincroniza sin
+                        // intentar recorrer visualmente un camino atrasado.
                         existente.transform.position =
                             destinoVisual;
 
@@ -552,29 +706,33 @@ namespace ImperiosEnGuerra.Vistas
             EdificioEstadoDto[] datos,
             string propietario)
         {
-            EntidadSeleccionableVista[] entidades =
-                GetComponentsInChildren<EntidadSeleccionableVista>(true);
+            var idsPresentes =
+                new HashSet<string>(
+                    datos
+                        .Where(
+                            edificio =>
+                                edificio != null &&
+                                !string.IsNullOrWhiteSpace(
+                                    edificio.id))
+                        .Select(
+                            edificio =>
+                                edificio.id));
 
-            foreach (EntidadSeleccionableVista entidad in entidades)
+            foreach (EntidadSeleccionableVista entidad
+                     in entidadesSeleccionables)
             {
                 if (entidad == null ||
                     entidad.Categoria != CategoriaEntidadVisual.Edificio ||
                     entidad.Propietario != propietario)
-                    continue;
-
-                bool existe = false;
-                foreach (EdificioEstadoDto edificio in datos)
                 {
-                    if (edificio != null &&
-                        edificio.id == entidad.IdLogico)
-                    {
-                        existe = true;
-                        break;
-                    }
+                    continue;
                 }
 
-                if (!existe)
+                if (!idsPresentes.Contains(
+                        entidad.IdLogico))
+                {
                     entidad.gameObject.SetActive(false);
+                }
             }
         }
 
@@ -582,30 +740,34 @@ namespace ImperiosEnGuerra.Vistas
             UnidadEstadoDto[] datos,
             string propietario)
         {
-            EntidadSeleccionableVista[] entidades =
-                GetComponentsInChildren<EntidadSeleccionableVista>(true);
+            var idsPresentes =
+                new HashSet<string>(
+                    datos
+                        .Where(
+                            unidad =>
+                                unidad != null &&
+                                !string.IsNullOrWhiteSpace(
+                                    unidad.id))
+                        .Select(
+                            unidad =>
+                                unidad.id));
 
-            foreach (EntidadSeleccionableVista entidad in entidades)
+            foreach (EntidadSeleccionableVista entidad
+                     in entidadesSeleccionables)
             {
                 if (entidad == null ||
                     entidad.Categoria != CategoriaEntidadVisual.Unidad ||
                     entidad.Propietario != propietario)
-                    continue;
-
-                bool existe = false;
-                foreach (UnidadEstadoDto unidad in datos)
                 {
-                    if (unidad != null &&
-                        unidad.id == entidad.IdLogico)
-                    {
-                        existe = true;
-                        break;
-                    }
+                    continue;
                 }
 
-                if (!existe)
+                if (!idsPresentes.Contains(
+                        entidad.IdLogico))
                 {
-                    movimientosVisuales.Remove(entidad.IdLogico);
+                    movimientosVisuales.Remove(
+                        entidad.IdLogico);
+
                     entidad.gameObject.SetActive(false);
                 }
             }
@@ -638,11 +800,8 @@ namespace ImperiosEnGuerra.Vistas
                 }
             }
 
-            EntidadSeleccionableVista[] entidades =
-                GetComponentsInChildren<EntidadSeleccionableVista>(
-                    true);
-
-            foreach (EntidadSeleccionableVista entidad in entidades)
+            foreach (EntidadSeleccionableVista entidad
+                     in entidadesSeleccionables)
             {
                 if (entidad == null ||
                     entidad.Categoria != categoria ||
@@ -719,6 +878,8 @@ namespace ImperiosEnGuerra.Vistas
             if (edificios == null)
                 return;
 
+            // Las obras se reutilizan entre snapshots. Destruir y recrear
+            // GameObjects cada 0.5 s generaba allocations y picos de GC.
             for (int i = edificios.childCount - 1;
                  i >= 0;
                  i--)
@@ -733,11 +894,6 @@ namespace ImperiosEnGuerra.Vistas
                 }
 
                 objeto.SetActive(false);
-
-                if (Application.isPlaying)
-                    Destroy(objeto);
-                else
-                    DestroyImmediate(objeto);
             }
         }
 
@@ -746,6 +902,8 @@ namespace ImperiosEnGuerra.Vistas
             AntesDeLimpiarContenido?.Invoke();
             movimientosVisuales.Clear();
             entidadesPorId.Clear();
+            entidadesSeleccionables.Clear();
+            recursosSeleccionables.Clear();
             anchoVisual = 0;
             altoVisual = 0;
             if (contenidoGenerado == null)
@@ -823,6 +981,13 @@ namespace ImperiosEnGuerra.Vistas
                 GameObject objeto = CrearSprite($"Recurso_{recurso.tipo}_{recurso.coordenada.x}_{recurso.coordenada.y}",
                     sprite, recurso.coordenada.x, recurso.coordenada.y, 10, contenedor,
                     Vector3.one * escalaRecursos);
+
+                if (objeto != null &&
+                    objeto.GetComponent<AnimacionRecursoRecoleccion>() == null)
+                {
+                    objeto.AddComponent<AnimacionRecursoRecoleccion>();
+                }
+
                 ConfigurarSeleccionable(objeto, CategoriaEntidadVisual.Recurso,
                     recurso.tipo, string.Empty, recurso.coordenada);
             }
@@ -1167,28 +1332,69 @@ namespace ImperiosEnGuerra.Vistas
                     movimiento;
             }
 
-            if ((entidad.transform.position -
-                 destino).sqrMagnitude <=
-                0.0001f)
+            Vector3 origen =
+                movimiento.Destinos.Count > 0
+                    ? movimiento.Destinos.Last()
+                    : entidad.transform.position;
+
+            if ((origen - destino)
+                .sqrMagnitude <= 0.0001f)
             {
                 return;
             }
 
-            if (movimiento.Destinos.Count > 0 &&
-                (movimiento.Destinos.Last() -
-                 destino).sqrMagnitude <=
-                0.0001f)
-            {
-                return;
-            }
+            float distanciaVisual =
+                Mathf.Abs(
+                    origen.x -
+                    destino.x) +
+                Mathf.Abs(
+                    origen.y -
+                    destino.y);
 
-            // No acumulamos una cola infinita si Unity estuvo detenido.
-            if (movimiento.Destinos.Count >= 4)
+            // Si la Vista quedó muy atrasada no intenta reproducir una cola
+            // histórica: se alinea con el Modelo y continúa desde ahí.
+            if (movimiento.Destinos.Count >= 3 ||
+                distanciaVisual >
+                    espacioCasilla * 3.1f)
             {
                 movimiento.Destinos.Clear();
+
                 entidad.transform.position =
                     destino;
+
                 return;
+            }
+
+            bool cambiaX =
+                Mathf.Abs(
+                    origen.x -
+                    destino.x) >
+                0.0001f;
+
+            bool cambiaY =
+                Mathf.Abs(
+                    origen.y -
+                    destino.y) >
+                0.0001f;
+
+            if (cambiaX &&
+                cambiaY)
+            {
+                // El pathfinding lógico es ortogonal. Si un snapshot saltó
+                // una casilla intermedia, reconstruimos dos tramos rectos en
+                // vez de interpolar visualmente una diagonal.
+                Vector3 intermedio =
+                    new Vector3(
+                        destino.x,
+                        origen.y,
+                        destino.z);
+
+                if ((origen - intermedio)
+                    .sqrMagnitude > 0.0001f)
+                {
+                    movimiento.Destinos.Enqueue(
+                        intermedio);
+                }
             }
 
             movimiento.Destinos.Enqueue(
@@ -1197,7 +1403,8 @@ namespace ImperiosEnGuerra.Vistas
 
         private void Update()
         {
-            if (movimientosVisuales.Count == 0)
+            if (movimientoVisualPausado ||
+                movimientosVisuales.Count == 0)
             {
                 return;
             }
@@ -1321,6 +1528,16 @@ namespace ImperiosEnGuerra.Vistas
                 vidaMaxima,
                 danio,
                 alcance);
+
+            entidadesSeleccionables.Add(
+                entidad);
+
+            if (categoria ==
+                CategoriaEntidadVisual.Recurso)
+            {
+                recursosSeleccionables.Add(
+                    entidad);
+            }
 
             if (!string.IsNullOrWhiteSpace(
                     idLogico))
