@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -26,6 +27,9 @@ namespace ImperiosEnGuerra.Vistas
         private GameObject pantallaResultadoFinal;
         private Text tituloResultadoFinal;
         private Text detalleResultadoFinal;
+        private GameObject avisoTemporal;
+        private Text avisoTemporalTexto;
+        private Coroutine avisoTemporalRutina;
 
         public event Action<string> AccionSolicitada;
         public event Action<string> TipoUnidadSolicitado;
@@ -37,7 +41,191 @@ namespace ImperiosEnGuerra.Vistas
             CrearBotonCancelarSiFalta();
             AplicarLayoutCompacto();
             ConfigurarRaycastsNoBloqueantes();
+            CrearAvisoTemporal();
             CrearPantallaResultadoFinal();
+        }
+
+        public void MostrarAvisoTemporal(
+            string texto,
+            float duracionSegundos = 2.75f)
+        {
+            if (string.IsNullOrWhiteSpace(
+                    texto))
+            {
+                return;
+            }
+
+            CrearAvisoTemporal();
+
+            if (avisoTemporalTexto != null)
+            {
+                avisoTemporalTexto.text =
+                    texto;
+            }
+
+            if (avisoTemporal != null)
+            {
+                avisoTemporal.SetActive(
+                    true);
+            }
+
+            if (!Application.isPlaying ||
+                !isActiveAndEnabled)
+            {
+                return;
+            }
+
+            if (avisoTemporalRutina != null)
+            {
+                StopCoroutine(
+                    avisoTemporalRutina);
+            }
+
+            avisoTemporalRutina =
+                StartCoroutine(
+                    OcultarAvisoDespues(
+                        Mathf.Max(
+                            0.5f,
+                            duracionSegundos)));
+        }
+
+        private void CrearAvisoTemporal()
+        {
+            if (avisoTemporal != null)
+                return;
+
+            Transform existente =
+                transform.Find(
+                    "AvisoAldeano");
+
+            if (existente != null)
+            {
+                avisoTemporal =
+                    existente.gameObject;
+
+                avisoTemporalTexto =
+                    existente.GetComponentInChildren<Text>(
+                        true);
+
+                return;
+            }
+
+            avisoTemporal =
+                new GameObject(
+                    "AvisoAldeano",
+                    typeof(RectTransform),
+                    typeof(Image));
+
+            avisoTemporal.transform.SetParent(
+                transform,
+                false);
+
+            RectTransform rect =
+                avisoTemporal.GetComponent<RectTransform>();
+
+            rect.anchorMin =
+                new Vector2(
+                    0.5f,
+                    1f);
+
+            rect.anchorMax =
+                rect.anchorMin;
+
+            rect.pivot =
+                new Vector2(
+                    0.5f,
+                    1f);
+
+            rect.anchoredPosition =
+                new Vector2(
+                    0f,
+                    -58f);
+
+            rect.sizeDelta =
+                new Vector2(
+                    350f,
+                    34f);
+
+            Image fondo =
+                avisoTemporal.GetComponent<Image>();
+
+            fondo.color =
+                new Color(
+                    0.04f,
+                    0.07f,
+                    0.11f,
+                    0.88f);
+
+            fondo.raycastTarget =
+                false;
+
+            GameObject textoObjeto =
+                new GameObject(
+                    "Texto",
+                    typeof(RectTransform),
+                    typeof(Text));
+
+            textoObjeto.transform.SetParent(
+                avisoTemporal.transform,
+                false);
+
+            RectTransform textoRect =
+                textoObjeto.GetComponent<RectTransform>();
+
+            textoRect.anchorMin =
+                Vector2.zero;
+
+            textoRect.anchorMax =
+                Vector2.one;
+
+            textoRect.offsetMin =
+                new Vector2(
+                    10f,
+                    2f);
+
+            textoRect.offsetMax =
+                new Vector2(
+                    -10f,
+                    -2f);
+
+            avisoTemporalTexto =
+                textoObjeto.GetComponent<Text>();
+
+            avisoTemporalTexto.font =
+                Resources.GetBuiltinResource<Font>(
+                    "LegacyRuntime.ttf");
+
+            avisoTemporalTexto.fontSize =
+                15;
+
+            avisoTemporalTexto.alignment =
+                TextAnchor.MiddleCenter;
+
+            avisoTemporalTexto.color =
+                Color.white;
+
+            avisoTemporalTexto.raycastTarget =
+                false;
+
+            avisoTemporal.SetActive(
+                false);
+        }
+
+        private IEnumerator OcultarAvisoDespues(
+            float duracionSegundos)
+        {
+            yield return
+                new WaitForSecondsRealtime(
+                    duracionSegundos);
+
+            if (avisoTemporal != null)
+            {
+                avisoTemporal.SetActive(
+                    false);
+            }
+
+            avisoTemporalRutina =
+                null;
         }
 
         private void CrearBotonCancelarSiFalta()
