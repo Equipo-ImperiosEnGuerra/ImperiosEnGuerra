@@ -1130,22 +1130,27 @@ public sealed class EstadoPartidaService
         Guid obraId,
         out ObraConstruccion? obra)
     {
-        obra =
-            partidaActiva?.JugadorHumano.ObrasConstruccion
-                .FirstOrDefault(
-                    o => o.Id == obraId);
+        obra = null;
 
-        if (obra != null)
-            return partidaActiva!.JugadorHumano;
+        if (partidaActiva == null)
+            return null;
 
-        obra =
-            partidaActiva?.JugadorMaquina.ObrasConstruccion
-                .FirstOrDefault(
-                    o => o.Id == obraId);
+        foreach (Jugador jugador
+                 in partidaActiva.Jugadores)
+        {
+            ObraConstruccion? encontrada =
+                jugador.ObrasConstruccion
+                    .FirstOrDefault(
+                        o => o.Id == obraId);
 
-        return obra != null
-            ? partidaActiva!.JugadorMaquina
-            : null;
+            if (encontrada == null)
+                continue;
+
+            obra = encontrada;
+            return jugador;
+        }
+
+        return null;
     }
 
     public ResultadoAccion EncolarEntrenamiento(
