@@ -262,6 +262,17 @@ namespace ImperiosEnGuerra.Servicios
                 .Append(partida.Ganador.Nombre)
                 .Append('\n');
 
+            if (perdedores.Length > 0)
+            {
+                texto.Append("PerdedorTipo=")
+                    .Append(perdedores[0].Tipo)
+                    .Append('\n');
+
+                texto.Append("PerdedorNombre=")
+                    .Append(perdedores[0].Nombre)
+                    .Append('\n');
+            }
+
             texto.Append("Perdedores=")
                 .Append(perdedores.Length)
                 .Append('\n');
