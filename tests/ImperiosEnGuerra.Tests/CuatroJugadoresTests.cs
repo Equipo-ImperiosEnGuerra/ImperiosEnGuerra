@@ -1,10 +1,12 @@
 using ImperiosEnGuerra.Api.Mapeadores;
+using ImperiosEnGuerra.Modelo.Acciones;
 using ImperiosEnGuerra.Modelo.Combate;
 using ImperiosEnGuerra.Modelo.Core;
 using ImperiosEnGuerra.Modelo.Edificios;
 using ImperiosEnGuerra.Modelo.IA;
 using ImperiosEnGuerra.Modelo.Map;
 using ImperiosEnGuerra.Modelo.Recursos;
+using ImperiosEnGuerra.Modelo.Unidades;
 using NUnit.Framework;
 
 namespace ImperiosEnGuerra.Tests;
@@ -115,6 +117,124 @@ public class CuatroJugadoresTests
         Assert.That(
             partida.Finalizada,
             Is.False);
+    }
+
+    [Test]
+    public void ConquistarIa_CreaCentroUrbanoParaHumano()
+    {
+        Partida partida =
+            CrearPartidaCuatro();
+
+        Jugador maquina =
+            partida.JugadoresMaquina[0];
+
+        EliminarCentro(
+            maquina);
+
+        var atacante =
+            new Guerrero(
+                new Coordenada(
+                    6,
+                    6));
+
+        var defensor =
+            new Guerrero(
+                new Coordenada(
+                    7,
+                    6));
+
+        partida.JugadorHumano
+            .AgregarUnidad(
+                atacante);
+
+        maquina.AgregarUnidad(
+            defensor);
+
+        partida.JugadorHumano.Mapa
+            .ObtenerCasilla(
+                6,
+                6)
+            .Ocupar();
+
+        maquina.Mapa
+            .ObtenerCasilla(
+                7,
+                6)
+            .Ocupar();
+
+        int centrosAntes =
+            partida.JugadorHumano
+                .Edificios
+                .OfType<CentroUrbano>()
+                .Count();
+
+        var ataque =
+            new OperacionAtaque();
+
+        while (maquina.Unidades.Any(
+                   unidad =>
+                       unidad.Id ==
+                       defensor.Id))
+        {
+            ResultadoAccion resultado =
+                ataque.Ejecutar(
+                    partida,
+                    new SolicitudAtaque(
+                        atacante.Id,
+                        defensor.Id));
+
+            Assert.That(
+                resultado.Exito,
+                Is.True,
+                resultado.Mensaje);
+        }
+
+        CentroUrbano[] centros =
+            partida.JugadorHumano
+                .Edificios
+                .OfType<CentroUrbano>()
+                .ToArray();
+
+        Assert.That(
+            centros,
+            Has.Length.EqualTo(
+                centrosAntes + 1));
+
+        Assert.That(
+            centros.Any(
+                centro =>
+                    centro.Coordenada.X == 7 &&
+                    centro.Coordenada.Y == 6),
+            Is.True);
+
+        Assert.That(
+            partida.Finalizada,
+            Is.False,
+            "Conquistar una sola IA no debe terminar la partida.");
+    }
+
+    [Test]
+    public void IaEliminada_DejaDeTomarDecisiones()
+    {
+        Partida partida =
+            CrearPartidaCuatro();
+
+        Jugador maquina =
+            partida.JugadoresMaquina[0];
+
+        EliminarCentro(
+            maquina);
+
+        DecisionMaquina decision =
+            new PlanificadorDecisionMaquina()
+                .Preparar(
+                    partida,
+                    maquina);
+
+        Assert.That(
+            decision.Tipo,
+            Is.EqualTo(
+                TipoDecisionMaquina.Ninguna));
     }
 
     [Test]
