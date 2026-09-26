@@ -460,13 +460,41 @@ public sealed class EstadoPartidaService
         IReadOnlyCollection<Guid>? unidadesExcluidas = null,
         IReadOnlyCollection<Coordenada>? centrosExcluidos = null)
     {
+        return PrepararDecisionMaquina(
+            0,
+            unidadesExcluidas,
+            centrosExcluidos);
+    }
+
+    public DecisionMaquina PrepararDecisionMaquina(
+        int indiceMaquina,
+        IReadOnlyCollection<Guid>? unidadesExcluidas = null,
+        IReadOnlyCollection<Coordenada>? centrosExcluidos = null)
+    {
         lock (sincronizacion)
         {
+            Jugador? maquina =
+                partidaActiva?
+                    .JugadoresMaquina
+                    .ElementAtOrDefault(
+                        indiceMaquina);
+
             return new PlanificadorDecisionMaquina()
                 .Preparar(
                     partidaActiva,
+                    maquina,
                     unidadesExcluidas,
                     centrosExcluidos);
+        }
+    }
+
+    public int CantidadJugadoresMaquina()
+    {
+        lock (sincronizacion)
+        {
+            return partidaActiva?
+                .JugadoresMaquina.Count
+                ?? 0;
         }
     }
 
@@ -1721,18 +1749,13 @@ public sealed class EstadoPartidaService
             if (partidaActiva == null)
                 return false;
 
-            return
-                partidaActiva.JugadorHumano.Unidades.Any(
-                    u => u.Id == id)
-                ||
-                partidaActiva.JugadorMaquina.Unidades.Any(
-                    u => u.Id == id)
-                ||
-                partidaActiva.JugadorHumano.Edificios.Any(
-                    e => e.Id == id)
-                ||
-                partidaActiva.JugadorMaquina.Edificios.Any(
-                    e => e.Id == id);
+            return partidaActiva.Jugadores.Any(
+                jugador =>
+                    jugador.Unidades.Any(
+                        u => u.Id == id)
+                    ||
+                    jugador.Edificios.Any(
+                        e => e.Id == id));
         }
     }
 
