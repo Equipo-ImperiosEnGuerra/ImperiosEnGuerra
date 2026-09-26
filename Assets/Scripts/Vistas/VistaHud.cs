@@ -173,15 +173,16 @@ namespace ImperiosEnGuerra.Vistas
             if (panel == null)
                 return;
 
-            // El mapa queda centrado y deja una franja libre a la izquierda.
-            // Usamos esa zona para que el HUD no tape el campo de batalla.
+            // El jugador pidió mantener este HUD en la parte inferior
+            // izquierda. Se aprovecha la franja libre lateral y se conserva
+            // un ancho compacto para no invadir el mapa.
             ConfigurarRect(
                 panel,
-                new Vector2(0f, 1f),
-                new Vector2(0f, 1f),
-                new Vector2(0f, 1f),
-                new Vector2(12f, -288f),
-                new Vector2(282f, -58f));
+                Vector2.zero,
+                Vector2.zero,
+                Vector2.zero,
+                new Vector2(12f, 12f),
+                new Vector2(282f, 242f));
 
             ConfigurarRectHijo(
                 panel,
