@@ -199,11 +199,48 @@ public class RecoleccionUnityTests
     }
 
     [Test]
-    public void FinDeTrabajo_MuestraAvisoDeAldeanoDisponible()
+    public void AldeanoQuieto_DuranteDosSnapshots_MuestraAviso()
     {
+        var estado =
+            new EstadoPartidaDto
+            {
+                jugadorHumano =
+                    new JugadorEstadoDto
+                    {
+                        unidades =
+                            new[]
+                            {
+                                new UnidadEstadoDto
+                                {
+                                    id = IdAldeano,
+                                    tipo = "Aldeano",
+                                    estado = "Idle",
+                                    ordenActiva = "",
+                                    coordenada =
+                                        new CoordenadaEstadoDto
+                                        {
+                                            x = 1,
+                                            y = 1
+                                        }
+                                }
+                            }
+                    }
+            };
+
         Invocar(
             conexion,
-            "NotificarAldeanoDisponible");
+            "ActualizarAvisosAldeanosQuietos",
+            estado);
+
+        Invocar(
+            conexion,
+            "ActualizarAvisosAldeanosQuietos",
+            estado);
+
+        Invocar(
+            conexion,
+            "ActualizarAvisosAldeanosQuietos",
+            estado);
 
         Transform aviso =
             raiz.transform.Find(
@@ -223,8 +260,8 @@ public class RecoleccionUnityTests
 
         Assert.That(
             textoAviso.text,
-            Is.EqualTo(
-                "Aldeano disponible para una nueva tarea."));
+            Does.Contain(
+                "Aldeano quieto"));
 
         RectTransform rect =
             aviso.GetComponent<RectTransform>();
@@ -236,6 +273,57 @@ public class RecoleccionUnityTests
         Assert.That(
             rect.anchorMin.y,
             Is.EqualTo(1f));
+    }
+
+    [Test]
+    public void AldeanoQueSigueMoviendose_NoMuestraAvisoQuieto()
+    {
+        for (int x = 1; x <= 4; x++)
+        {
+            var estado =
+                new EstadoPartidaDto
+                {
+                    jugadorHumano =
+                        new JugadorEstadoDto
+                        {
+                            unidades =
+                                new[]
+                                {
+                                    new UnidadEstadoDto
+                                    {
+                                        id = IdAldeano,
+                                        tipo = "Aldeano",
+                                        estado = "Idle",
+                                        ordenActiva = "",
+                                        coordenada =
+                                            new CoordenadaEstadoDto
+                                            {
+                                                x = x,
+                                                y = 1
+                                            }
+                                    }
+                                }
+                        }
+                };
+
+            Invocar(
+                conexion,
+                "ActualizarAvisosAldeanosQuietos",
+                estado);
+        }
+
+        Transform aviso =
+            raiz.transform.Find(
+                "AvisoAldeano");
+
+        Assert.That(
+            aviso,
+            Is.Not.Null);
+
+        Assert.That(
+            aviso.gameObject.activeSelf,
+            Is.False,
+            "Mientras el Aldeano siga cambiando de casilla no debe considerarse quieto.");
     }
 
     [Test]
