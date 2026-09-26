@@ -29,6 +29,13 @@ namespace ImperiosEnGuerra.Controladores.Red
         private bool ultimoEstadoPartidaValido;
         private bool sesionVisualActiva;
         private Coroutine sincronizacionPeriodica;
+        private readonly Dictionary<string, Vector2Int> ultimaPosicionAldeano =
+            new Dictionary<string, Vector2Int>();
+        private readonly Dictionary<string, int> quietudAldeano =
+            new Dictionary<string, int>();
+        private readonly HashSet<string> aldeanosIdleAvisados =
+            new HashSet<string>();
+        private const int SnapshotsQuietoParaAviso = 2;
         private const float IntervaloSincronizacionEstado = 0.5f;
         private const float IntervaloConsultaProceso = 0.25f;
 
@@ -828,8 +835,6 @@ public bool PuedeCancelarAccion =>
                     "Recolección completada, pero no se pudo actualizar la vista. ",
                     false);
 
-                NotificarAldeanoDisponible();
-
                 yield break;
             }
 
@@ -1076,8 +1081,6 @@ public bool PuedeCancelarAccion =>
                         : resultado.mensaje,
                     "Construcción completada, pero no se pudo actualizar la vista. ",
                     false);
-
-                NotificarAldeanoDisponible();
 
                 yield break;
             }
@@ -2076,6 +2079,7 @@ public bool PuedeCancelarAccion =>
             PartidaFinalizada = false;
             ApiDisponible = true;
             ultimoInicioPartidaExitoso = true;
+            ReiniciarAvisosAldeanosQuietos();
 
             if (controladorSeleccion == null)
             {
@@ -2194,6 +2198,12 @@ public bool PuedeCancelarAccion =>
             vistaPartida.Sincronizar(estadoPartida);
             ultimoEstadoPartidaValido = true;
 
+            if (!PartidaFinalizada)
+            {
+                ActualizarAvisosAldeanosQuietos(
+                    estadoPartida);
+            }
+
             if (vistaHud != null)
             {
                 var recursos =
@@ -2236,16 +2246,157 @@ public bool PuedeCancelarAccion =>
             }
         }
 
-        private void NotificarAldeanoDisponible()
+        private void ReiniciarAvisosAldeanosQuietos()
         {
-            if (vistaHud == null ||
-                PartidaFinalizada)
+            ultimaPosicionAldeano.Clear();
+            quietudAldeano.Clear();
+            aldeanosIdleAvisados.Clear();
+        }
+
+        private void ActualizarAvisosAldeanosQuietos(
+            EstadoPartidaDto estadoPartida)
+        {
+            UnidadEstadoDto[] unidades =
+                estadoPartida?
+                    .jugadorHumano?
+                    .unidades;
+
+            if (unidades == null)
+                return;
+
+            var presentes =
+                new HashSet<string>();
+
+            int nuevosQuietos =
+                0;
+
+            foreach (UnidadEstadoDto unidad
+                     in unidades)
+            {
+                if (unidad == null ||
+                    unidad.tipo != "Aldeano" ||
+                    unidad.coordenada == null ||
+                    string.IsNullOrWhiteSpace(
+                        unidad.id))
+                {
+                    continue;
+                }
+
+                presentes.Add(
+                    unidad.id);
+
+                var posicion =
+                    new Vector2Int(
+                        unidad.coordenada.x,
+                        unidad.coordenada.y);
+
+                bool tienePosicionAnterior =
+                    ultimaPosicionAldeano
+                        .TryGetValue(
+                            unidad.id,
+                            out Vector2Int anterior);
+
+                bool quieto =
+                    tienePosicionAnterior &&
+                    anterior == posicion;
+
+                bool sinTarea =
+                    string.IsNullOrWhiteSpace(
+                        unidad.ordenActiva) &&
+                    (string.IsNullOrWhiteSpace(
+                         unidad.estado) ||
+                     unidad.estado == "Idle");
+
+                if (!sinTarea)
+                {
+                    quietudAldeano[
+                        unidad.id] =
+                        0;
+
+                    // Una orden real rearma el aviso para cuando termine.
+                    aldeanosIdleAvisados.Remove(
+                        unidad.id);
+                }
+                else if (quieto)
+                {
+                    int muestras =
+                        quietudAldeano.TryGetValue(
+                            unidad.id,
+                            out int actual)
+                            ? actual + 1
+                            : 1;
+
+                    quietudAldeano[
+                        unidad.id] =
+                        muestras;
+
+                    if (muestras >=
+                            SnapshotsQuietoParaAviso &&
+                        aldeanosIdleAvisados.Add(
+                            unidad.id))
+                    {
+                        nuevosQuietos++;
+                    }
+                }
+                else
+                {
+                    // El paseo ambiental puede cambiar la casilla sin crear
+                    // una orden real. Reiniciamos el contador, pero no
+                    // repetimos el aviso hasta que el jugador le asigne tarea.
+                    quietudAldeano[
+                        unidad.id] =
+                        0;
+                }
+
+                ultimaPosicionAldeano[
+                    unidad.id] =
+                    posicion;
+            }
+
+            LimpiarAvisosAldeanosAusentes(
+                presentes);
+
+            if (nuevosQuietos <= 0 ||
+                vistaHud == null)
             {
                 return;
             }
 
             vistaHud.MostrarAvisoTemporal(
-                "Aldeano disponible para una nueva tarea.");
+                nuevosQuietos == 1
+                    ? "Hay un Aldeano quieto y disponible."
+                    : $"Hay {nuevosQuietos} Aldeanos quietos y disponibles.");
+        }
+
+        private void LimpiarAvisosAldeanosAusentes(
+            HashSet<string> presentes)
+        {
+            var ausentes =
+                new List<string>();
+
+            foreach (string id
+                     in ultimaPosicionAldeano.Keys)
+            {
+                if (!presentes.Contains(
+                        id))
+                {
+                    ausentes.Add(
+                        id);
+                }
+            }
+
+            foreach (string id
+                     in ausentes)
+            {
+                ultimaPosicionAldeano.Remove(
+                    id);
+
+                quietudAldeano.Remove(
+                    id);
+
+                aldeanosIdleAvisados.Remove(
+                    id);
+            }
         }
 
         private IniciarPartidaDto CrearPartidaPrueba()
