@@ -199,6 +199,67 @@ public class RecoleccionUnityTests
     }
 
     [Test]
+    public void AnimacionRecurso_AlFinalizarRestauraTransformOriginal()
+    {
+        var objeto =
+            new GameObject(
+                "RecursoAnimado");
+
+        try
+        {
+            objeto.transform.localPosition =
+                new Vector3(
+                    4f,
+                    6f,
+                    0f);
+
+            objeto.transform.localScale =
+                new Vector3(
+                    0.88f,
+                    0.88f,
+                    0.88f);
+
+            Vector3 posicionOriginal =
+                objeto.transform.localPosition;
+
+            Vector3 escalaOriginal =
+                objeto.transform.localScale;
+
+            AnimacionRecursoRecoleccion animacion =
+                objeto.AddComponent<AnimacionRecursoRecoleccion>();
+
+            animacion.EstablecerRecolectando(
+                true);
+
+            Assert.That(
+                animacion.Recolectando,
+                Is.True);
+
+            animacion.EstablecerRecolectando(
+                false);
+
+            Assert.That(
+                animacion.Recolectando,
+                Is.False);
+
+            Assert.That(
+                objeto.transform.localPosition,
+                Is.EqualTo(
+                    posicionOriginal));
+
+            Assert.That(
+                objeto.transform.localScale,
+                Is.EqualTo(
+                    escalaOriginal));
+        }
+        finally
+        {
+            Object.DestroyImmediate(
+                objeto);
+        }
+    }
+
+    [Test]
     public void AldeanoQuieto_DuranteDosSnapshots_MuestraAviso()
     {
         var estado =

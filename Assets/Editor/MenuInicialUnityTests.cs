@@ -44,6 +44,51 @@ public class MenuInicialUnityTests
     }
 
     [Test]
+    public void VistaMenuPausa_CreaReanudarYSalir()
+    {
+        var objeto =
+            new GameObject(
+                "PausaPrueba");
+
+        try
+        {
+            VistaMenuPausa vista =
+                objeto.AddComponent<VistaMenuPausa>();
+
+            Assert.That(
+                vista.Visible,
+                Is.False);
+
+            vista.Mostrar();
+
+            Assert.That(
+                vista.Visible,
+                Is.True);
+
+            Assert.That(
+                objeto.transform.Find(
+                    "FondoPausa/Panel/Reanudar"),
+                Is.Not.Null);
+
+            Assert.That(
+                objeto.transform.Find(
+                    "FondoPausa/Panel/Salir"),
+                Is.Not.Null);
+
+            vista.Ocultar();
+
+            Assert.That(
+                vista.Visible,
+                Is.False);
+        }
+        finally
+        {
+            Object.DestroyImmediate(
+                objeto);
+        }
+    }
+
+    [Test]
     public void Instrucciones_UsanLenguajeDeJuego_NoTecnico()
     {
         var objeto =

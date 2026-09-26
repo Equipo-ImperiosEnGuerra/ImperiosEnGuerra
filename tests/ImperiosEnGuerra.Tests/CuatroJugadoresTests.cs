@@ -214,6 +214,212 @@ public class CuatroJugadoresTests
     }
 
     [Test]
+    public void IaAunActiva_DestruirUnidad_NoCreaCentroConquista()
+    {
+        Partida partida =
+            CrearPartidaCuatro();
+
+        Jugador maquina =
+            partida.JugadoresMaquina[0];
+
+        var atacante =
+            new Guerrero(
+                new Coordenada(
+                    6,
+                    6));
+
+        var defensor =
+            new Guerrero(
+                new Coordenada(
+                    7,
+                    6));
+
+        partida.JugadorHumano
+            .AgregarUnidad(
+                atacante);
+
+        maquina.AgregarUnidad(
+            defensor);
+
+        partida.JugadorHumano.Mapa
+            .ObtenerCasilla(
+                6,
+                6)
+            .Ocupar();
+
+        maquina.Mapa
+            .ObtenerCasilla(
+                7,
+                6)
+            .Ocupar();
+
+        int centrosAntes =
+            partida.JugadorHumano
+                .Edificios
+                .OfType<CentroUrbano>()
+                .Count();
+
+        var ataque =
+            new OperacionAtaque();
+
+        while (maquina.Unidades.Any(
+                   unidad =>
+                       unidad.Id ==
+                       defensor.Id))
+        {
+            ResultadoAccion resultado =
+                ataque.Ejecutar(
+                    partida,
+                    new SolicitudAtaque(
+                        atacante.Id,
+                        defensor.Id));
+
+            Assert.That(
+                resultado.Exito,
+                Is.True,
+                resultado.Mensaje);
+        }
+
+        Assert.That(
+            maquina.Edificios
+                .OfType<CentroUrbano>()
+                .Any(),
+            Is.True,
+            "La IA continúa activa mientras conserve un Centro Urbano.");
+
+        Assert.That(
+            partida.JugadorHumano
+                .Edificios
+                .OfType<CentroUrbano>()
+                .Count(),
+            Is.EqualTo(
+                centrosAntes),
+            "Destruir una unidad de una IA aún activa no debe crear un Centro Urbano humano.");
+    }
+
+    [Test]
+    public void IaYaEliminada_DestruirAldeanoResidual_NoCreaOtroCentroConquista()
+    {
+        Partida partida =
+            CrearPartidaCuatro();
+
+        Jugador maquina =
+            partida.JugadoresMaquina[0];
+
+        EliminarCentro(
+            maquina);
+
+        var atacante =
+            new Guerrero(
+                new Coordenada(
+                    6,
+                    6));
+
+        var defensorMilitar =
+            new Guerrero(
+                new Coordenada(
+                    7,
+                    6));
+
+        var aldeanoResidual =
+            new Aldeano(
+                new Coordenada(
+                    6,
+                    7));
+
+        partida.JugadorHumano
+            .AgregarUnidad(
+                atacante);
+
+        maquina.AgregarUnidad(
+            defensorMilitar);
+
+        maquina.AgregarUnidad(
+            aldeanoResidual);
+
+        partida.JugadorHumano.Mapa
+            .ObtenerCasilla(
+                6,
+                6)
+            .Ocupar();
+
+        maquina.Mapa
+            .ObtenerCasilla(
+                7,
+                6)
+            .Ocupar();
+
+        maquina.Mapa
+            .ObtenerCasilla(
+                6,
+                7)
+            .Ocupar();
+
+        var ataque =
+            new OperacionAtaque();
+
+        while (maquina.Unidades.Any(
+                   unidad =>
+                       unidad.Id ==
+                       defensorMilitar.Id))
+        {
+            ResultadoAccion resultado =
+                ataque.Ejecutar(
+                    partida,
+                    new SolicitudAtaque(
+                        atacante.Id,
+                        defensorMilitar.Id));
+
+            Assert.That(
+                resultado.Exito,
+                Is.True,
+                resultado.Mensaje);
+        }
+
+        int centrosTrasConquista =
+            partida.JugadorHumano
+                .Edificios
+                .OfType<CentroUrbano>()
+                .Count();
+
+        Assert.That(
+            centrosTrasConquista,
+            Is.EqualTo(
+                2),
+            "La primera IA derrotada debe crear exactamente un Centro Urbano de conquista.");
+
+        while (maquina.Unidades.Any(
+                   unidad =>
+                       unidad.Id ==
+                       aldeanoResidual.Id))
+        {
+            ResultadoAccion resultado =
+                ataque.Ejecutar(
+                    partida,
+                    new SolicitudAtaque(
+                        atacante.Id,
+                        aldeanoResidual.Id));
+
+            Assert.That(
+                resultado.Exito,
+                Is.True,
+                resultado.Mensaje);
+        }
+
+        int centrosDespuesDelAldeano =
+            partida.JugadorHumano
+                .Edificios
+                .OfType<CentroUrbano>()
+                .Count();
+
+        Assert.That(
+            centrosDespuesDelAldeano,
+            Is.EqualTo(
+                centrosTrasConquista),
+            "Una IA ya derrotada no puede generar Centros Urbanos adicionales al perder Aldeanos residuales.");
+    }
+
+    [Test]
     public void IaEliminada_DejaDeTomarDecisiones()
     {
         Partida partida =

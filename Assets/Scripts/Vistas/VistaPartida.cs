@@ -54,7 +54,27 @@ namespace ImperiosEnGuerra.Vistas
             entidadesPorId =
                 new Dictionary<string, EntidadSeleccionableVista>();
 
+        private bool movimientoVisualPausado;
+
         public event System.Action AntesDeLimpiarContenido;
+
+        public void EstablecerPausaVisual(
+            bool pausada)
+        {
+            movimientoVisualPausado =
+                pausada;
+
+            AnimacionRecursoRecoleccion[] recursos =
+                GetComponentsInChildren<AnimacionRecursoRecoleccion>(
+                    true);
+
+            foreach (AnimacionRecursoRecoleccion recurso
+                     in recursos)
+            {
+                recurso?.EstablecerPausada(
+                    pausada);
+            }
+        }
 
         public void Renderizar(EstadoPartidaDto estado)
         {
@@ -93,6 +113,9 @@ namespace ImperiosEnGuerra.Vistas
                     edificios,
                     unidades);
             }
+
+            ActualizarAnimacionRecursosRecoleccion(
+                estado);
 
             AjustarCamara(estado.mapa);
         }
@@ -152,6 +175,9 @@ namespace ImperiosEnGuerra.Vistas
                     edificios,
                     unidades);
             }
+
+            ActualizarAnimacionRecursosRecoleccion(
+                estado);
         }
 
         private void SincronizarRecursos(
@@ -185,6 +211,103 @@ namespace ImperiosEnGuerra.Vistas
                     entidad.gameObject.SetActive(
                         visible);
                 }
+            }
+        }
+
+        private void ActualizarAnimacionRecursosRecoleccion(
+            EstadoPartidaDto estado)
+        {
+            JugadorEstadoDto[] jugadores =
+                ObtenerJugadoresEstado(
+                    estado);
+
+            var recolectores =
+                new List<UnidadEstadoDto>();
+
+            foreach (JugadorEstadoDto jugador
+                     in jugadores)
+            {
+                if (jugador?.unidades == null)
+                    continue;
+
+                foreach (UnidadEstadoDto unidad
+                         in jugador.unidades)
+                {
+                    if (unidad == null ||
+                        unidad.tipo != "Aldeano" ||
+                        unidad.coordenada == null ||
+                        !string.Equals(
+                            unidad.ordenActiva,
+                            "Recolectar",
+                            System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    recolectores.Add(
+                        unidad);
+                }
+            }
+
+            EntidadSeleccionableVista[] entidades =
+                GetComponentsInChildren<EntidadSeleccionableVista>(
+                    true);
+
+            foreach (EntidadSeleccionableVista entidad
+                     in entidades)
+            {
+                if (entidad == null ||
+                    entidad.Categoria != CategoriaEntidadVisual.Recurso)
+                {
+                    continue;
+                }
+
+                AnimacionRecursoRecoleccion animacion =
+                    entidad.GetComponent<AnimacionRecursoRecoleccion>();
+
+                if (animacion == null)
+                    continue;
+
+                bool siendoRecolectado =
+                    false;
+
+                if (entidad.gameObject.activeSelf)
+                {
+                    foreach (UnidadEstadoDto aldeano
+                             in recolectores)
+                    {
+                        int distancia =
+                            Mathf.Abs(
+                                aldeano.coordenada.x -
+                                entidad.X) +
+                            Mathf.Abs(
+                                aldeano.coordenada.y -
+                                entidad.Y);
+
+                        bool tipoCompatible =
+                            string.IsNullOrWhiteSpace(
+                                aldeano.tipoCarga) ||
+                            string.Equals(
+                                aldeano.tipoCarga,
+                                entidad.TipoLogico,
+                                System.StringComparison.OrdinalIgnoreCase);
+
+                        if (distancia <= 1 &&
+                            tipoCompatible)
+                        {
+                            siendoRecolectado =
+                                true;
+
+                            break;
+                        }
+                    }
+                }
+
+                animacion.EstablecerRecolectando(
+                    siendoRecolectado);
+
+                animacion.EstablecerPausada(
+                    movimientoVisualPausado);
             }
         }
 
@@ -476,23 +599,23 @@ namespace ImperiosEnGuerra.Vistas
                         unidad.alcance);
 
                     int saltoLogico =
-                        Mathf.Max(
-                            Mathf.Abs(
-                                unidad.coordenada.x -
-                                xAnterior),
-                            Mathf.Abs(
-                                unidad.coordenada.y -
-                                yAnterior));
+                        Mathf.Abs(
+                            unidad.coordenada.x -
+                            xAnterior) +
+                        Mathf.Abs(
+                            unidad.coordenada.y -
+                            yAnterior);
 
                     Vector3 destinoVisual =
                         PosicionVisual(
                             unidad.coordenada.x,
                             unidad.coordenada.y);
 
-                    if (saltoLogico > 1)
+                    if (saltoLogico > 3)
                     {
-                        // Si hubo una pausa larga o se perdió algún snapshot,
-                        // no se interpola atravesando el mapa en diagonal.
+                        // Si Unity perdió varios snapshots, el Modelo sigue
+                        // siendo la fuente de verdad. Se resincroniza sin
+                        // intentar recorrer visualmente un camino atrasado.
                         existente.transform.position =
                             destinoVisual;
 
@@ -823,6 +946,13 @@ namespace ImperiosEnGuerra.Vistas
                 GameObject objeto = CrearSprite($"Recurso_{recurso.tipo}_{recurso.coordenada.x}_{recurso.coordenada.y}",
                     sprite, recurso.coordenada.x, recurso.coordenada.y, 10, contenedor,
                     Vector3.one * escalaRecursos);
+
+                if (objeto != null &&
+                    objeto.GetComponent<AnimacionRecursoRecoleccion>() == null)
+                {
+                    objeto.AddComponent<AnimacionRecursoRecoleccion>();
+                }
+
                 ConfigurarSeleccionable(objeto, CategoriaEntidadVisual.Recurso,
                     recurso.tipo, string.Empty, recurso.coordenada);
             }
@@ -1167,28 +1297,69 @@ namespace ImperiosEnGuerra.Vistas
                     movimiento;
             }
 
-            if ((entidad.transform.position -
-                 destino).sqrMagnitude <=
-                0.0001f)
+            Vector3 origen =
+                movimiento.Destinos.Count > 0
+                    ? movimiento.Destinos.Last()
+                    : entidad.transform.position;
+
+            if ((origen - destino)
+                .sqrMagnitude <= 0.0001f)
             {
                 return;
             }
 
-            if (movimiento.Destinos.Count > 0 &&
-                (movimiento.Destinos.Last() -
-                 destino).sqrMagnitude <=
-                0.0001f)
-            {
-                return;
-            }
+            float distanciaVisual =
+                Mathf.Abs(
+                    origen.x -
+                    destino.x) +
+                Mathf.Abs(
+                    origen.y -
+                    destino.y);
 
-            // No acumulamos una cola infinita si Unity estuvo detenido.
-            if (movimiento.Destinos.Count >= 4)
+            // Si la Vista quedó muy atrasada no intenta reproducir una cola
+            // histórica: se alinea con el Modelo y continúa desde ahí.
+            if (movimiento.Destinos.Count >= 3 ||
+                distanciaVisual >
+                    espacioCasilla * 3.1f)
             {
                 movimiento.Destinos.Clear();
+
                 entidad.transform.position =
                     destino;
+
                 return;
+            }
+
+            bool cambiaX =
+                Mathf.Abs(
+                    origen.x -
+                    destino.x) >
+                0.0001f;
+
+            bool cambiaY =
+                Mathf.Abs(
+                    origen.y -
+                    destino.y) >
+                0.0001f;
+
+            if (cambiaX &&
+                cambiaY)
+            {
+                // El pathfinding lógico es ortogonal. Si un snapshot saltó
+                // una casilla intermedia, reconstruimos dos tramos rectos en
+                // vez de interpolar visualmente una diagonal.
+                Vector3 intermedio =
+                    new Vector3(
+                        destino.x,
+                        origen.y,
+                        destino.z);
+
+                if ((origen - intermedio)
+                    .sqrMagnitude > 0.0001f)
+                {
+                    movimiento.Destinos.Enqueue(
+                        intermedio);
+                }
             }
 
             movimiento.Destinos.Enqueue(
@@ -1197,7 +1368,8 @@ namespace ImperiosEnGuerra.Vistas
 
         private void Update()
         {
-            if (movimientosVisuales.Count == 0)
+            if (movimientoVisualPausado ||
+                movimientosVisuales.Count == 0)
             {
                 return;
             }

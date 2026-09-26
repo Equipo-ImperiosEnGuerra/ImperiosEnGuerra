@@ -29,6 +29,8 @@ namespace ImperiosEnGuerra.Controladores.Red
         private bool ultimoEstadoPartidaValido;
         private bool sesionVisualActiva;
         private Coroutine sincronizacionPeriodica;
+
+        public bool PausadaPorMenu { get; private set; }
         private readonly Dictionary<string, Vector2Int> ultimaPosicionAldeano =
             new Dictionary<string, Vector2Int>();
         private readonly Dictionary<string, int> quietudAldeano =
@@ -304,6 +306,163 @@ public bool PuedeCancelarAccion =>
                 true);
         }
 
+        public void PausarPartidaDesdeMenu(
+            System.Action<bool> alCompletar = null)
+        {
+            if (!isActiveAndEnabled ||
+                PartidaFinalizada ||
+                !ApiDisponible ||
+                PausadaPorMenu)
+            {
+                alCompletar?.Invoke(
+                    PausadaPorMenu);
+
+                return;
+            }
+
+            StartCoroutine(
+                CambiarPausaTemporal(
+                    true,
+                    alCompletar));
+        }
+
+        public void ReanudarPartidaDesdeMenu(
+            System.Action<bool> alCompletar = null)
+        {
+            if (!isActiveAndEnabled ||
+                PartidaFinalizada ||
+                !ApiDisponible)
+            {
+                alCompletar?.Invoke(
+                    false);
+
+                return;
+            }
+
+            if (!PausadaPorMenu)
+            {
+                alCompletar?.Invoke(
+                    true);
+
+                return;
+            }
+
+            StartCoroutine(
+                CambiarPausaTemporal(
+                    false,
+                    alCompletar));
+        }
+
+        private IEnumerator CambiarPausaTemporal(
+            bool pausar,
+            System.Action<bool> alCompletar)
+        {
+            if (pausar)
+            {
+                sesionVisualActiva =
+                    false;
+
+                if (sincronizacionPeriodica != null)
+                {
+                    StopCoroutine(
+                        sincronizacionPeriodica);
+
+                    sincronizacionPeriodica =
+                        null;
+                }
+
+                controladorSeleccion?
+                    .BloquearInteraccion();
+
+                vistaPartida?
+                    .EstablecerPausaVisual(
+                        true);
+            }
+
+            string endpoint =
+                pausar
+                    ? "/api/sesion/pausar-temporal"
+                    : "/api/sesion/reanudar";
+
+            using var request =
+                new UnityWebRequest(
+                    $"{urlBaseApi}{endpoint}",
+                    UnityWebRequest.kHttpVerbPOST);
+
+            request.downloadHandler =
+                new DownloadHandlerBuffer();
+
+            request.timeout =
+                5;
+
+            yield return request.SendWebRequest();
+
+            if (request.result !=
+                UnityWebRequest.Result.Success)
+            {
+                Debug.LogWarning(
+                    $"No se pudo {(pausar ? "pausar" : "reanudar")} la partida: {request.error}",
+                    this);
+
+                if (pausar)
+                {
+                    sesionVisualActiva =
+                        true;
+
+                    if (sincronizacionPeriodica == null)
+                    {
+                        sincronizacionPeriodica =
+                            StartCoroutine(
+                                SincronizarPartidaPeriodicamente());
+                    }
+
+                    controladorSeleccion?
+                        .DesbloquearInteraccion();
+
+                    vistaPartida?
+                        .EstablecerPausaVisual(
+                            false);
+                }
+
+                alCompletar?.Invoke(
+                    false);
+
+                yield break;
+            }
+
+            PausadaPorMenu =
+                pausar;
+
+            if (!pausar)
+            {
+                yield return ObtenerPartidaActiva(
+                    "",
+                    "",
+                    false,
+                    true);
+
+                sesionVisualActiva =
+                    true;
+
+                if (sincronizacionPeriodica == null)
+                {
+                    sincronizacionPeriodica =
+                        StartCoroutine(
+                            SincronizarPartidaPeriodicamente());
+                }
+
+                controladorSeleccion?
+                    .DesbloquearInteraccion();
+
+                vistaPartida?
+                    .EstablecerPausaVisual(
+                        false);
+            }
+
+            alCompletar?.Invoke(
+                true);
+        }
+
         public void PrepararRegresoAlMenu()
         {
             // El menú puede mostrarse sin recargar la escena. Así Play Mode
@@ -333,8 +492,10 @@ public bool PuedeCancelarAccion =>
 
             PartidaFinalizada = false;
             ApiDisponible = false;
+            PausadaPorMenu = false;
 
             controladorSeleccion?.BloquearInteraccion();
+            vistaPartida?.EstablecerPausaVisual(false);
             vistaHud?.OcultarResultadoFinal();
             vistaHud?.MostrarMensaje("");
 
@@ -365,6 +526,7 @@ public bool PuedeCancelarAccion =>
             AtaqueEnCurso = false;
             CuracionEnCurso = false;
             ApiDisponible = false;
+            PausadaPorMenu = false;
         }
 
         private IEnumerator EnviarMovimiento(MoverUnidadDto movimiento)
@@ -2078,6 +2240,7 @@ public bool PuedeCancelarAccion =>
 
             PartidaFinalizada = false;
             ApiDisponible = true;
+            PausadaPorMenu = false;
             ultimoInicioPartidaExitoso = true;
             ReiniciarAvisosAldeanosQuietos();
 
@@ -2088,6 +2251,7 @@ public bool PuedeCancelarAccion =>
             }
 
             controladorSeleccion?.DesbloquearInteraccion();
+            vistaPartida?.EstablecerPausaVisual(false);
             vistaHud?.OcultarResultadoFinal();
 
             Debug.Log(
