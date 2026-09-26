@@ -275,6 +275,171 @@ public class JugadorMaquinaTests
     }
 
     [Test]
+    public void Planificador_SinMilitaresYPocoOro_PriorizaOroParaReponerEjercito()
+    {
+        Partida partida =
+            CrearPartidaEstrategica(
+                aldeanos: 3,
+                centros: 2,
+                oro: 0,
+                madera: 0,
+                comida: 15);
+
+        var maderaCercana =
+            new Recurso(
+                TipoRecurso.Madera,
+                new Coordenada(4, 1),
+                100);
+
+        var oroNecesario =
+            new Recurso(
+                TipoRecurso.Oro,
+                new Coordenada(7, 7),
+                100);
+
+        Assert.That(
+            partida.JugadorMaquina.Mapa
+                .ColocarRecurso(
+                    maderaCercana),
+            Is.True);
+
+        Assert.That(
+            partida.JugadorMaquina.Mapa
+                .ColocarRecurso(
+                    oroNecesario),
+            Is.True);
+
+        DecisionMaquina decision =
+            new PlanificadorDecisionMaquina()
+                .Preparar(
+                    partida);
+
+        Assert.That(
+            decision.Tipo,
+            Is.EqualTo(
+                TipoDecisionMaquina.Recolectar));
+
+        Assert.That(
+            decision.Objetivo.X,
+            Is.EqualTo(
+                oroNecesario.Coordenada.X));
+
+        Assert.That(
+            decision.Objetivo.Y,
+            Is.EqualTo(
+                oroNecesario.Coordenada.Y),
+            "La IA debe buscar el Oro que necesita para volver a entrenar Guerreros, aunque haya Madera más cerca.");
+    }
+
+    [Test]
+    public void Planificador_SinMilitaresYPocaComida_PriorizaComidaParaReponerEjercito()
+    {
+        Partida partida =
+            CrearPartidaEstrategica(
+                aldeanos: 3,
+                centros: 2,
+                oro: 5,
+                madera: 0,
+                comida: 0);
+
+        var maderaCercana =
+            new Recurso(
+                TipoRecurso.Madera,
+                new Coordenada(4, 1),
+                100);
+
+        var comidaNecesaria =
+            new Recurso(
+                TipoRecurso.Comida,
+                new Coordenada(7, 7),
+                100);
+
+        Assert.That(
+            partida.JugadorMaquina.Mapa
+                .ColocarRecurso(
+                    maderaCercana),
+            Is.True);
+
+        Assert.That(
+            partida.JugadorMaquina.Mapa
+                .ColocarRecurso(
+                    comidaNecesaria),
+            Is.True);
+
+        DecisionMaquina decision =
+            new PlanificadorDecisionMaquina()
+                .Preparar(
+                    partida);
+
+        Assert.That(
+            decision.Tipo,
+            Is.EqualTo(
+                TipoDecisionMaquina.Recolectar));
+
+        Assert.That(
+            decision.Objetivo.X,
+            Is.EqualTo(
+                comidaNecesaria.Coordenada.X));
+
+        Assert.That(
+            decision.Objetivo.Y,
+            Is.EqualTo(
+                comidaNecesaria.Coordenada.Y),
+            "La IA debe buscar Comida para reponer ejército en vez de acumular recursos que no necesita.");
+    }
+
+    [Test]
+    public void Planificador_TrasPerderEjercito_VuelveAEntrenarGuerrero()
+    {
+        Partida partida =
+            CrearPartidaEstrategica(
+                aldeanos: 3,
+                centros: 2,
+                oro: 5,
+                madera: 0,
+                comida: 15);
+
+        Jugador maquina =
+            partida.JugadorMaquina;
+
+        var uno =
+            new Guerrero(
+                new Coordenada(4, 4));
+
+        var dos =
+            new Guerrero(
+                new Coordenada(5, 4));
+
+        maquina.AgregarUnidad(
+            uno);
+
+        maquina.AgregarUnidad(
+            dos);
+
+        maquina.EliminarUnidad(
+            uno);
+
+        maquina.EliminarUnidad(
+            dos);
+
+        DecisionMaquina decision =
+            new PlanificadorDecisionMaquina()
+                .Preparar(
+                    partida);
+
+        Assert.That(
+            decision.Tipo,
+            Is.EqualTo(
+                TipoDecisionMaquina.Entrenar));
+
+        Assert.That(
+            decision.TipoUnidad,
+            Is.EqualTo(
+                nameof(Guerrero)),
+            "Perder las tropas no debe dejar a la IA permanentemente solo con Aldeanos.");
+    }
+
+    [Test]
     public void Planificador_SinExpansionPendiente_EntrenaPrimeraUnidadMilitar()
     {
         Partida partida =
