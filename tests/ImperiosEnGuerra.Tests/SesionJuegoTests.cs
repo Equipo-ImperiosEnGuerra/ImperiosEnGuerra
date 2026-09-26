@@ -42,12 +42,20 @@ public class SesionJuegoTests
                 acciones,
                 TimeSpan.FromSeconds(5));
 
+        using var regeneracion =
+            new ServicioRegeneracionRecursos(
+                estado,
+                TimeSpan.FromSeconds(5),
+                TimeSpan.FromSeconds(1),
+                7);
+
         using var sesion =
             new ServicioSesionJuego(
                 estado,
                 acciones,
                 maquina,
                 reacciones,
+                regeneracion,
                 TimeSpan.FromSeconds(5),
                 TimeSpan.FromSeconds(1));
 
@@ -68,6 +76,10 @@ public class SesionJuegoTests
             Is.True);
 
         Assert.That(
+            regeneracion.Activo,
+            Is.True);
+
+        Assert.That(
             sesion.Pausar(),
             Is.True);
 
@@ -75,7 +87,8 @@ public class SesionJuegoTests
             SpinWait.SpinUntil(
                 () =>
                     !maquina.Activo &&
-                    !reacciones.Activo,
+                    !reacciones.Activo &&
+                    !regeneracion.Activo,
                 TimeSpan.FromSeconds(1)),
             Is.True);
 
@@ -117,12 +130,20 @@ public class SesionJuegoTests
                 acciones,
                 TimeSpan.FromSeconds(5));
 
+        using var regeneracion =
+            new ServicioRegeneracionRecursos(
+                estado,
+                TimeSpan.FromSeconds(5),
+                TimeSpan.FromSeconds(1),
+                7);
+
         using var sesion =
             new ServicioSesionJuego(
                 estado,
                 acciones,
                 maquina,
                 reacciones,
+                regeneracion,
                 TimeSpan.FromMilliseconds(80),
                 TimeSpan.FromMilliseconds(20));
 
@@ -141,7 +162,8 @@ public class SesionJuegoTests
             SpinWait.SpinUntil(
                 () =>
                     !maquina.Activo &&
-                    !reacciones.Activo,
+                    !reacciones.Activo &&
+                    !regeneracion.Activo,
                 TimeSpan.FromSeconds(1)),
             Is.True);
     }
@@ -179,12 +201,20 @@ public class SesionJuegoTests
                 acciones,
                 TimeSpan.FromSeconds(5));
 
+        using var regeneracion =
+            new ServicioRegeneracionRecursos(
+                estado,
+                TimeSpan.FromSeconds(5),
+                TimeSpan.FromSeconds(1),
+                7);
+
         using var sesion =
             new ServicioSesionJuego(
                 estado,
                 acciones,
                 maquina,
                 reacciones,
+                regeneracion,
                 TimeSpan.FromMilliseconds(120),
                 TimeSpan.FromMilliseconds(20));
 
