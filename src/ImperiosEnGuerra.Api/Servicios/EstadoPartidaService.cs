@@ -25,6 +25,7 @@ public sealed class EstadoPartidaService
         new ConfiguracionEconomia();
     private Partida? partidaActiva;
     private bool finalizacionNotificada;
+    private bool reevaluacionTerminalPorSnapshotHabilitada;
 
     public event Action? PartidaFinalizada;
 
@@ -1873,6 +1874,23 @@ public sealed class EstadoPartidaService
         {
             partidaActiva = partida;
             finalizacionNotificada = false;
+
+            // La revalidación periódica solo aplica a partidas reales que
+            // comenzaron con Centros Urbanos. Muchos tests unitarios crean
+            // escenarios parciales (por ejemplo solo un Aldeano) y no deben
+            // considerarse derrotas únicamente por consultar un snapshot.
+            reevaluacionTerminalPorSnapshotHabilitada =
+                partida.JugadorHumano.Edificios
+                    .OfType<CentroUrbano>()
+                    .Any()
+                &&
+                partida.JugadoresMaquina
+                    .Any(
+                        maquina =>
+                            maquina.Edificios
+                                .OfType<CentroUrbano>()
+                                .Any());
+
             RegistrarEventoSeguro("PARTIDA|EXITO|Partida establecida.");
         }
     }
@@ -2029,7 +2047,8 @@ public sealed class EstadoPartidaService
     private void ReevaluarFinalizacionSinBloqueo()
     {
         if (partidaActiva == null ||
-            partidaActiva.Finalizada)
+            partidaActiva.Finalizada ||
+            !reevaluacionTerminalPorSnapshotHabilitada)
         {
             return;
         }
