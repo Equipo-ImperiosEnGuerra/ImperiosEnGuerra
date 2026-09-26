@@ -25,14 +25,16 @@ namespace ImperiosEnGuerra.Modelo.IA
             Partida partida,
             IReadOnlyCollection<Guid> unidadesExcluidas = null,
             IReadOnlyCollection<Coordenada> centrosExcluidos = null,
-            bool permitirCombate = true)
+            bool permitirCombate = true,
+            bool permitirPatrulla = true)
         {
             return Preparar(
                 partida,
                 partida?.JugadorMaquina,
                 unidadesExcluidas,
                 centrosExcluidos,
-                permitirCombate);
+                permitirCombate,
+                permitirPatrulla);
         }
 
         public DecisionMaquina Preparar(
@@ -40,7 +42,8 @@ namespace ImperiosEnGuerra.Modelo.IA
             Jugador maquina,
             IReadOnlyCollection<Guid> unidadesExcluidas = null,
             IReadOnlyCollection<Coordenada> centrosExcluidos = null,
-            bool permitirCombate = true)
+            bool permitirCombate = true,
+            bool permitirPatrulla = true)
         {
             if (partida == null)
             {
@@ -202,10 +205,13 @@ namespace ImperiosEnGuerra.Modelo.IA
             }
 
             DecisionMaquina patrulla =
-                PrepararPatrulla(
-                    partida,
-                    maquina,
-                    excluidas);
+                permitirPatrulla
+                    ? PrepararPatrulla(
+                        partida,
+                        maquina,
+                        excluidas)
+                    : DecisionMaquina.SinAccion(
+                        "La patrulla está reservada al canal militar.");
 
             if (disponibles.Length == 0)
             {
@@ -271,6 +277,69 @@ namespace ImperiosEnGuerra.Modelo.IA
                 : DecisionMaquina.Recolectar(
                     mejorAldeano.Id,
                     mejorRecurso.Coordenada);
+        }
+
+        public DecisionMaquina PrepararMilitar(
+            Partida partida,
+            Jugador maquina,
+            IReadOnlyCollection<Guid> unidadesExcluidas = null,
+            bool permitirCombate = true)
+        {
+            if (partida == null)
+            {
+                return DecisionMaquina.SinAccion(
+                    "No hay una partida activa.");
+            }
+
+            if (partida.Finalizada)
+            {
+                return DecisionMaquina.SinAccion(
+                    "La partida ya finalizó.");
+            }
+
+            if (maquina == null ||
+                maquina.Tipo != TipoJugador.Maquina ||
+                !partida.Jugadores.Contains(
+                    maquina))
+            {
+                return DecisionMaquina.SinAccion(
+                    "La facción de Máquina indicada no pertenece a la partida.");
+            }
+
+            if (new EvaluadorVictoria()
+                .Evaluar(
+                    maquina)
+                .HayVictoria)
+            {
+                return DecisionMaquina.SinAccion(
+                    "La facción de Máquina ya fue eliminada.");
+            }
+
+            var excluidas =
+                unidadesExcluidas == null
+                    ? new HashSet<Guid>()
+                    : new HashSet<Guid>(
+                        unidadesExcluidas);
+
+            if (permitirCombate)
+            {
+                DecisionMaquina combate =
+                    PrepararCombate(
+                        partida,
+                        maquina,
+                        excluidas);
+
+                if (combate.Tipo !=
+                    TipoDecisionMaquina.Ninguna)
+                {
+                    return combate;
+                }
+            }
+
+            return PrepararPatrulla(
+                partida,
+                maquina,
+                excluidas);
         }
 
         private static DecisionMaquina PrepararPatrulla(
