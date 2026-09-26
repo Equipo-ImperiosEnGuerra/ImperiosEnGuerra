@@ -1016,7 +1016,6 @@ public sealed class ServicioAccionesConcurrentes
                     ResultadoAccion encolado =
                         estadoPartida.EncolarEntrenamiento(
                             copia,
-                            propietarioTipo,
                             out entrenamientoId,
                             out centroUrbano);
 
@@ -1025,8 +1024,7 @@ public sealed class ServicioAccionesConcurrentes
 
                     while (!estadoPartida.EsTurnoEntrenamiento(
                         centroUrbano,
-                        entrenamientoId,
-                        propietarioTipo))
+                        entrenamientoId))
                     {
                         EsperarAntesDeAplicar(
                             token,
@@ -1064,8 +1062,7 @@ public sealed class ServicioAccionesConcurrentes
                             estadoPartida.AvanzarEntrenamiento(
                                 centroUrbano,
                                 entrenamientoId,
-                                10,
-                                propietarioTipo);
+                                10);
 
                         if (!progreso.Exito)
                         {
@@ -1082,8 +1079,7 @@ public sealed class ServicioAccionesConcurrentes
                         estadoPartida.CompletarEntrenamientoConSpawn(
                             centroUrbano,
                             entrenamientoId,
-                            copia?.TipoUnidad ?? string.Empty,
-                            propietarioTipo);
+                            copia?.TipoUnidad ?? string.Empty);
 
                     if (!spawn.Exito)
                     {
@@ -1104,15 +1100,14 @@ public sealed class ServicioAccionesConcurrentes
                     {
                         estadoPartida.CancelarEntrenamientoCola(
                             centroUrbano,
-                            entrenamientoId,
-                            propietarioTipo);
+                            entrenamientoId);
                     }
 
                     if (!completado &&
                         costoReservado)
                     {
                         estadoPartida.ReembolsarCosto(
-                            propietarioTipo,
+                            centroUrbano,
                             costo);
                     }
                 }
