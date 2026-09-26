@@ -10,7 +10,7 @@
 - **CUMPLE:** existe implementación/evidencia directa en el repositorio.
 - **CUMPLE / VALIDAR:** la implementación existe, pero falta una prueba final de entrega o evidencia consolidada.
 - **PENDIENTE DOCUMENTAR:** el código existe, pero falta el entregable formal exigido por la guía.
-- **REQUIERE ACLARACIÓN DOCENTE:** la versión actual difiere del texto original de la guía y debe documentarse la modificación posterior de alcance.
+- **NO APLICA — ALCANCE ACTUALIZADO:** aparece en la guía original, pero dejó de ser requisito para la entrega según la aclaración posterior del docente comunicada al equipo.
 
 ## Matriz de cumplimiento
 
@@ -33,12 +33,12 @@
 | Movimiento con hilos/Task | CUMPLE | `IniciarMovimiento` ejecutado mediante gestor concurrente | Explicar Main Thread |
 | Sincronización de datos compartidos | CUMPLE | `lock`, `ConcurrentDictionary`, `ConcurrentQueue`, `Interlocked`, `SemaphoreSlim`, `CancellationToken` | Preparar ejemplos de race conditions |
 | Workers no modifican UnityEngine | CUMPLE | Servicio concurrente separado y prueba `ServiciosConcurrencia_NoReferenciaUnityEngine` | Explicarlo en sustentación |
-| Listener de red no bloqueante | CUMPLE en servidor | `ServicioRedPartida.AtenderClienteAsync` + WebSocket asíncrono | Ver punto de dos instancias |
-| Mensajes de red estructurados JSON | CUMPLE | `MensajeRedPartida`, `System.Text.Json`, despachador y tests | Ninguna |
-| Red: construir, entrenar, mover, atacar | CUMPLE a nivel de protocolo/dispatcher | `NetworkingTests` cubre MOVER, RECOLECTAR, CONSTRUIR, ENTRENAR, ATACAR y CURAR | Verificar requisito de dos instancias reales |
-| Manejo de desconexiones/errores de red | CUMPLE / VALIDAR | Servicio WebSocket maneja cierre, cancelación y errores; mensajes inválidos se rechazan | Hacer prueba demostrable de desconexión |
-| Dos jugadores / dos instancias | REQUIERE ACLARACIÓN DOCENTE | El texto original lo exige; la versión actual es Humano vs 3 Máquinas | Documentar formalmente la modificación de alcance comunicada posteriormente por el profesor |
-| Comunicación de acciones a la aplicación del oponente | REQUIERE ACLARACIÓN DOCENTE | Existe servidor WebSocket + protocolo, pero no se evidencia un cliente WebSocket Unity para dos ejecutables de jugador | Si networking entre jugadores dejó de ser obligatorio, registrar la aclaración; si sigue vigente, implementar/demo de dos clientes |
+| Listener de red no bloqueante | CUMPLE COMO EXTRA | `ServicioRedPartida.AtenderClienteAsync` + WebSocket asíncrono | Conservar como evidencia técnica opcional |
+| Mensajes de red estructurados JSON | CUMPLE COMO EXTRA | `MensajeRedPartida`, `System.Text.Json`, despachador y tests | Conservar como evidencia técnica opcional |
+| Red: construir, entrenar, mover, atacar | CUMPLE COMO EXTRA | `NetworkingTests` cubre MOVER, RECOLECTAR, CONSTRUIR, ENTRENAR, ATACAR y CURAR | No requiere dos ejecutables para el alcance final |
+| Manejo de desconexiones/errores de red | CUMPLE COMO EXTRA | Servicio WebSocket maneja cierre, cancelación y errores; mensajes inválidos se rechazan | No es criterio obligatorio del alcance final |
+| Dos jugadores / dos instancias | NO APLICA — ALCANCE ACTUALIZADO | La guía original lo exigía; el alcance final aceptado es 1 Humano vs 3 Máquinas | Ninguna implementación adicional |
+| Comunicación de acciones a la aplicación del oponente | NO APLICA — ALCANCE ACTUALIZADO | El networking entre dos jugadores dejó de ser obligatorio; el WebSocket existente se conserva como extensión | Ninguna implementación adicional |
 | Condición de victoria | CUMPLE con decisión de diseño | `EvaluadorVictoria` y regla actual AND: sin Centros Urbanos y sin militares | Documentar que la guía dice “y/o” y justificar la regla final aprobada |
 | Anuncio de ganador | CUMPLE | HUD/pantalla final bloqueante | Evidencia visual |
 | `configuracion.txt` | CUMPLE | `ServicioArchivos.GuardarConfiguracionInicial` | Adjuntar ejemplo generado |
@@ -61,15 +61,24 @@
 
 ## Hallazgos importantes
 
-### 1. Cambio de modalidad respecto a la guía original
+### 1. Alcance final respecto a la guía original
 
-La guía original describe dos jugadores y una instancia por jugador. El proyecto actual funciona como un Humano contra tres facciones de Máquina.
+La guía original describe dos jugadores y una instancia por jugador. Ese requisito fue reemplazado posteriormente para la entrega: **ya no es necesario implementar dos jugadores ni dos instancias conectadas**.
 
-El equipo indicó durante el desarrollo que el profesor cambió la modalidad a Humano vs Máquina y posteriormente aclaró que WebSockets era opcional. Esta modificación debe quedar escrita en la documentación final o acompañada de la evidencia disponible de la aclaración para que el evaluador no compare la versión actual como si siguiera vigente el requisito original de dos jugadores humanos.
+La modalidad final del proyecto es:
 
-### 2. Networking: implementación técnica vs escenario original
+```text
+1 jugador Humano
+vs
+3 facciones controladas por Máquina
+(Morada, Verde y Amarilla)
+```
 
-El repositorio sí contiene:
+Por tanto, la ausencia de un segundo cliente Unity **no se considera un incumplimiento del alcance final**. La guía original se conserva como referencia histórica de requisitos, pero este punto queda marcado como **NO APLICA — ALCANCE ACTUALIZADO**.
+
+### 2. Networking opcional conservado como extensión
+
+El networking dejó de ser obligatorio para la entrega final. Aun así, el repositorio conserva una implementación funcional como evidencia técnica adicional:
 
 - endpoint WebSocket;
 - servicio de escucha asíncrono;
@@ -79,7 +88,7 @@ El repositorio sí contiene:
 - despacho hacia las mismas operaciones concurrentes del gameplay;
 - tests de mensajes y errores.
 
-Sin embargo, no aparece un cliente `ClientWebSocket` dentro de Unity que conecte dos ejecutables de jugadores entre sí. Por tanto, si se auditara literalmente la guía original, la demostración de “dos instancias del juego” quedaría incompleta. Si la aclaración posterior del profesor eliminó ese requisito, no es una tarea de implementación pendiente: es una tarea de documentación.
+No se requiere implementar un cliente `ClientWebSocket` en un segundo ejecutable Unity. El componente de red existente puede explicarse en la sustentación como **extra técnico** y como ejemplo adicional de concurrencia, JSON, sincronización y manejo de conexiones.
 
 ### 3. Condición “y/o”
 
@@ -94,20 +103,25 @@ sin unidades militares
 
 La regla está implementada y probada, pero la documentación final debe aclarar que se tomó una decisión concreta sobre una formulación ambigua de la guía.
 
-### 4. README desactualizado
+### 4. README actualizado
 
-El README todavía presenta Fase 6 como “lista para merge a develop”, aunque la versión ya llegó a `main` después de Fase 7. Debe actualizarse.
+El README fue actualizado durante esta auditoría para:
 
-También debe revisarse la tabla de Monje: el Modelo actual usa su capacidad como curación (15, alcance 2, intervalo 5 s), mientras `ConfiguracionCombate` le asigna daño de ataque 0. El README no debe presentarlo como daño ofensivo.
+- reflejar Fase 7 integrada en `main`;
+- registrar el alcance final Humano vs 3 Máquinas;
+- indicar que dos instancias/networking entre jugadores ya no son obligatorios;
+- conservar WebSocket + JSON como extensión técnica;
+- documentar la estrategia diferenciada de Morada, Verde y Amarilla;
+- corregir al Monje: **0 daño ofensivo** y curación de 15 a alcance 2 cada 5 s.
 
 ## Orden de cierre recomendado
 
-1. Actualizar `README.md` al estado final real.
-2. Documentar la modificación de alcance Humano vs Máquina / networking opcional.
+1. ~~Actualizar `README.md` al estado final real.~~ **COMPLETADO**
+2. ~~Documentar la modificación de alcance Humano vs Máquina / networking opcional.~~ **COMPLETADO**
 3. Ejecutar suite .NET desde `main`.
 4. Ejecutar Unity EditMode/PlayMode y smoke test del build.
 5. Guardar ejemplos de los tres archivos obligatorios.
-6. Crear informe final MVC + concurrencia + networking.
+6. Crear informe final MVC + concurrencia + networking opcional.
 7. Crear UML basado en el código final.
 8. Crear diagrama de flujo.
 9. Crear documento de pruebas de escritorio.
