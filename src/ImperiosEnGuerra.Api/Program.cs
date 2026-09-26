@@ -93,17 +93,52 @@ app.MapPost(
             PartidaRequestMapper.ConvertirRecursos(
                 request.RecursosMaquina);
 
-        var inicializador = new InicializadorPartida();
+        var recursosCompartidos =
+            recursosHumano
+                .Concat(
+                    recursosMaquina)
+                .ToList();
 
-        Partida partida = inicializador.Crear(
-            request.NombreHumano ?? string.Empty,
-            mapa,
-            centroHumano,
-            recursosHumano,
-            request.NombreMaquina ?? string.Empty,
-            mapa,
-            centroMaquina,
-            recursosMaquina);
+        Coordenada centroMaquinaVerde =
+            new Coordenada(
+                request.AnchoMapa - 2,
+                1);
+
+        Coordenada centroMaquinaAmarilla =
+            new Coordenada(
+                1,
+                request.AltoMapa - 2);
+
+        string nombreBaseMaquina =
+            string.IsNullOrWhiteSpace(
+                request.NombreMaquina)
+                ? "CPU"
+                : request.NombreMaquina;
+
+        var inicializador =
+            new InicializadorPartida();
+
+        Partida partida =
+            inicializador.CrearCuatroJugadores(
+                request.NombreHumano ?? string.Empty,
+                mapa,
+                centroHumano,
+                recursosCompartidos,
+                new[]
+                {
+                    (
+                        $"{nombreBaseMaquina} Roja",
+                        centroMaquina
+                    ),
+                    (
+                        $"{nombreBaseMaquina} Verde",
+                        centroMaquinaVerde
+                    ),
+                    (
+                        $"{nombreBaseMaquina} Amarilla",
+                        centroMaquinaAmarilla
+                    )
+                });
 
         servicioArchivos.GuardarConfiguracionInicial(
             partida);
@@ -135,7 +170,16 @@ app.MapPost(
                 tipo = partida.JugadorMaquina.Tipo.ToString(),
                 edificios = partida.JugadorMaquina.Edificios.Count,
                 unidades = partida.JugadorMaquina.Unidades.Count
-            }
+            },
+
+            jugadores = partida.Jugadores.Select(
+                jugador => new
+                {
+                    nombre = jugador.Nombre,
+                    tipo = jugador.Tipo.ToString(),
+                    edificios = jugador.Edificios.Count,
+                    unidades = jugador.Unidades.Count
+                })
         });
     }
     catch (ArgumentException ex)
