@@ -119,6 +119,56 @@ public class JugadorMaquinaTests
     }
 
     [Test]
+    public async Task EjecutarPaso_LimitaUnaRecoleccionConcurrentePorIa()
+    {
+        Partida partida =
+            CrearPartidaSeparada(
+                out _,
+                out _,
+                out _,
+                out _,
+                out _);
+
+        var estado =
+            new EstadoPartidaService();
+
+        estado.EstablecerPartida(
+            partida);
+
+        using var gestor =
+            new GestorProcesosConcurrentes();
+
+        var acciones =
+            new ServicioAccionesConcurrentes(
+                estado,
+                gestor,
+                TimeSpan.FromSeconds(1));
+
+        using var maquina =
+            new ServicioJugadorMaquina(
+                estado,
+                acciones,
+                TimeSpan.FromMilliseconds(10));
+
+        ProcesoConcurrente? primera =
+            maquina.EjecutarPaso();
+
+        Assert.That(
+            primera,
+            Is.Not.Null);
+
+        ProcesoConcurrente? segunda =
+            maquina.EjecutarPaso();
+
+        Assert.That(
+            segunda,
+            Is.Null,
+            "Una misma IA no debe lanzar varios workers de recolección al mismo tiempo.");
+
+        await primera!.Finalizacion;
+    }
+
+    [Test]
     public void CicloAutomatico_SePuedeIniciarYDetenerSinDuplicarlo()
     {
         Partida partida =
