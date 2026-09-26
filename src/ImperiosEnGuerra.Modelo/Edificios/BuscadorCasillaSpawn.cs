@@ -38,7 +38,7 @@ namespace ImperiosEnGuerra.Modelo.Edificios
                 ? null
                 : Buscar(
                     partida,
-                    propietario.Tipo,
+                    propietario,
                     edificio);
         }
 
@@ -54,11 +54,37 @@ namespace ImperiosEnGuerra.Modelo.Edificios
                 throw new ArgumentNullException(nameof(edificio));
 
             Jugador propietario =
-                partida.ObtenerJugador(
-                    propietarioTipo);
+                partida
+                    .ObtenerJugadores(
+                        propietarioTipo)
+                    .FirstOrDefault(
+                        jugador =>
+                            jugador.Edificios.Any(
+                                e => Coincide(
+                                    e.Coordenada,
+                                    edificio)));
+
+            return propietario == null
+                ? null
+                : Buscar(
+                    partida,
+                    propietario,
+                    edificio);
+        }
+
+        public Coordenada Buscar(
+            Partida partida,
+            Jugador propietario,
+            Coordenada edificio)
+        {
+            if (partida == null)
+                throw new ArgumentNullException(nameof(partida));
 
             if (propietario == null)
-                return null;
+                throw new ArgumentNullException(nameof(propietario));
+
+            if (edificio == null)
+                throw new ArgumentNullException(nameof(edificio));
 
             Mapa mapa =
                 propietario.Mapa;
@@ -181,15 +207,12 @@ namespace ImperiosEnGuerra.Modelo.Edificios
                 return false;
             }
 
-            return !TieneEntidadEnMapa(
-                       partida.JugadorHumano,
-                       mapa,
-                       candidato)
-                   &&
-                   !TieneEntidadEnMapa(
-                       partida.JugadorMaquina,
-                       mapa,
-                       candidato);
+            return !partida.Jugadores.Any(
+                jugador =>
+                    TieneEntidadEnMapa(
+                        jugador,
+                        mapa,
+                        candidato));
         }
 
         private static bool TieneEntidadEnMapa(
