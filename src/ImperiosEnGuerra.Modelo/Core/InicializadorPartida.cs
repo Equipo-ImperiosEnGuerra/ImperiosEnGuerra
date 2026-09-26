@@ -105,6 +105,218 @@ namespace ImperiosEnGuerra.Modelo.Core
                 jugadorMaquina);
         }
 
+        /// <summary>
+        /// Crea una partida compartiendo un único mapa físico entre un humano
+        /// y varias IAs. Los recursos existen una sola vez en el mapa, por lo
+        /// que todas las facciones compiten realmente por los mismos nodos.
+        /// </summary>
+        public Partida CrearCuatroJugadores(
+            string nombreHumano,
+            Mapa mapa,
+            Coordenada centroHumano,
+            IReadOnlyList<Recurso> recursosCompartidos,
+            IReadOnlyList<(string Nombre, Coordenada Centro)> maquinas)
+        {
+            if (mapa == null)
+                throw new ArgumentNullException(nameof(mapa));
+
+            if (centroHumano == null)
+                throw new ArgumentNullException(nameof(centroHumano));
+
+            if (recursosCompartidos == null)
+                throw new ArgumentNullException(nameof(recursosCompartidos));
+
+            if (maquinas == null ||
+                maquinas.Count != 3)
+            {
+                throw new ArgumentException(
+                    "La partida de cuatro jugadores requiere exactamente tres IAs.",
+                    nameof(maquinas));
+            }
+
+            var posicionesPorMapa =
+                new Dictionary<Mapa, HashSet<(int, int)>>
+                {
+                    [mapa] =
+                        new HashSet<(int, int)>()
+                };
+
+            HashSet<(int, int)> reservadas =
+                posicionesPorMapa[mapa];
+
+            ReservarCentroCompartido(
+                mapa,
+                centroHumano,
+                reservadas);
+
+            foreach (var maquina in maquinas)
+            {
+                if (maquina.Centro == null)
+                {
+                    throw new ArgumentException(
+                        "Cada IA requiere una posición de Centro Urbano.",
+                        nameof(maquinas));
+                }
+
+                ReservarCentroCompartido(
+                    mapa,
+                    maquina.Centro,
+                    reservadas);
+            }
+
+            ValidarRecursosCompartidos(
+                mapa,
+                recursosCompartidos,
+                reservadas);
+
+            IReadOnlyList<Coordenada> aldeanosHumano =
+                PlanificarAldeanosIniciales(
+                    mapa,
+                    centroHumano,
+                    posicionesPorMapa);
+
+            var aldeanosMaquina =
+                new List<IReadOnlyList<Coordenada>>();
+
+            foreach (var maquina in maquinas)
+            {
+                aldeanosMaquina.Add(
+                    PlanificarAldeanosIniciales(
+                        mapa,
+                        maquina.Centro,
+                        posicionesPorMapa));
+            }
+
+            var jugadorHumano =
+                new Jugador(
+                    nombreHumano,
+                    TipoJugador.Humano,
+                    mapa,
+                    new RecursosJugador());
+
+            var jugadoresMaquina =
+                new List<Jugador>();
+
+            foreach (var maquina in maquinas)
+            {
+                jugadoresMaquina.Add(
+                    new Jugador(
+                        maquina.Nombre,
+                        TipoJugador.Maquina,
+                        mapa,
+                        new RecursosJugador()));
+            }
+
+            ConfigurarMapa(
+                jugadorHumano,
+                centroHumano,
+                recursosCompartidos);
+
+            for (int i = 0;
+                 i < jugadoresMaquina.Count;
+                 i++)
+            {
+                ConfigurarMapa(
+                    jugadoresMaquina[i],
+                    maquinas[i].Centro,
+                    Array.Empty<Recurso>());
+            }
+
+            ConfigurarInicioJugador(
+                jugadorHumano,
+                aldeanosHumano);
+
+            for (int i = 0;
+                 i < jugadoresMaquina.Count;
+                 i++)
+            {
+                ConfigurarInicioJugador(
+                    jugadoresMaquina[i],
+                    aldeanosMaquina[i]);
+            }
+
+            return new Partida(
+                jugadorHumano,
+                jugadoresMaquina);
+        }
+
+        private static void ReservarCentroCompartido(
+            Mapa mapa,
+            Coordenada centro,
+            HashSet<(int, int)> reservadas)
+        {
+            if (!mapa.PuedeColocar(centro))
+            {
+                throw new ArgumentException(
+                    "La posición de un Centro Urbano no está disponible.");
+            }
+
+            if (!reservadas.Add(
+                    (centro.X, centro.Y)))
+            {
+                throw new ArgumentException(
+                    "Dos Centros Urbanos no pueden compartir la misma casilla.");
+            }
+        }
+
+        private static void ValidarRecursosCompartidos(
+            Mapa mapa,
+            IReadOnlyList<Recurso> recursos,
+            HashSet<(int, int)> reservadas)
+        {
+            bool tieneOro = false;
+            bool tieneMadera = false;
+            bool tieneComida = false;
+
+            foreach (Recurso recurso in recursos)
+            {
+                if (recurso == null)
+                {
+                    throw new ArgumentException(
+                        "La lista no puede contener recursos nulos.",
+                        nameof(recursos));
+                }
+
+                if (!mapa.PuedeColocar(
+                        recurso.Coordenada))
+                {
+                    throw new ArgumentException(
+                        "La posición de un recurso no está disponible.",
+                        nameof(recursos));
+                }
+
+                if (!reservadas.Add(
+                        (recurso.Coordenada.X,
+                         recurso.Coordenada.Y)))
+                {
+                    throw new ArgumentException(
+                        "Un recurso coincide con un Centro Urbano u otro recurso.",
+                        nameof(recursos));
+                }
+
+                tieneOro =
+                    tieneOro ||
+                    recurso.Tipo == TipoRecurso.Oro;
+
+                tieneMadera =
+                    tieneMadera ||
+                    recurso.Tipo == TipoRecurso.Madera;
+
+                tieneComida =
+                    tieneComida ||
+                    recurso.Tipo == TipoRecurso.Comida;
+            }
+
+            if (!tieneOro ||
+                !tieneMadera ||
+                !tieneComida)
+            {
+                throw new ArgumentException(
+                    "El mapa compartido requiere Oro, Madera y Comida.",
+                    nameof(recursos));
+            }
+        }
+
         private void ValidarMapa(
             Mapa mapa,
             Coordenada centro,
