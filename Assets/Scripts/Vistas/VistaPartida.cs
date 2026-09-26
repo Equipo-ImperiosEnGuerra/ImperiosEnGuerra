@@ -40,7 +40,8 @@ namespace ImperiosEnGuerra.Vistas
         private sealed class MovimientoVisualPendiente
         {
             public EntidadSeleccionableVista Entidad;
-            public Vector3 Destino;
+            public readonly Queue<Vector3> Destinos =
+                new Queue<Vector3>();
         }
 
         private readonly Dictionary<string, MovimientoVisualPendiente>
@@ -452,6 +453,12 @@ namespace ImperiosEnGuerra.Vistas
 
                 if (existente != null)
                 {
+                    int xAnterior =
+                        existente.X;
+
+                    int yAnterior =
+                        existente.Y;
+
                     existente.ActualizarDatosLogicos(
                         unidad.coordenada.x,
                         unidad.coordenada.y,
@@ -462,14 +469,37 @@ namespace ImperiosEnGuerra.Vistas
                         unidad.danio,
                         unidad.alcance);
 
-                    movimientosVisuales[unidad.id] =
-                        new MovimientoVisualPendiente
-                        {
-                            Entidad = existente,
-                            Destino = PosicionVisual(
-                                unidad.coordenada.x,
-                                unidad.coordenada.y)
-                        };
+                    int saltoLogico =
+                        Mathf.Max(
+                            Mathf.Abs(
+                                unidad.coordenada.x -
+                                xAnterior),
+                            Mathf.Abs(
+                                unidad.coordenada.y -
+                                yAnterior));
+
+                    Vector3 destinoVisual =
+                        PosicionVisual(
+                            unidad.coordenada.x,
+                            unidad.coordenada.y);
+
+                    if (saltoLogico > 1)
+                    {
+                        // Si hubo una pausa larga o se perdió algún snapshot,
+                        // no se interpola atravesando el mapa en diagonal.
+                        existente.transform.position =
+                            destinoVisual;
+
+                        movimientosVisuales.Remove(
+                            unidad.id);
+                    }
+                    else
+                    {
+                        ProgramarMovimientoVisual(
+                            unidad.id,
+                            existente,
+                            destinoVisual);
+                    }
 
                     continue;
                 }
@@ -1075,14 +1105,72 @@ namespace ImperiosEnGuerra.Vistas
                 estadoLogico,
                 ordenActiva);
 
-            movimientosVisuales[unidadId] =
-                new MovimientoVisualPendiente
-                {
-                    Entidad = encontrada,
-                    Destino = PosicionVisual(x, y)
-                };
+            ProgramarMovimientoVisual(
+                unidadId,
+                encontrada,
+                PosicionVisual(
+                    x,
+                    y));
 
             return true;
+        }
+
+        private void ProgramarMovimientoVisual(
+            string unidadId,
+            EntidadSeleccionableVista entidad,
+            Vector3 destino)
+        {
+            if (string.IsNullOrWhiteSpace(
+                    unidadId) ||
+                entidad == null)
+            {
+                return;
+            }
+
+            if (!movimientosVisuales.TryGetValue(
+                    unidadId,
+                    out MovimientoVisualPendiente movimiento) ||
+                movimiento == null ||
+                movimiento.Entidad != entidad)
+            {
+                movimiento =
+                    new MovimientoVisualPendiente
+                    {
+                        Entidad =
+                            entidad
+                    };
+
+                movimientosVisuales[
+                    unidadId] =
+                    movimiento;
+            }
+
+            if ((entidad.transform.position -
+                 destino).sqrMagnitude <=
+                0.0001f)
+            {
+                return;
+            }
+
+            if (movimiento.Destinos.Count > 0 &&
+                (movimiento.Destinos.Last() -
+                 destino).sqrMagnitude <=
+                0.0001f)
+            {
+                return;
+            }
+
+            // No acumulamos una cola infinita si Unity estuvo detenido.
+            if (movimiento.Destinos.Count >= 4)
+            {
+                movimiento.Destinos.Clear();
+                entidad.transform.position =
+                    destino;
+                return;
+            }
+
+            movimiento.Destinos.Enqueue(
+                destino);
         }
 
         private void Update()
@@ -1108,8 +1196,18 @@ namespace ImperiosEnGuerra.Vistas
                     continue;
                 }
 
+                if (movimiento.Destinos.Count == 0)
+                {
+                    completados.Add(
+                        par.Key);
+                    continue;
+                }
+
                 Transform transformUnidad =
                     movimiento.Entidad.transform;
+
+                Vector3 destino =
+                    movimiento.Destinos.Peek();
 
                 float paso =
                     velocidadMovimientoVisual *
@@ -1118,16 +1216,22 @@ namespace ImperiosEnGuerra.Vistas
                 transformUnidad.position =
                     Vector3.MoveTowards(
                         transformUnidad.position,
-                        movimiento.Destino,
+                        destino,
                         paso);
 
-                if ((transformUnidad.position - movimiento.Destino)
+                if ((transformUnidad.position - destino)
                     .sqrMagnitude <= 0.0001f)
                 {
                     transformUnidad.position =
-                        movimiento.Destino;
+                        destino;
 
-                    completados.Add(par.Key);
+                    movimiento.Destinos.Dequeue();
+
+                    if (movimiento.Destinos.Count == 0)
+                    {
+                        completados.Add(
+                            par.Key);
+                    }
                 }
             }
 
