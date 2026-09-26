@@ -2,7 +2,9 @@
 
 Proyecto académico de Programación Orientada a Objetos desarrollado en C# y Unity.
 
-**Imperios en Guerra** es un videojuego de estrategia en tiempo real (RTS) inspirado en Age of Empires. La modalidad actual del proyecto es **Humano vs Máquina**.
+**Imperios en Guerra** es un videojuego de estrategia en tiempo real (RTS) inspirado en Age of Empires. La modalidad final del proyecto es **1 jugador Humano vs 3 facciones controladas por Máquina**: Morada, Verde y Amarilla.
+
+> **Alcance actualizado por el docente:** la guía original contemplaba dos jugadores en dos instancias y comunicación obligatoria entre ambas. Posteriormente ese alcance dejó de ser obligatorio para la entrega: la modalidad evaluada pasó a Humano vs Máquina y el networking quedó como componente opcional. El proyecto conserva la implementación de WebSocket + JSON como extensión técnica, pero no depende de un segundo cliente Unity para cumplir el alcance final.
 
 ## Tecnologías
 
@@ -40,7 +42,7 @@ Las operaciones largas se ejecutan fuera del Main Thread de Unity:
 - construcción progresiva;
 - entrenamiento con cola;
 - decisiones de la Máquina;
-- escucha y envío de networking;
+- escucha y envío de networking opcional;
 - ataque concurrente.
 
 Se utilizan `Task.Run`, ThreadPool, `CancellationToken`, `lock`, `ConcurrentDictionary`, `ConcurrentQueue`, `Interlocked` y `SemaphoreSlim` según la responsabilidad.
@@ -73,14 +75,16 @@ La guía disponible no fija valores numéricos de vida, daño, armadura ni alcan
 
 ## Balance de combate del prototipo
 
-| Entidad | Vida | Daño | Alcance | Intervalo |
+| Entidad | Vida | Daño ofensivo | Alcance de ataque | Intervalo de ataque |
 |---|---:|---:|---:|---:|
 | Aldeano | 60 | 0 | 0 | — |
 | Guerrero | 120 | 30 | 1 | 4 s |
 | Lancero | 100 | 25 | 1 | 3.5 s |
 | Arquero | 80 | 20 | 3 | 3 s |
-| Monje | 70 | 15 | 2 | 5 s |
-| Centro Urbano | 300 | — | — | — |
+| Monje | 70 | 0 | 0 | — |
+| Centro Urbano | 300 | 0 | 0 | — |
+
+El **Monje no es una unidad ofensiva**. Su función es de apoyo: cura **15 puntos**, a **alcance 2**, con un intervalo de **5 s** entre curaciones.
 
 El combate usa distancia de cuadrícula de 8 vecinos para el alcance, por lo que una diagonal inmediata cuenta como una casilla. El pathfinding continúa usando su movimiento ortogonal original.
 
@@ -137,13 +141,21 @@ Su ciclo de decisiones puede:
 1. asignar Aldeanos a recursos;
 2. entrenar Aldeanos para crecimiento;
 3. construir un segundo Centro Urbano cuando dispone de recursos;
-4. entrenar fuerza militar;
-5. priorizar objetivos militares humanos;
-6. aproximarse según el alcance de la unidad;
-7. atacar;
-8. asaltar el Centro Urbano cuando ya no hay objetivos militares y dispone de fuerza suficiente.
+4. reunir recursos para una composición militar objetivo;
+5. entrenar fuerza militar diversificada;
+6. priorizar objetivos militares humanos;
+7. aproximarse según el alcance de la unidad;
+8. atacar;
+9. asaltar el Centro Urbano cuando ya no hay objetivos militares y dispone de fuerza suficiente.
 
-La Máquina no persigue Aldeanos como objetivo militar prioritario y mantiene un solo frente de combate activo.
+Las tres facciones usan una doctrina inicial distinta para evitar ejércitos idénticos:
+
+- **Morada:** prioriza Arqueros y luego completa la composición.
+- **Verde:** prioriza Lanceros y luego completa la composición.
+- **Amarilla:** prioriza Guerreros y luego completa la composición.
+- Cuando la economía está desarrollada, las facciones incorporan también Monjes como apoyo.
+
+La IA no abandona su plan solo porque otra unidad sea más barata: puede ordenar a sus Aldeanos recolectar los recursos que necesita para la tropa objetivo. La Máquina no persigue Aldeanos como objetivo militar prioritario y mantiene un solo frente de combate activo.
 
 ## Economía visible y spawn
 
@@ -162,9 +174,11 @@ El selector de entrenamiento muestra costos compactos:
 
 El spawn de unidades entrenadas evita bordes cuando existe una alternativa interior y prioriza casillas con más salidas libres. Las marcas temporales de ocupación del spawn se liberan al abandonar la casilla para no dejar obstáculos fantasma.
 
-## Networking
+## Networking opcional
 
-El proyecto implementa networking mediante **WebSocket + JSON**, manteniendo además la API REST utilizada por Unity.
+La guía original exigía comunicación entre dos instancias de jugadores. **Ese requisito dejó de ser necesario para el alcance final indicado posteriormente por el docente**. La versión entregable funciona como Humano vs 3 Máquinas y no necesita un segundo cliente Unity.
+
+Aun así, el repositorio conserva networking mediante **WebSocket + JSON** como extensión técnica y como demostración de escucha concurrente, manteniendo además la API REST utilizada por Unity.
 
 Endpoint WebSocket:
 
@@ -178,13 +192,14 @@ Estado de red:
 GET /api/red/estado
 ```
 
-Tipos de mensajes soportados:
+Tipos de mensajes soportados por el protocolo:
 
 - `MOVER`
 - `RECOLECTAR`
 - `CONSTRUIR`
 - `ENTRENAR`
 - `ATACAR`
+- `CURAR`
 
 El listener WebSocket es asíncrono, mantiene clientes en una colección concurrente, usa `SemaphoreSlim` para serializar envíos por conexión, maneja cierres/errores y despacha las acciones hacia `ServicioAccionesConcurrentes`.
 
@@ -216,7 +231,7 @@ Suite .NET:
 dotnet test tests/ImperiosEnGuerra.Tests/ImperiosEnGuerra.Tests.csproj
 ```
 
-La suite completa fue validada localmente por el equipo al cierre de Fase 6 con **0 errores** después de las últimas estabilizaciones de combate, spawn, economía y UI.
+La suite se utiliza como validación principal del Modelo, servicios, concurrencia, networking opcional, ataques, IA y condición de victoria. Antes de la entrega final debe ejecutarse nuevamente desde `main` junto con las pruebas de Unity y el smoke test del build standalone.
 
 Las advertencias de acceso denegado a `log_partida.txt` que aparecen en una prueba son intencionales: esa prueba verifica el manejo controlado de errores de IO.
 
@@ -240,9 +255,15 @@ Issue → Branch → Desarrollo → Pruebas → Commit → Pull Request → Deve
 - Fase 3: **TERMINADA**
 - Fase 4: **TERMINADA**
 - Etapa 4.5: **TERMINADA**
-- Fase 5: **TERMINADA E INTEGRADA EN DEVELOP**
-- Fase 6: **TERMINADA, VALIDADA Y LISTA PARA MERGE A DEVELOP**
+- Fase 5: **TERMINADA**
+- Fase 6: **TERMINADA**
+- Fase 7: **TERMINADA E INTEGRADA EN MAIN**
+- Auditoría y documentación final: **EN DESARROLLO**
 
-Documentación:
+La versión estable actual incluye el cierre de Fase 7, optimización de snapshots para reducir micro-freezes, menú e instrucciones actualizados y estrategia militar diferenciada para las tres IAs.
+
+Documentación relevante:
 - `docs/FASE_5_AVANCES_Y_ESTADO_CERRADA.md`
 - `docs/FASE_6_AVANCES_Y_ESTADO_CERRADA.md`
+- `docs/BUILD_Y_EJECUCION.md`
+- `docs/AUDITORIA_FINAL_GUIA.md`
