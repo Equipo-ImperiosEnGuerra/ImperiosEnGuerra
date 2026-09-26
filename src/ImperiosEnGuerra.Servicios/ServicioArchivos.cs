@@ -80,12 +80,28 @@ namespace ImperiosEnGuerra.Servicios
                 Jugador jugador =
                     partida.Jugadores[i];
 
-                string seccion =
-                    ReferenceEquals(
+                string seccion;
+
+                if (ReferenceEquals(
                         jugador,
-                        partida.JugadorHumano)
-                        ? "JUGADOR_HUMANO"
-                        : $"JUGADOR_MAQUINA_{i}";
+                        partida.JugadorHumano))
+                {
+                    seccion =
+                        "JUGADOR_HUMANO";
+                }
+                else
+                {
+                    int indiceMaquina =
+                        partida.JugadoresMaquina
+                            .ToList()
+                            .IndexOf(
+                                jugador);
+
+                    seccion =
+                        indiceMaquina <= 0
+                            ? "JUGADOR_MAQUINA"
+                            : $"JUGADOR_MAQUINA_{indiceMaquina + 1}";
+                }
 
                 AgregarJugador(
                     texto,
