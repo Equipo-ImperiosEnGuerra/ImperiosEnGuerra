@@ -63,6 +63,17 @@ namespace ImperiosEnGuerra.Vistas
         {
             movimientoVisualPausado =
                 pausada;
+
+            AnimacionRecursoRecoleccion[] recursos =
+                GetComponentsInChildren<AnimacionRecursoRecoleccion>(
+                    true);
+
+            foreach (AnimacionRecursoRecoleccion recurso
+                     in recursos)
+            {
+                recurso?.EstablecerPausada(
+                    pausada);
+            }
         }
 
         public void Renderizar(EstadoPartidaDto estado)
@@ -102,6 +113,9 @@ namespace ImperiosEnGuerra.Vistas
                     edificios,
                     unidades);
             }
+
+            ActualizarAnimacionRecursosRecoleccion(
+                estado);
 
             AjustarCamara(estado.mapa);
         }
@@ -161,6 +175,9 @@ namespace ImperiosEnGuerra.Vistas
                     edificios,
                     unidades);
             }
+
+            ActualizarAnimacionRecursosRecoleccion(
+                estado);
         }
 
         private void SincronizarRecursos(
@@ -194,6 +211,103 @@ namespace ImperiosEnGuerra.Vistas
                     entidad.gameObject.SetActive(
                         visible);
                 }
+            }
+        }
+
+        private void ActualizarAnimacionRecursosRecoleccion(
+            EstadoPartidaDto estado)
+        {
+            JugadorEstadoDto[] jugadores =
+                ObtenerJugadoresEstado(
+                    estado);
+
+            var recolectores =
+                new List<UnidadEstadoDto>();
+
+            foreach (JugadorEstadoDto jugador
+                     in jugadores)
+            {
+                if (jugador?.unidades == null)
+                    continue;
+
+                foreach (UnidadEstadoDto unidad
+                         in jugador.unidades)
+                {
+                    if (unidad == null ||
+                        unidad.tipo != "Aldeano" ||
+                        unidad.coordenada == null ||
+                        !string.Equals(
+                            unidad.ordenActiva,
+                            "Recolectar",
+                            System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    recolectores.Add(
+                        unidad);
+                }
+            }
+
+            EntidadSeleccionableVista[] entidades =
+                GetComponentsInChildren<EntidadSeleccionableVista>(
+                    true);
+
+            foreach (EntidadSeleccionableVista entidad
+                     in entidades)
+            {
+                if (entidad == null ||
+                    entidad.Categoria != CategoriaEntidadVisual.Recurso)
+                {
+                    continue;
+                }
+
+                AnimacionRecursoRecoleccion animacion =
+                    entidad.GetComponent<AnimacionRecursoRecoleccion>();
+
+                if (animacion == null)
+                    continue;
+
+                bool siendoRecolectado =
+                    false;
+
+                if (entidad.gameObject.activeSelf)
+                {
+                    foreach (UnidadEstadoDto aldeano
+                             in recolectores)
+                    {
+                        int distancia =
+                            Mathf.Abs(
+                                aldeano.coordenada.x -
+                                entidad.X) +
+                            Mathf.Abs(
+                                aldeano.coordenada.y -
+                                entidad.Y);
+
+                        bool tipoCompatible =
+                            string.IsNullOrWhiteSpace(
+                                aldeano.tipoCarga) ||
+                            string.Equals(
+                                aldeano.tipoCarga,
+                                entidad.TipoLogico,
+                                System.StringComparison.OrdinalIgnoreCase);
+
+                        if (distancia <= 1 &&
+                            tipoCompatible)
+                        {
+                            siendoRecolectado =
+                                true;
+
+                            break;
+                        }
+                    }
+                }
+
+                animacion.EstablecerRecolectando(
+                    siendoRecolectado);
+
+                animacion.EstablecerPausada(
+                    movimientoVisualPausado);
             }
         }
 
@@ -832,6 +946,13 @@ namespace ImperiosEnGuerra.Vistas
                 GameObject objeto = CrearSprite($"Recurso_{recurso.tipo}_{recurso.coordenada.x}_{recurso.coordenada.y}",
                     sprite, recurso.coordenada.x, recurso.coordenada.y, 10, contenedor,
                     Vector3.one * escalaRecursos);
+
+                if (objeto != null &&
+                    objeto.GetComponent<AnimacionRecursoRecoleccion>() == null)
+                {
+                    objeto.AddComponent<AnimacionRecursoRecoleccion>();
+                }
+
                 ConfigurarSeleccionable(objeto, CategoriaEntidadVisual.Recurso,
                     recurso.tipo, string.Empty, recurso.coordenada);
             }
