@@ -158,5 +158,23 @@ namespace ImperiosEnGuerra.Modelo.Map
             recursos.Add(recurso);
             return true;
         }
+
+
+        /// <summary>
+        /// Retira un nodo físico agotado. Se usa por el servicio de
+        /// regeneración para reemplazarlo por otro nodo del mismo tipo.
+        /// </summary>
+        public bool RetirarRecursoAgotado(
+            Recurso recurso)
+        {
+            if (recurso == null ||
+                !recurso.Agotado)
+            {
+                return false;
+            }
+
+            return recursos.Remove(
+                recurso);
+        }
     }
 }
