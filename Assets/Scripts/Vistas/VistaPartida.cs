@@ -48,6 +48,12 @@ namespace ImperiosEnGuerra.Vistas
             movimientosVisuales =
                 new Dictionary<string, MovimientoVisualPendiente>();
 
+        // Índice visual por identidad estable. Evita recorrer toda la jerarquía
+        // por cada unidad/edificio en cada snapshot.
+        private readonly Dictionary<string, EntidadSeleccionableVista>
+            entidadesPorId =
+                new Dictionary<string, EntidadSeleccionableVista>();
+
         public event System.Action AntesDeLimpiarContenido;
 
         public void Renderizar(EstadoPartidaDto estado)
@@ -614,6 +620,24 @@ namespace ImperiosEnGuerra.Vistas
             int y,
             bool ignorarCoordenada = false)
         {
+            if (!string.IsNullOrWhiteSpace(
+                    id) &&
+                entidadesPorId.TryGetValue(
+                    id,
+                    out EntidadSeleccionableVista porId) &&
+                porId != null)
+            {
+                if (porId.Categoria == categoria &&
+                    porId.TipoLogico == tipo &&
+                    porId.Propietario == propietario &&
+                    (ignorarCoordenada ||
+                     (porId.X == x &&
+                      porId.Y == y)))
+                {
+                    return porId;
+                }
+            }
+
             EntidadSeleccionableVista[] entidades =
                 GetComponentsInChildren<EntidadSeleccionableVista>(
                     true);
@@ -639,6 +663,14 @@ namespace ImperiosEnGuerra.Vistas
                      entidad.Y != y))
                 {
                     continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(
+                        entidad.IdLogico))
+                {
+                    entidadesPorId[
+                        entidad.IdLogico] =
+                        entidad;
                 }
 
                 return entidad;
@@ -713,6 +745,7 @@ namespace ImperiosEnGuerra.Vistas
         {
             AntesDeLimpiarContenido?.Invoke();
             movimientosVisuales.Clear();
+            entidadesPorId.Clear();
             anchoVisual = 0;
             altoVisual = 0;
             if (contenidoGenerado == null)
@@ -1078,23 +1111,12 @@ namespace ImperiosEnGuerra.Vistas
                 return false;
             }
 
-            EntidadSeleccionableVista[] entidades =
-                GetComponentsInChildren<EntidadSeleccionableVista>(true);
-
-            EntidadSeleccionableVista encontrada = null;
-
-            foreach (EntidadSeleccionableVista entidad in entidades)
-            {
-                if (entidad != null &&
-                    entidad.Categoria == CategoriaEntidadVisual.Unidad &&
-                    entidad.IdLogico == unidadId)
-                {
-                    encontrada = entidad;
-                    break;
-                }
-            }
-
-            if (encontrada == null)
+            if (!entidadesPorId.TryGetValue(
+                    unidadId,
+                    out EntidadSeleccionableVista encontrada) ||
+                encontrada == null ||
+                encontrada.Categoria !=
+                    CategoriaEntidadVisual.Unidad)
             {
                 return false;
             }
@@ -1299,6 +1321,14 @@ namespace ImperiosEnGuerra.Vistas
                 vidaMaxima,
                 danio,
                 alcance);
+
+            if (!string.IsNullOrWhiteSpace(
+                    idLogico))
+            {
+                entidadesPorId[
+                    idLogico] =
+                    entidad;
+            }
 
             var collider = objeto.AddComponent<BoxCollider2D>();
 
