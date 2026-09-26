@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using ImperiosEnGuerra.Modelo.Map;
 
@@ -6,8 +7,26 @@ namespace ImperiosEnGuerra.Modelo.Core
 {
     public class Partida
     {
+        private readonly List<Jugador> jugadores;
+
         public Jugador JugadorHumano { get; }
-        public Jugador JugadorMaquina { get; }
+
+        /// <summary>
+        /// Compatibilidad con la versión Humano vs Máquina.
+        /// Devuelve la primera IA de la colección.
+        /// </summary>
+        public Jugador JugadorMaquina =>
+            JugadoresMaquina.FirstOrDefault();
+
+        public IReadOnlyList<Jugador> Jugadores =>
+            jugadores.AsReadOnly();
+
+        public IReadOnlyList<Jugador> JugadoresMaquina =>
+            jugadores
+                .Where(
+                    j => j.Tipo == TipoJugador.Maquina)
+                .ToList()
+                .AsReadOnly();
 
         public bool Finalizada { get; private set; }
         public Jugador Ganador { get; private set; }
@@ -16,25 +35,70 @@ namespace ImperiosEnGuerra.Modelo.Core
         public Partida(
             Jugador jugadorHumano,
             Jugador jugadorMaquina)
+            : this(
+                jugadorHumano,
+                new[] { jugadorMaquina })
+        {
+        }
+
+        public Partida(
+            Jugador jugadorHumano,
+            IEnumerable<Jugador> jugadoresMaquina)
         {
             if (jugadorHumano == null)
-                throw new ArgumentNullException(nameof(jugadorHumano));
+                throw new ArgumentNullException(
+                    nameof(jugadorHumano));
 
-            if (jugadorMaquina == null)
-                throw new ArgumentNullException(nameof(jugadorMaquina));
+            if (jugadoresMaquina == null)
+                throw new ArgumentNullException(
+                    nameof(jugadoresMaquina));
 
             if (jugadorHumano.Tipo != TipoJugador.Humano)
+            {
                 throw new ArgumentException(
                     "El primer jugador debe ser de tipo Humano.",
                     nameof(jugadorHumano));
+            }
 
-            if (jugadorMaquina.Tipo != TipoJugador.Maquina)
+            List<Jugador> maquinas =
+                jugadoresMaquina
+                    .Where(j => j != null)
+                    .ToList();
+
+            if (maquinas.Count == 0)
+            {
                 throw new ArgumentException(
-                    "El segundo jugador debe ser de tipo Maquina.",
-                    nameof(jugadorMaquina));
+                    "La partida requiere al menos un jugador Máquina.",
+                    nameof(jugadoresMaquina));
+            }
+
+            if (maquinas.Any(
+                    j => j.Tipo != TipoJugador.Maquina))
+            {
+                throw new ArgumentException(
+                    "Todos los rivales deben ser de tipo Maquina.",
+                    nameof(jugadoresMaquina));
+            }
+
+            if (maquinas.Distinct().Count() !=
+                maquinas.Count)
+            {
+                throw new ArgumentException(
+                    "No se puede registrar dos veces el mismo jugador.",
+                    nameof(jugadoresMaquina));
+            }
 
             JugadorHumano = jugadorHumano;
-            JugadorMaquina = jugadorMaquina;
+
+            jugadores =
+                new List<Jugador>
+                {
+                    jugadorHumano
+                };
+
+            jugadores.AddRange(
+                maquinas);
+
             Finalizada = false;
             Ganador = null;
             MotivoFinalizacion = string.Empty;
@@ -43,35 +107,35 @@ namespace ImperiosEnGuerra.Modelo.Core
         public Jugador ObtenerJugador(
             TipoJugador tipo)
         {
-            return tipo == TipoJugador.Humano
-                ? JugadorHumano
-                : tipo == TipoJugador.Maquina
-                    ? JugadorMaquina
-                    : null;
+            return jugadores.FirstOrDefault(
+                j => j.Tipo == tipo);
+        }
+
+        public IReadOnlyList<Jugador> ObtenerJugadores(
+            TipoJugador tipo)
+        {
+            return jugadores
+                .Where(j => j.Tipo == tipo)
+                .ToList()
+                .AsReadOnly();
         }
 
         public Jugador BuscarJugadorPorUnidad(
             Guid unidadId)
         {
-            if (JugadorHumano.Unidades.Any(u => u.Id == unidadId))
-                return JugadorHumano;
-
-            if (JugadorMaquina.Unidades.Any(u => u.Id == unidadId))
-                return JugadorMaquina;
-
-            return null;
+            return jugadores.FirstOrDefault(
+                jugador =>
+                    jugador.Unidades.Any(
+                        u => u.Id == unidadId));
         }
 
         public Jugador BuscarJugadorPorEdificio(
             Guid edificioId)
         {
-            if (JugadorHumano.Edificios.Any(e => e.Id == edificioId))
-                return JugadorHumano;
-
-            if (JugadorMaquina.Edificios.Any(e => e.Id == edificioId))
-                return JugadorMaquina;
-
-            return null;
+            return jugadores.FirstOrDefault(
+                jugador =>
+                    jugador.Edificios.Any(
+                        e => e.Id == edificioId));
         }
 
         public Jugador BuscarJugadorPorEdificio(
@@ -80,32 +144,85 @@ namespace ImperiosEnGuerra.Modelo.Core
             if (coordenada == null)
                 return null;
 
-            bool humano =
-                JugadorHumano.Edificios.Any(
-                    e => Coincide(e.Coordenada, coordenada));
+            Jugador[] coincidencias =
+                jugadores
+                    .Where(
+                        jugador =>
+                            jugador.Edificios.Any(
+                                e => Coincide(
+                                    e.Coordenada,
+                                    coordenada)))
+                    .ToArray();
 
-            bool maquina =
-                JugadorMaquina.Edificios.Any(
-                    e => Coincide(e.Coordenada, coordenada));
+            return coincidencias.Length == 1
+                ? coincidencias[0]
+                : null;
+        }
 
-            if (humano == maquina)
-                return null;
+        public IReadOnlyList<Jugador> ObtenerEnemigos(
+            Jugador jugador)
+        {
+            if (jugador == null ||
+                !jugadores.Contains(jugador))
+            {
+                return Array.Empty<Jugador>();
+            }
 
-            return humano
-                ? JugadorHumano
-                : JugadorMaquina;
+            if (ReferenceEquals(
+                    jugador,
+                    JugadorHumano))
+            {
+                return JugadoresMaquina;
+            }
+
+            // Las IAs pertenecen al mismo equipo durante esta fase.
+            return new[] { JugadorHumano };
         }
 
         public Jugador ObtenerOponente(
             Jugador jugador)
         {
-            if (ReferenceEquals(jugador, JugadorHumano))
-                return JugadorMaquina;
+            return ObtenerEnemigos(
+                    jugador)
+                .FirstOrDefault();
+        }
 
-            if (ReferenceEquals(jugador, JugadorMaquina))
-                return JugadorHumano;
+        public bool SonAliados(
+            Jugador primero,
+            Jugador segundo)
+        {
+            if (primero == null ||
+                segundo == null)
+            {
+                return false;
+            }
 
-            return null;
+            if (ReferenceEquals(
+                    primero,
+                    segundo))
+            {
+                return true;
+            }
+
+            return primero.Tipo == TipoJugador.Maquina &&
+                   segundo.Tipo == TipoJugador.Maquina;
+        }
+
+        public bool SonEnemigos(
+            Jugador primero,
+            Jugador segundo)
+        {
+            if (primero == null ||
+                segundo == null)
+            {
+                return false;
+            }
+
+            return jugadores.Contains(primero) &&
+                   jugadores.Contains(segundo) &&
+                   !SonAliados(
+                       primero,
+                       segundo);
         }
 
         public bool IntentarFinalizar(
@@ -113,10 +230,11 @@ namespace ImperiosEnGuerra.Modelo.Core
             string motivo)
         {
             if (ganador == null)
-                throw new ArgumentNullException(nameof(ganador));
+                throw new ArgumentNullException(
+                    nameof(ganador));
 
-            if (!ReferenceEquals(ganador, JugadorHumano) &&
-                !ReferenceEquals(ganador, JugadorMaquina))
+            if (!jugadores.Contains(
+                    ganador))
             {
                 throw new ArgumentException(
                     "El ganador debe pertenecer a la partida.",
@@ -128,7 +246,9 @@ namespace ImperiosEnGuerra.Modelo.Core
 
             Finalizada = true;
             Ganador = ganador;
-            MotivoFinalizacion = motivo ?? string.Empty;
+            MotivoFinalizacion =
+                motivo ?? string.Empty;
+
             return true;
         }
 
