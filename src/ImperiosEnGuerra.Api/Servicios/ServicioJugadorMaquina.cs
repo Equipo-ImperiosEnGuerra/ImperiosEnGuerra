@@ -22,6 +22,8 @@ public sealed class ServicioJugadorMaquina : IDisposable
     // pero las tres IAs pueden combatir al mismo tiempo de forma independiente.
     private readonly HashSet<int> combatesAsignados =
         new HashSet<int>();
+    private readonly HashSet<int> recoleccionesAsignadas =
+        new HashSet<int>();
 
     private CancellationTokenSource? cancelacion;
     private DateTime inicioCicloUtc = DateTime.MinValue;
@@ -229,7 +231,8 @@ public sealed class ServicioJugadorMaquina : IDisposable
         switch (decision.Tipo)
         {
             case TipoDecisionMaquina.Recolectar:
-                return EjecutarConUnidadAsignada(
+                return EjecutarConRecoleccionAsignada(
+                    indiceMaquina,
                     decision.UnidadId,
                     () =>
                         acciones.IniciarRecoleccion(
@@ -352,6 +355,70 @@ public sealed class ServicioJugadorMaquina : IDisposable
 
             default:
                 return null;
+        }
+    }
+
+    private ProcesoConcurrente? EjecutarConRecoleccionAsignada(
+        int indiceMaquina,
+        Guid unidadId,
+        Func<ProcesoConcurrente> iniciar)
+    {
+        if (unidadId == Guid.Empty ||
+            iniciar == null)
+        {
+            return null;
+        }
+
+        lock (sincronizacion)
+        {
+            if (recoleccionesAsignadas.Contains(
+                    indiceMaquina) ||
+                !unidadesAsignadas.Add(
+                    unidadId))
+            {
+                return null;
+            }
+
+            recoleccionesAsignadas.Add(
+                indiceMaquina);
+        }
+
+        try
+        {
+            ProcesoConcurrente proceso =
+                iniciar();
+
+            _ = proceso.Finalizacion
+                .ContinueWith(
+                    _ =>
+                    {
+                        lock (sincronizacion)
+                        {
+                            unidadesAsignadas.Remove(
+                                unidadId);
+
+                            recoleccionesAsignadas.Remove(
+                                indiceMaquina);
+                        }
+                    },
+                    CancellationToken.None,
+                    TaskContinuationOptions.ExecuteSynchronously,
+                    TaskScheduler.Default);
+
+            return proceso;
+        }
+        catch
+        {
+            lock (sincronizacion)
+            {
+                unidadesAsignadas.Remove(
+                    unidadId);
+
+                recoleccionesAsignadas.Remove(
+                    indiceMaquina);
+            }
+
+            throw;
         }
     }
 
