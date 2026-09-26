@@ -373,6 +373,10 @@ public bool PuedeCancelarAccion =>
 
                 controladorSeleccion?
                     .BloquearInteraccion();
+
+                vistaPartida?
+                    .EstablecerPausaVisual(
+                        true);
             }
 
             string endpoint =
@@ -414,6 +418,10 @@ public bool PuedeCancelarAccion =>
 
                     controladorSeleccion?
                         .DesbloquearInteraccion();
+
+                    vistaPartida?
+                        .EstablecerPausaVisual(
+                            false);
                 }
 
                 alCompletar?.Invoke(
@@ -445,6 +453,10 @@ public bool PuedeCancelarAccion =>
 
                 controladorSeleccion?
                     .DesbloquearInteraccion();
+
+                vistaPartida?
+                    .EstablecerPausaVisual(
+                        false);
             }
 
             alCompletar?.Invoke(
@@ -483,6 +495,7 @@ public bool PuedeCancelarAccion =>
             PausadaPorMenu = false;
 
             controladorSeleccion?.BloquearInteraccion();
+            vistaPartida?.EstablecerPausaVisual(false);
             vistaHud?.OcultarResultadoFinal();
             vistaHud?.MostrarMensaje("");
 
@@ -2238,6 +2251,7 @@ public bool PuedeCancelarAccion =>
             }
 
             controladorSeleccion?.DesbloquearInteraccion();
+            vistaPartida?.EstablecerPausaVisual(false);
             vistaHud?.OcultarResultadoFinal();
 
             Debug.Log(
