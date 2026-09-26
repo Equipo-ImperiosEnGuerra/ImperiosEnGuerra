@@ -620,6 +620,48 @@ public class JugadorMaquinaTests
     }
 
     [Test]
+    public void Planificador_ConArqueroYaEnEntrenamiento_NoDuplicaElMismoTipo()
+    {
+        Partida partida =
+            CrearPartidaEstrategica(
+                aldeanos: 3,
+                centros: 2,
+                oro: 8,
+                madera: 0,
+                comida: 15);
+
+        partida.JugadorMaquina.AgregarUnidad(
+            new Guerrero(
+                new Coordenada(
+                    4,
+                    4)));
+
+        CentroUrbano centroOcupado =
+            partida.JugadorMaquina.Edificios
+                .OfType<CentroUrbano>()
+                .First();
+
+        centroOcupado.EncolarEntrenamiento(
+            nameof(Arquero));
+
+        DecisionMaquina decision =
+            new PlanificadorDecisionMaquina()
+                .Preparar(
+                    partida);
+
+        Assert.That(
+            decision.Tipo,
+            Is.EqualTo(
+                TipoDecisionMaquina.Entrenar));
+
+        Assert.That(
+            decision.TipoUnidad,
+            Is.EqualTo(
+                nameof(Lancero)),
+            "La IA debe contar las tropas que ya están en entrenamiento para no duplicar composición innecesariamente.");
+    }
+
+    [Test]
     public void Planificador_ConTresTipos_EntrenaMonjeComoApoyoSiLaEconomiaLoPermite()
     {
         Partida partida =
