@@ -35,10 +35,10 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     "No existe un edificio propietario único en la posición indicada.");
             }
 
-            return Ejecutar(
+            return EjecutarConPropietario(
                 partida,
                 solicitud,
-                propietario.Tipo);
+                propietario);
         }
 
         public ResultadoAccion Ejecutar(
@@ -63,13 +63,31 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     "La posición de aparición es obligatoria.");
 
             Jugador propietario =
-                partida.ObtenerJugador(
-                    propietarioTipo);
+                partida
+                    .ObtenerJugadores(
+                        propietarioTipo)
+                    .FirstOrDefault(
+                        jugador =>
+                            jugador.Edificios.Any(
+                                e => MismaCoordenada(
+                                    e.Coordenada,
+                                    solicitud.EdificioOrigen)));
 
             if (propietario == null)
                 return ResultadoAccion.Fallido(
                     "No existe el jugador propietario indicado.");
 
+            return EjecutarConPropietario(
+                partida,
+                solicitud,
+                propietario);
+        }
+
+        private ResultadoAccion EjecutarConPropietario(
+            Partida partida,
+            SolicitudEntrenamiento solicitud,
+            Jugador propietario)
+        {
             Edificio edificio =
                 propietario.Edificios
                     .FirstOrDefault(
