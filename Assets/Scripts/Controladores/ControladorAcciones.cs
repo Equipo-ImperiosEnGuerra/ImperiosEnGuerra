@@ -445,7 +445,8 @@ namespace ImperiosEnGuerra.Controladores
                 objetivo.isActiveAndEnabled &&
                 (objetivo.Categoria == CategoriaEntidadVisual.Unidad ||
                  objetivo.Categoria == CategoriaEntidadVisual.Edificio) &&
-                objetivo.Propietario == "Maquina" &&
+                objetivo.Propietario != null &&
+                objetivo.Propietario.StartsWith("Maquina") &&
                 !string.IsNullOrWhiteSpace(objetivo.IdLogico);
         }
 
