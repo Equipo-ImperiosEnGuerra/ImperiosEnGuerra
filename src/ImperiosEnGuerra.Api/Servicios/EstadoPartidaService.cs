@@ -374,6 +374,128 @@ public sealed class EstadoPartidaService
         }
     }
 
+    public IReadOnlyList<Recurso> ObtenerRecursosAgotados()
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+            {
+                return Array.Empty<Recurso>();
+            }
+
+            return partidaActiva.JugadorHumano.Mapa
+                .Recursos
+                .Where(
+                    recurso =>
+                        recurso != null &&
+                        recurso.Agotado)
+                .ToList()
+                .AsReadOnly();
+        }
+    }
+
+    public bool IntentarRegenerarRecurso(
+        TipoRecurso tipo,
+        Coordenada origenAgotado,
+        int selectorAleatorio,
+        out Coordenada nuevaCoordenada)
+    {
+        lock (sincronizacion)
+        {
+            nuevaCoordenada = null;
+
+            if (partidaActiva == null ||
+                partidaActiva.Finalizada ||
+                origenAgotado == null)
+            {
+                return false;
+            }
+
+            Mapa mapa =
+                partidaActiva.JugadorHumano.Mapa;
+
+            Recurso recursoAgotado =
+                mapa.ObtenerRecursoEn(
+                    origenAgotado);
+
+            if (recursoAgotado == null ||
+                recursoAgotado.Tipo != tipo ||
+                !recursoAgotado.Agotado)
+            {
+                return false;
+            }
+
+            var candidatas =
+                new List<Coordenada>();
+
+            for (int x = 0;
+                 x < mapa.Ancho;
+                 x++)
+            {
+                for (int y = 0;
+                     y < mapa.Alto;
+                     y++)
+                {
+                    var candidata =
+                        new Coordenada(
+                            x,
+                            y);
+
+                    if (mapa.PuedeColocar(
+                            candidata))
+                    {
+                        candidatas.Add(
+                            candidata);
+                    }
+                }
+            }
+
+            if (candidatas.Count == 0)
+                return false;
+
+            int valor =
+                selectorAleatorio ==
+                int.MinValue
+                    ? 0
+                    : Math.Abs(
+                        selectorAleatorio);
+
+            Coordenada destino =
+                candidatas[
+                    valor %
+                    candidatas.Count];
+
+            if (!mapa.RetirarRecursoAgotado(
+                    recursoAgotado))
+            {
+                return false;
+            }
+
+            var nuevo =
+                new Recurso(
+                    tipo,
+                    destino);
+
+            if (!mapa.ColocarRecurso(
+                    nuevo))
+            {
+                mapa.ColocarRecurso(
+                    recursoAgotado);
+
+                return false;
+            }
+
+            nuevaCoordenada =
+                destino;
+
+            RegistrarEventoSeguro(
+                $"RECURSO_REGENERADO|{tipo}|({destino.X},{destino.Y})");
+
+            return true;
+        }
+    }
+
+
     public bool RecursoExiste(
         Coordenada objetivo)
     {
