@@ -174,6 +174,21 @@ namespace ImperiosEnGuerra.Modelo.IA
                     nameof(Guerrero));
             }
 
+            if (militaresPropios < 2 &&
+                disponibles.Length > 0)
+            {
+                DecisionMaquina reposicion =
+                    PrepararRecoleccionParaGuerrero(
+                        maquina,
+                        disponibles);
+
+                if (reposicion.Tipo !=
+                    TipoDecisionMaquina.Ninguna)
+                {
+                    return reposicion;
+                }
+            }
+
             if (permitirCombate)
             {
                 DecisionMaquina combate =
@@ -561,6 +576,175 @@ namespace ImperiosEnGuerra.Modelo.IA
                 .ThenBy(c => c.X)
                 .ThenBy(c => c.Y)
                 .FirstOrDefault();
+        }
+
+        private DecisionMaquina PrepararRecoleccionParaGuerrero(
+            Jugador maquina,
+            IReadOnlyList<Aldeano> disponibles)
+        {
+            if (maquina == null ||
+                disponibles == null ||
+                disponibles.Count == 0 ||
+                !economia.IntentarObtenerCostoUnidad(
+                    nameof(Guerrero),
+                    out CostoRecursos costo))
+            {
+                return DecisionMaquina.SinAccion(
+                    "No fue posible preparar recursos para reponer ejército.");
+            }
+
+            int oroActual =
+                maquina.Recursos.ObtenerCantidad(
+                    TipoRecurso.Oro);
+
+            int comidaActual =
+                maquina.Recursos.ObtenerCantidad(
+                    TipoRecurso.Comida);
+
+            int faltaOro =
+                Math.Max(
+                    0,
+                    costo.Oro -
+                    oroActual);
+
+            int faltaComida =
+                Math.Max(
+                    0,
+                    costo.Comida -
+                    comidaActual);
+
+            if (faltaOro == 0 &&
+                faltaComida == 0)
+            {
+                return DecisionMaquina.SinAccion(
+                    "La IA ya dispone de recursos para entrenar un Guerrero.");
+            }
+
+            TipoRecurso tipoPrioritario;
+
+            if (faltaOro > 0 &&
+                faltaComida > 0)
+            {
+                double proporcionOro =
+                    costo.Oro <= 0
+                        ? 0d
+                        : (double)faltaOro /
+                          costo.Oro;
+
+                double proporcionComida =
+                    costo.Comida <= 0
+                        ? 0d
+                        : (double)faltaComida /
+                          costo.Comida;
+
+                tipoPrioritario =
+                    proporcionComida >=
+                    proporcionOro
+                        ? TipoRecurso.Comida
+                        : TipoRecurso.Oro;
+            }
+            else
+            {
+                tipoPrioritario =
+                    faltaComida > 0
+                        ? TipoRecurso.Comida
+                        : TipoRecurso.Oro;
+            }
+
+            Recurso recurso =
+                BuscarRecursoMasCercano(
+                    maquina,
+                    disponibles,
+                    tipoPrioritario,
+                    out Aldeano aldeano);
+
+            if (recurso == null)
+            {
+                TipoRecurso alternativo =
+                    tipoPrioritario ==
+                    TipoRecurso.Comida
+                        ? TipoRecurso.Oro
+                        : TipoRecurso.Comida;
+
+                bool alternativoNecesario =
+                    alternativo ==
+                    TipoRecurso.Oro
+                        ? faltaOro > 0
+                        : faltaComida > 0;
+
+                if (alternativoNecesario)
+                {
+                    recurso =
+                        BuscarRecursoMasCercano(
+                            maquina,
+                            disponibles,
+                            alternativo,
+                            out aldeano);
+                }
+            }
+
+            return recurso == null ||
+                   aldeano == null
+                ? DecisionMaquina.SinAccion(
+                    "No hay un nodo disponible del recurso necesario para reponer ejército.")
+                : DecisionMaquina.Recolectar(
+                    aldeano.Id,
+                    recurso.Coordenada);
+        }
+
+        private static Recurso BuscarRecursoMasCercano(
+            Jugador maquina,
+            IReadOnlyList<Aldeano> disponibles,
+            TipoRecurso tipo,
+            out Aldeano mejorAldeano)
+        {
+            mejorAldeano =
+                null;
+
+            Recurso mejorRecurso =
+                null;
+
+            int mejorDistancia =
+                int.MaxValue;
+
+            Recurso[] candidatos =
+                maquina.Mapa.Recursos
+                    .Where(
+                        recurso =>
+                            recurso != null &&
+                            !recurso.Agotado &&
+                            recurso.Tipo == tipo)
+                    .ToArray();
+
+            foreach (Aldeano aldeano
+                     in disponibles)
+            {
+                foreach (Recurso recurso
+                         in candidatos)
+                {
+                    int distancia =
+                        Distancia(
+                            aldeano.Coordenada,
+                            recurso.Coordenada);
+
+                    if (distancia >=
+                        mejorDistancia)
+                    {
+                        continue;
+                    }
+
+                    mejorDistancia =
+                        distancia;
+
+                    mejorAldeano =
+                        aldeano;
+
+                    mejorRecurso =
+                        recurso;
+                }
+            }
+
+            return mejorRecurso;
         }
 
         private bool PuedePagarUnidad(
