@@ -492,8 +492,15 @@ namespace ImperiosEnGuerra.Modelo.IA
             Coordenada objetivo,
             int alcance)
         {
+            Jugador propietario =
+                partida.BuscarJugadorPorUnidad(
+                    atacante.Id);
+
             Mapa mapa =
-                partida.JugadorMaquina.Mapa;
+                propietario?.Mapa;
+
+            if (mapa == null)
+                return null;
 
             var candidatas =
                 new List<Coordenada>();
@@ -525,14 +532,12 @@ namespace ImperiosEnGuerra.Modelo.IA
                 .Where(
                     c =>
                         mapa.PuedeColocar(c) &&
-                        !HayEntidadEn(
-                            partida.JugadorHumano,
-                            mapa,
-                            c) &&
-                        !HayEntidadEn(
-                            partida.JugadorMaquina,
-                            mapa,
-                            c))
+                        !partida.Jugadores.Any(
+                            jugador =>
+                                HayEntidadEn(
+                                    jugador,
+                                    mapa,
+                                    c)))
                 .OrderBy(
                     c => Distancia(
                         atacante.Coordenada,
