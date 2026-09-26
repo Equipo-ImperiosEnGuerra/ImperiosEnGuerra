@@ -298,9 +298,6 @@ public sealed class ServicioAccionesConcurrentes
                             continue;
                         }
 
-                        Console.WriteLine(
-                            $"MOVIMIENTO_PASO: {unidadId} -> " +
-                            $"({siguiente.X},{siguiente.Y})");
                     }
 
                     return ResultadoAccion.Exitoso(
@@ -401,9 +398,6 @@ public sealed class ServicioAccionesConcurrentes
                             "Movimiento idle detenido por cambio del mapa.");
                     }
 
-                    Console.WriteLine(
-                        $"MOVIMIENTO_IDLE: {unidadId} -> " +
-                        $"({paso.X},{paso.Y})");
                 }
 
                 return ResultadoAccion.Exitoso(
@@ -1425,9 +1419,6 @@ public sealed class ServicioAccionesConcurrentes
                                 break;
                             }
 
-                            Console.WriteLine(
-                                $"CURACION_MOVIMIENTO: {curadorId} -> " +
-                                $"({paso.X},{paso.Y})");
                         }
 
                         if (requiereReplan)
@@ -1972,9 +1963,6 @@ public sealed class ServicioAccionesConcurrentes
                 return resultado;
             }
 
-            Console.WriteLine(
-                $"RECOLECCION_MOVIMIENTO: {unidadId} -> " +
-                $"({siguiente.X},{siguiente.Y})");
         }
 
         return ResultadoAccion.Exitoso(
@@ -2010,9 +1998,6 @@ public sealed class ServicioAccionesConcurrentes
             if (!resultado.Exito)
                 return resultado;
 
-            Console.WriteLine(
-                $"CONSTRUCCION_MOVIMIENTO: {unidadId} -> " +
-                $"({siguiente.X},{siguiente.Y})");
         }
 
         return ResultadoAccion.Exitoso(
