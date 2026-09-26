@@ -269,7 +269,7 @@ public class CuatroJugadoresTests
                 new[]
                 {
                     (
-                        "CPU Roja",
+                        "CPU Morada",
                         new Coordenada(13, 13)
                     ),
                     (
