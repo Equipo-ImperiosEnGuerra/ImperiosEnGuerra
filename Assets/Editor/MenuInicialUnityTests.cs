@@ -79,6 +79,22 @@ public class MenuInicialUnityTests
             Assert.That(
                 cuerpo.text,
                 Does.Contain("cancelar"));
+
+            Assert.That(
+                cuerpo.text,
+                Does.Contain("tres facciones"));
+
+            Assert.That(
+                cuerpo.text,
+                Does.Contain("Morada"));
+
+            Assert.That(
+                cuerpo.text,
+                Does.Contain("reaparece"));
+
+            Assert.That(
+                cuerpo.text,
+                Does.Contain("nuevo Centro Urbano"));
         }
         finally
         {
