@@ -74,7 +74,7 @@ public class MenuInicialUnityTests
 
             Assert.That(
                 cuerpo.text,
-                Does.Contain("Monjes"));
+                Does.Contain("El Monje"));
 
             Assert.That(
                 cuerpo.text,
@@ -95,6 +95,26 @@ public class MenuInicialUnityTests
             Assert.That(
                 cuerpo.text,
                 Does.Contain("nuevo Centro Urbano"));
+
+            Assert.That(
+                cuerpo.text,
+                Does.Contain("pulsa RECOLECTAR"));
+
+            Assert.That(
+                cuerpo.text,
+                Does.Contain("pulsa MOVER"));
+
+            Assert.That(
+                cuerpo.text,
+                Does.Contain("pulsa ENTRENAR"));
+
+            Assert.That(
+                cuerpo.text,
+                Does.Contain("pulsa ATACAR"));
+
+            Assert.That(
+                cuerpo.text,
+                Does.Contain("sin tarea"));
         }
         finally
         {
