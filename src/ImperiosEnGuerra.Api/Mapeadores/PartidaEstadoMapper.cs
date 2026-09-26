@@ -41,7 +41,7 @@ public static class PartidaEstadoMapper
             JugadorMaquina =
                 ConvertirJugador(
                     partida.JugadorMaquina,
-                    "Roja"),
+                    "Morada"),
             Jugadores =
                 new[]
                 {
@@ -184,7 +184,7 @@ public static class PartidaEstadoMapper
         switch (indice)
         {
             case 0:
-                return "Roja";
+                return "Morada";
             case 1:
                 return "Verde";
             case 2:
