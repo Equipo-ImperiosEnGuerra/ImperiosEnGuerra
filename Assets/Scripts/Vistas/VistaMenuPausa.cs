@@ -15,6 +15,10 @@ namespace ImperiosEnGuerra.Vistas
         public event Action ReanudarSolicitado;
         public event Action SalirSolicitado;
 
+        public bool Visible =>
+            fondo != null &&
+            fondo.activeSelf;
+
         private void Awake()
         {
             Construir();
