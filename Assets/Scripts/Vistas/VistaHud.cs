@@ -430,8 +430,11 @@ namespace ImperiosEnGuerra.Vistas
                     : entidad.TipoLogico;
 
             string bando =
-                entidad.Propietario == "Maquina"
-                    ? "Enemigo"
+                entidad.Propietario != null &&
+                entidad.Propietario.StartsWith(
+                    "Maquina")
+                    ? DescribirFaccionEnemiga(
+                        entidad.Propietario)
                     : "Tu bando";
 
             string texto =
@@ -474,6 +477,28 @@ namespace ImperiosEnGuerra.Vistas
             }
 
             seleccion.text = texto;
+        }
+
+        private static string DescribirFaccionEnemiga(
+            string propietario)
+        {
+            if (string.IsNullOrWhiteSpace(
+                    propietario))
+            {
+                return "Enemigo";
+            }
+
+            int separador =
+                propietario.IndexOf('_');
+
+            if (separador < 0 ||
+                separador >=
+                    propietario.Length - 1)
+            {
+                return "Enemigo";
+            }
+
+            return $"Enemigo {propietario.Substring(separador + 1)}";
         }
 
         private static string TraducirEstado(
@@ -643,8 +668,8 @@ namespace ImperiosEnGuerra.Vistas
             if (victoriaHumana)
             {
                 detalle =
-                    "Has derrotado al ejército enemigo.\n" +
-                    "El rival ya no conserva Centros Urbanos ni unidades militares.";
+                    "Has derrotado a las tres facciones enemigas.\n" +
+                    "Ya no conservan Centros Urbanos ni unidades militares.";
             }
             else if (!string.IsNullOrWhiteSpace(
                          ganador))
