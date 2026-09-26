@@ -29,7 +29,7 @@ namespace ImperiosEnGuerra.Controladores.Red
         private bool ultimoEstadoPartidaValido;
         private bool sesionVisualActiva;
         private Coroutine sincronizacionPeriodica;
-        private const float IntervaloSincronizacionEstado = 0.25f;
+        private const float IntervaloSincronizacionEstado = 0.5f;
         private const float IntervaloConsultaProceso = 0.25f;
 
         public event System.Action PartidaIniciadaDesdeMenu;
