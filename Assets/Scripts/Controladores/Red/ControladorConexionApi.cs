@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Text;
 using ImperiosEnGuerra.Controladores;
 using ImperiosEnGuerra.Controladores.Red.Contratos;
@@ -28,6 +29,9 @@ namespace ImperiosEnGuerra.Controladores.Red
         private bool ultimoEstadoPartidaValido;
         private bool sesionVisualActiva;
         private Coroutine sincronizacionPeriodica;
+        private readonly Dictionary<string, bool> aldeanosTrabajando =
+            new Dictionary<string, bool>();
+        private bool seguimientoAldeanosInicializado;
 
         private const float IntervaloSincronizacionEstado = 0.25f;
         private const float IntervaloConsultaProceso = 0.25f;
@@ -1880,6 +1884,7 @@ public bool PuedeCancelarAccion =>
         {
             ApiDisponible = false;
             PartidaFinalizada = false;
+            ReiniciarSeguimientoAldeanos();
 
             if (controladorSeleccion == null)
             {
@@ -1905,6 +1910,7 @@ public bool PuedeCancelarAccion =>
             ApiDisponible = false;
             ultimoInicioPartidaExitoso = false;
             ultimoEstadoPartidaValido = false;
+            ReiniciarSeguimientoAldeanos();
 
             string url =
                 $"{urlBaseApi}/api/estado";
@@ -2190,6 +2196,12 @@ public bool PuedeCancelarAccion =>
             vistaPartida.Sincronizar(estadoPartida);
             ultimoEstadoPartidaValido = true;
 
+            if (!PartidaFinalizada)
+            {
+                ActualizarAvisosAldeanos(
+                    estadoPartida);
+            }
+
             if (vistaHud != null)
             {
                 var recursos =
@@ -2230,6 +2242,120 @@ public bool PuedeCancelarAccion =>
                         true);
                 }
             }
+        }
+
+        private void ReiniciarSeguimientoAldeanos()
+        {
+            aldeanosTrabajando.Clear();
+            seguimientoAldeanosInicializado =
+                false;
+        }
+
+        private void ActualizarAvisosAldeanos(
+            EstadoPartidaDto estadoPartida)
+        {
+            UnidadEstadoDto[] unidades =
+                estadoPartida?
+                    .jugadorHumano?
+                    .unidades;
+
+            if (unidades == null)
+                return;
+
+            var idsActuales =
+                new HashSet<string>();
+
+            int quedaronLibres =
+                0;
+
+            foreach (UnidadEstadoDto unidad
+                     in unidades)
+            {
+                if (unidad == null ||
+                    unidad.tipo != "Aldeano" ||
+                    string.IsNullOrWhiteSpace(
+                        unidad.id))
+                {
+                    continue;
+                }
+
+                idsActuales.Add(
+                    unidad.id);
+
+                bool trabajando =
+                    TieneTrabajoAldeano(
+                        unidad);
+
+                if (seguimientoAldeanosInicializado &&
+                    aldeanosTrabajando.TryGetValue(
+                        unidad.id,
+                        out bool estabaTrabajando) &&
+                    estabaTrabajando &&
+                    !trabajando)
+                {
+                    quedaronLibres++;
+                }
+
+                aldeanosTrabajando[
+                    unidad.id] =
+                    trabajando;
+            }
+
+            if (!seguimientoAldeanosInicializado)
+            {
+                seguimientoAldeanosInicializado =
+                    true;
+
+                return;
+            }
+
+            var eliminados =
+                new List<string>();
+
+            foreach (string id
+                     in aldeanosTrabajando.Keys)
+            {
+                if (!idsActuales.Contains(
+                        id))
+                {
+                    eliminados.Add(
+                        id);
+                }
+            }
+
+            foreach (string id
+                     in eliminados)
+            {
+                aldeanosTrabajando.Remove(
+                    id);
+            }
+
+            if (quedaronLibres <= 0 ||
+                vistaHud == null)
+            {
+                return;
+            }
+
+            vistaHud.MostrarAvisoTemporal(
+                quedaronLibres == 1
+                    ? "Un Aldeano ha quedado sin tarea."
+                    : $"{quedaronLibres} Aldeanos han quedado sin tarea.");
+        }
+
+        private static bool TieneTrabajoAldeano(
+            UnidadEstadoDto unidad)
+        {
+            if (unidad == null)
+                return false;
+
+            return unidad.ordenActiva ==
+                       "Recolectar" ||
+                   unidad.ordenActiva ==
+                       "Construir" ||
+                   unidad.estado ==
+                       "Recolectando" ||
+                   unidad.estado ==
+                       "Construyendo";
         }
 
         private IniciarPartidaDto CrearPartidaPrueba()
