@@ -72,9 +72,32 @@ namespace ImperiosEnGuerra.Servicios
 
             StringBuilder texto = new StringBuilder();
             texto.Append("PARTIDA\n");
-            AgregarJugador(texto, "JUGADOR_HUMANO", partida.JugadorHumano);
-            texto.Append('\n');
-            AgregarJugador(texto, "JUGADOR_MAQUINA", partida.JugadorMaquina);
+
+            for (int i = 0;
+                 i < partida.Jugadores.Count;
+                 i++)
+            {
+                Jugador jugador =
+                    partida.Jugadores[i];
+
+                string seccion =
+                    ReferenceEquals(
+                        jugador,
+                        partida.JugadorHumano)
+                        ? "JUGADOR_HUMANO"
+                        : $"JUGADOR_MAQUINA_{i}";
+
+                AgregarJugador(
+                    texto,
+                    seccion,
+                    jugador);
+
+                if (i <
+                    partida.Jugadores.Count - 1)
+                {
+                    texto.Append('\n');
+                }
+            }
 
             GuardarConfiguracion(texto.ToString());
         }
@@ -201,9 +224,14 @@ namespace ImperiosEnGuerra.Servicios
                     "La partida debe estar finalizada y tener un ganador antes de guardar el resultado.");
             }
 
-            Jugador perdedor =
-                partida.ObtenerOponente(
-                    partida.Ganador);
+            Jugador[] perdedores =
+                partida.Jugadores
+                    .Where(
+                        jugador =>
+                            !ReferenceEquals(
+                                jugador,
+                                partida.Ganador))
+                    .ToArray();
 
             StringBuilder texto =
                 new StringBuilder();
@@ -218,13 +246,24 @@ namespace ImperiosEnGuerra.Servicios
                 .Append(partida.Ganador.Nombre)
                 .Append('\n');
 
-            if (perdedor != null)
+            texto.Append("Perdedores=")
+                .Append(perdedores.Length)
+                .Append('\n');
+
+            for (int i = 0;
+                 i < perdedores.Length;
+                 i++)
             {
-                texto.Append("PerdedorTipo=")
-                    .Append(perdedor.Tipo)
+                texto.Append("Perdedor")
+                    .Append(i + 1)
+                    .Append("Tipo=")
+                    .Append(perdedores[i].Tipo)
                     .Append('\n');
-                texto.Append("PerdedorNombre=")
-                    .Append(perdedor.Nombre)
+
+                texto.Append("Perdedor")
+                    .Append(i + 1)
+                    .Append("Nombre=")
+                    .Append(perdedores[i].Nombre)
                     .Append('\n');
             }
 
