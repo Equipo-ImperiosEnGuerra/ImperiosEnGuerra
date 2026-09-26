@@ -1,6 +1,7 @@
 using ImperiosEnGuerra.Controladores.Red;
 using ImperiosEnGuerra.Vistas;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace ImperiosEnGuerra.Controladores
 {
@@ -14,6 +15,9 @@ namespace ImperiosEnGuerra.Controladores
         private ControladorSeleccion controladorSeleccion;
         private VistaHud vistaHud;
         private VistaMenuInicial vistaMenu;
+        private VistaMenuPausa vistaPausa;
+        private bool partidaEnCurso;
+        private bool cambioPausaEnCurso;
 
         [RuntimeInitializeOnLoadMethod(
             RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -51,6 +55,14 @@ namespace ImperiosEnGuerra.Controladores
             vistaMenu =
                 objetoVista.AddComponent<VistaMenuInicial>();
 
+            GameObject objetoPausa =
+                new GameObject(
+                    "MenuPausa",
+                    typeof(RectTransform));
+
+            vistaPausa =
+                objetoPausa.AddComponent<VistaMenuPausa>();
+
             controladorSeleccion?.BloquearInteraccion();
             vistaHud?.OcultarResultadoFinal();
 
@@ -58,6 +70,15 @@ namespace ImperiosEnGuerra.Controladores
             vistaMenu.InstruccionesSolicitadas += MostrarInstrucciones;
             vistaMenu.VolverSolicitado += MostrarPrincipal;
             vistaMenu.SalirSolicitado += Salir;
+
+            if (vistaPausa != null)
+            {
+                vistaPausa.ReanudarSolicitado +=
+                    ReanudarPartida;
+
+                vistaPausa.SalirSolicitado +=
+                    Salir;
+            }
 
             if (vistaHud != null)
             {
@@ -90,6 +111,15 @@ namespace ImperiosEnGuerra.Controladores
                 vistaMenu.SalirSolicitado -= Salir;
             }
 
+            if (vistaPausa != null)
+            {
+                vistaPausa.ReanudarSolicitado -=
+                    ReanudarPartida;
+
+                vistaPausa.SalirSolicitado -=
+                    Salir;
+            }
+
             if (vistaHud != null)
             {
                 vistaHud.VolverMenuSolicitado -=
@@ -106,6 +136,29 @@ namespace ImperiosEnGuerra.Controladores
 
                 conexionApi.InicioPartidaFallido -=
                     InicioFallido;
+            }
+        }
+
+        private void Update()
+        {
+            if (!partidaEnCurso ||
+                conexionApi == null ||
+                conexionApi.PartidaFinalizada ||
+                Keyboard.current == null ||
+                !Keyboard.current.escapeKey.wasPressedThisFrame ||
+                cambioPausaEnCurso)
+            {
+                return;
+            }
+
+            if (vistaPausa != null &&
+                vistaPausa.Visible)
+            {
+                ReanudarPartida();
+            }
+            else
+            {
+                PausarPartida();
             }
         }
 
@@ -129,8 +182,12 @@ namespace ImperiosEnGuerra.Controladores
 
         private void PartidaIniciada()
         {
+            partidaEnCurso = true;
+            cambioPausaEnCurso = false;
+
             vistaMenu.EstablecerCargando(false);
             vistaMenu.Ocultar();
+            vistaPausa?.Ocultar();
 
             controladorSeleccion?.DesbloquearInteraccion();
         }
@@ -138,6 +195,9 @@ namespace ImperiosEnGuerra.Controladores
         private void InicioFallido(
             string mensaje)
         {
+            partidaEnCurso = false;
+            cambioPausaEnCurso = false;
+
             controladorSeleccion?.BloquearInteraccion();
 
             vistaMenu.MostrarPrincipal();
@@ -159,8 +219,75 @@ namespace ImperiosEnGuerra.Controladores
             vistaMenu.MostrarPrincipal();
         }
 
+        private void PausarPartida()
+        {
+            if (!partidaEnCurso ||
+                conexionApi == null ||
+                vistaPausa == null ||
+                cambioPausaEnCurso)
+            {
+                return;
+            }
+
+            cambioPausaEnCurso =
+                true;
+
+            controladorSeleccion?
+                .BloquearInteraccion();
+
+            vistaPausa.Mostrar();
+
+            conexionApi.PausarPartidaDesdeMenu(
+                exito =>
+                {
+                    cambioPausaEnCurso =
+                        false;
+
+                    if (!exito)
+                    {
+                        vistaPausa.Ocultar();
+
+                        controladorSeleccion?
+                            .DesbloquearInteraccion();
+                    }
+                });
+        }
+
+        private void ReanudarPartida()
+        {
+            if (!partidaEnCurso ||
+                conexionApi == null ||
+                vistaPausa == null ||
+                cambioPausaEnCurso)
+            {
+                return;
+            }
+
+            cambioPausaEnCurso =
+                true;
+
+            conexionApi.ReanudarPartidaDesdeMenu(
+                exito =>
+                {
+                    cambioPausaEnCurso =
+                        false;
+
+                    if (!exito)
+                        return;
+
+                    vistaPausa.Ocultar();
+
+                    controladorSeleccion?
+                        .DesbloquearInteraccion();
+                });
+        }
+
         private void VolverAlMenu()
         {
+            partidaEnCurso = false;
+            cambioPausaEnCurso = false;
+            vistaPausa?.Ocultar();
+
             // No se recarga la escena: en Editor eso podía dejar el flujo de
             // Play Mode en un estado inesperado. Se restablece únicamente la
             // presentación y el controlador de conexión.
@@ -177,8 +304,14 @@ namespace ImperiosEnGuerra.Controladores
             }
         }
 
-        private static void Salir()
+        private void Salir()
         {
+            partidaEnCurso = false;
+            cambioPausaEnCurso = false;
+
+            // Detiene también la simulación remota antes de cerrar el build.
+            conexionApi?.PrepararRegresoAlMenu();
+
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying =
                 false;
