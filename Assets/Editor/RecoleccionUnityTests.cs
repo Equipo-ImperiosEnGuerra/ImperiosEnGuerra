@@ -199,186 +199,11 @@ public class RecoleccionUnityTests
     }
 
     [Test]
-    public void AldeanoQueTerminaTrabajo_MuestraAvisoTemporal()
+    public void FinDeTrabajo_MuestraAvisoDeAldeanoDisponible()
     {
-        var trabajando =
-            new EstadoPartidaDto
-            {
-                jugadorHumano =
-                    new JugadorEstadoDto
-                    {
-                        unidades =
-                            new[]
-                            {
-                                new UnidadEstadoDto
-                                {
-                                    id = IdAldeano,
-                                    tipo = "Aldeano",
-                                    estado = "Recolectando",
-                                    ordenActiva = "Recolectar",
-                                    coordenada =
-                                        new CoordenadaEstadoDto
-                                        {
-                                            x = 1,
-                                            y = 1
-                                        }
-                                }
-                            }
-                    }
-            };
-
-        var libre =
-            new EstadoPartidaDto
-            {
-                jugadorHumano =
-                    new JugadorEstadoDto
-                    {
-                        unidades =
-                            new[]
-                            {
-                                new UnidadEstadoDto
-                                {
-                                    id = IdAldeano,
-                                    tipo = "Aldeano",
-                                    estado = "Idle",
-                                    ordenActiva = "",
-                                    coordenada =
-                                        new CoordenadaEstadoDto
-                                        {
-                                            x = 1,
-                                            y = 1
-                                        }
-                                }
-                            }
-                    }
-            };
-
         Invocar(
             conexion,
-            "ActualizarAvisosAldeanos",
-            trabajando);
-
-        Transform avisoAntes =
-            raiz.transform.Find(
-                "AvisoAldeano");
-
-        Assert.That(
-            avisoAntes,
-            Is.Not.Null);
-
-        Assert.That(
-            avisoAntes.gameObject.activeSelf,
-            Is.False,
-            "El primer snapshot solo debe inicializar el seguimiento.");
-
-        Invocar(
-            conexion,
-            "ActualizarAvisosAldeanos",
-            libre);
-
-        Invocar(
-            conexion,
-            "ActualizarAvisosAldeanos",
-            libre);
-
-        Invocar(
-            conexion,
-            "ActualizarAvisosAldeanos",
-            libre);
-
-        Transform aviso =
-            raiz.transform.Find(
-                "AvisoAldeano");
-
-        Assert.That(
-            aviso.gameObject.activeSelf,
-            Is.True);
-
-        Text textoAviso =
-            aviso.GetComponentInChildren<Text>(
-                true);
-
-        Assert.That(
-            textoAviso.text,
-            Does.Contain(
-                "sin tarea"));
-
-        RectTransform rect =
-            aviso.GetComponent<RectTransform>();
-
-        Assert.That(
-            rect.sizeDelta.x,
-            Is.LessThanOrEqualTo(350f));
-
-        Assert.That(
-            rect.anchorMin.y,
-            Is.EqualTo(1f));
-    }
-
-    [Test]
-    public void AldeanoEnMovimiento_NoMuestraAvisoSinTarea()
-    {
-        var trabajando =
-            new EstadoPartidaDto
-            {
-                jugadorHumano =
-                    new JugadorEstadoDto
-                    {
-                        unidades =
-                            new[]
-                            {
-                                new UnidadEstadoDto
-                                {
-                                    id = IdAldeano,
-                                    tipo = "Aldeano",
-                                    estado = "Recolectando",
-                                    ordenActiva = "Recolectar",
-                                    coordenada =
-                                        new CoordenadaEstadoDto
-                                        {
-                                            x = 1,
-                                            y = 1
-                                        }
-                                }
-                            }
-                    }
-            };
-
-        var moviendo =
-            new EstadoPartidaDto
-            {
-                jugadorHumano =
-                    new JugadorEstadoDto
-                    {
-                        unidades =
-                            new[]
-                            {
-                                new UnidadEstadoDto
-                                {
-                                    id = IdAldeano,
-                                    tipo = "Aldeano",
-                                    estado = "Moviendo",
-                                    ordenActiva = "Mover",
-                                    coordenada =
-                                        new CoordenadaEstadoDto
-                                        {
-                                            x = 2,
-                                            y = 1
-                                        }
-                                }
-                            }
-                    }
-            };
-
-        Invocar(
-            conexion,
-            "ActualizarAvisosAldeanos",
-            trabajando);
-
-        Invocar(
-            conexion,
-            "ActualizarAvisosAldeanos",
-            moviendo);
+            "NotificarAldeanoDisponible");
 
         Transform aviso =
             raiz.transform.Find(
@@ -390,86 +215,27 @@ public class RecoleccionUnityTests
 
         Assert.That(
             aviso.gameObject.activeSelf,
-            Is.False,
-            "Mover sigue siendo una tarea activa y no debe disparar el aviso.");
-    }
+            Is.True);
 
-    [Test]
-    public void AldeanoIdleQueSigueCambiandoDeCasilla_NoMuestraAviso()
-    {
-        var trabajando =
-            new EstadoPartidaDto
-            {
-                jugadorHumano =
-                    new JugadorEstadoDto
-                    {
-                        unidades =
-                            new[]
-                            {
-                                new UnidadEstadoDto
-                                {
-                                    id = IdAldeano,
-                                    tipo = "Aldeano",
-                                    estado = "Recolectando",
-                                    ordenActiva = "Recolectar",
-                                    coordenada =
-                                        new CoordenadaEstadoDto
-                                        {
-                                            x = 1,
-                                            y = 1
-                                        }
-                                }
-                            }
-                    }
-            };
-
-        Invocar(
-            conexion,
-            "ActualizarAvisosAldeanos",
-            trabajando);
-
-        for (int x = 2; x <= 5; x++)
-        {
-            var paseo =
-                new EstadoPartidaDto
-                {
-                    jugadorHumano =
-                        new JugadorEstadoDto
-                        {
-                            unidades =
-                                new[]
-                                {
-                                    new UnidadEstadoDto
-                                    {
-                                        id = IdAldeano,
-                                        tipo = "Aldeano",
-                                        estado = "Idle",
-                                        ordenActiva = "",
-                                        coordenada =
-                                            new CoordenadaEstadoDto
-                                            {
-                                                x = x,
-                                                y = 1
-                                            }
-                                    }
-                                }
-                        }
-                };
-
-            Invocar(
-                conexion,
-                "ActualizarAvisosAldeanos",
-                paseo);
-        }
-
-        Transform aviso =
-            raiz.transform.Find(
-                "AvisoAldeano");
+        Text textoAviso =
+            aviso.GetComponentInChildren<Text>(
+                true);
 
         Assert.That(
-            aviso.gameObject.activeSelf,
-            Is.False,
-            "El paseo automático puede verse como Idle, pero mientras cambie de casilla no está parado.");
+            textoAviso.text,
+            Is.EqualTo(
+                "Aldeano disponible para una nueva tarea."));
+
+        RectTransform rect =
+            aviso.GetComponent<RectTransform>();
+
+        Assert.That(
+            rect.sizeDelta.x,
+            Is.LessThanOrEqualTo(350f));
+
+        Assert.That(
+            rect.anchorMin.y,
+            Is.EqualTo(1f));
     }
 
     [Test]
