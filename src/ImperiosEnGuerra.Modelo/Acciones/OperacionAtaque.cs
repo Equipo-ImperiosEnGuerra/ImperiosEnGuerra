@@ -165,9 +165,26 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                         partida,
                         objetivoPropietario);
 
+            bool centroConquistaCreado =
+                evaluacion.HayVictoria &&
+                ReferenceEquals(
+                    propietario,
+                    partida.JugadorHumano) &&
+                objetivoPropietario.Tipo ==
+                    TipoJugador.Maquina &&
+                IntentarCrearCentroConquista(
+                    partida,
+                    objetivo);
+
             string mensaje =
                 $"Impacto de {atacante.GetType().Name}: daño {atacante.DanioAtaque}. " +
                 $"{tipoObjetivo} enemigo destruido.";
+
+            if (centroConquistaCreado)
+            {
+                mensaje +=
+                    " Facción conquistada: se estableció un nuevo Centro Urbano para tu imperio.";
+            }
 
             if (partida.Finalizada &&
                 partida.Ganador != null)
@@ -178,6 +195,46 @@ namespace ImperiosEnGuerra.Modelo.Acciones
 
             return ResultadoAccion.Exitoso(
                 mensaje);
+        }
+
+        private static bool IntentarCrearCentroConquista(
+            Partida partida,
+            Coordenada posicion)
+        {
+            if (partida == null ||
+                posicion == null)
+            {
+                return false;
+            }
+
+            Mapa mapa =
+                partida.JugadorHumano.Mapa;
+
+            if (!mapa.PuedeColocar(
+                    posicion))
+            {
+                return false;
+            }
+
+            Casilla casilla =
+                mapa.ObtenerCasilla(
+                    posicion.X,
+                    posicion.Y);
+
+            if (casilla == null ||
+                !casilla.Ocupar())
+            {
+                return false;
+            }
+
+            partida.JugadorHumano
+                .AgregarEdificio(
+                    new CentroUrbano(
+                        new Coordenada(
+                            posicion.X,
+                            posicion.Y)));
+
+            return true;
         }
 
         private static int DistanciaCombate(
