@@ -47,25 +47,31 @@ namespace ImperiosEnGuerra.Modelo.Combate
                 return ResultadoAproximacionAtaque.Fallido(
                     "La unidad atacante no tiene alcance ofensivo.");
 
-            Jugador oponente =
-                partida.ObtenerOponente(
-                    propietario);
+            Jugador objetivoPropietario =
+                partida.BuscarJugadorPorUnidad(
+                    solicitud.ObjetivoId)
+                ??
+                partida.BuscarJugadorPorEdificio(
+                    solicitud.ObjetivoId);
 
-            if (oponente == null ||
+            if (objetivoPropietario == null ||
+                !partida.SonEnemigos(
+                    propietario,
+                    objetivoPropietario) ||
                 !ReferenceEquals(
                     propietario.Mapa,
-                    oponente.Mapa))
+                    objetivoPropietario.Mapa))
             {
                 return ResultadoAproximacionAtaque.Fallido(
-                    "El atacante y el objetivo no comparten el mismo mapa lógico.");
+                    "El objetivo no pertenece a una facción enemiga válida.");
             }
 
             Unidad objetivoUnidad =
-                oponente.Unidades.FirstOrDefault(
+                objetivoPropietario.Unidades.FirstOrDefault(
                     u => u.Id == solicitud.ObjetivoId);
 
             Edificio objetivoEdificio =
-                oponente.Edificios.FirstOrDefault(
+                objetivoPropietario.Edificios.FirstOrDefault(
                     e => e.Id == solicitud.ObjetivoId);
 
             Coordenada objetivo =
@@ -95,7 +101,15 @@ namespace ImperiosEnGuerra.Modelo.Combate
                     propietario);
 
             List<Coordenada> ocupacionesAliadas =
-                propietario.Unidades
+                partida.Jugadores
+                    .Where(
+                        jugador =>
+                            partida.SonAliados(
+                                propietario,
+                                jugador))
+                    .SelectMany(
+                        jugador =>
+                            jugador.Unidades)
                     .Where(
                         u =>
                             !ReferenceEquals(
@@ -104,7 +118,8 @@ namespace ImperiosEnGuerra.Modelo.Combate
                     .Select(
                         u => u.Coordenada)
                     .Where(
-                        c => c != null)
+                        coordenada =>
+                            coordenada != null)
                     .ToList();
 
             var candidatas =
@@ -184,23 +199,17 @@ namespace ImperiosEnGuerra.Modelo.Combate
             var bloqueos =
                 new List<Coordenada>();
 
-            AgregarBloqueos(
-                partida.JugadorHumano,
-                mapa,
-                atacante,
-                ReferenceEquals(
-                    partida.JugadorHumano,
-                    propietario),
-                bloqueos);
-
-            AgregarBloqueos(
-                partida.JugadorMaquina,
-                mapa,
-                atacante,
-                ReferenceEquals(
-                    partida.JugadorMaquina,
-                    propietario),
-                bloqueos);
+            foreach (Jugador jugador in partida.Jugadores)
+            {
+                AgregarBloqueos(
+                    jugador,
+                    mapa,
+                    atacante,
+                    partida.SonAliados(
+                        propietario,
+                        jugador),
+                    bloqueos);
+            }
 
             return bloqueos;
         }
@@ -209,7 +218,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
             Jugador jugador,
             Mapa mapa,
             Unidad atacante,
-            bool esPropietario,
+            bool esAliado,
             List<Coordenada> bloqueos)
         {
             if (!ReferenceEquals(
@@ -221,7 +230,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
 
             // Los compañeros de equipo no cierran la ruta de aproximación.
             // En cambio las unidades enemigas continúan siendo obstáculos.
-            if (!esPropietario)
+            if (!esAliado)
             {
                 foreach (Unidad unidad in jugador.Unidades)
                 {
@@ -248,17 +257,13 @@ namespace ImperiosEnGuerra.Modelo.Combate
             Unidad atacante,
             Coordenada posicion)
         {
-            return TieneEntidad(
-                       partida.JugadorHumano,
-                       mapa,
-                       atacante,
-                       posicion)
-                   ||
-                   TieneEntidad(
-                       partida.JugadorMaquina,
-                       mapa,
-                       atacante,
-                       posicion);
+            return partida.Jugadores.Any(
+                jugador =>
+                    TieneEntidad(
+                        jugador,
+                        mapa,
+                        atacante,
+                        posicion));
         }
 
         private static bool TieneEntidad(
