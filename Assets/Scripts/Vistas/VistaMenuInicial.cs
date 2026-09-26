@@ -217,15 +217,15 @@ namespace ImperiosEnGuerra.Vistas
 
             const string instrucciones =
                 "OBJETIVO\n" +
-                "Derrota al ejército enemigo destruyendo sus Centros Urbanos y eliminando sus unidades militares.\n\n" +
+                "Defiende tu imperio de tres facciones enemigas: Morada, Verde y Amarilla. Ganas al eliminar los Centros Urbanos y las unidades militares de las tres IAs.\n\n" +
+                "CONQUISTA\n" +
+                "Cuando eliminas por completo una facción enemiga, tu imperio establece automáticamente un nuevo Centro Urbano en la zona conquistada.\n\n" +
                 "ECONOMÍA\n" +
-                "Usa Aldeanos para reunir Oro, Madera y Comida. Necesitarás recursos para construir y entrenar nuevas unidades.\n\n" +
+                "Las cuatro facciones compiten por los mismos nodos de Oro, Madera y Comida. Cuando un nodo se agota, después de un tiempo reaparece otro del mismo tipo en una casilla libre del mapa.\n\n" +
                 "ÓRDENES\n" +
-                "Selecciona una unidad o edificio propio y elige una acción. Si el objetivo está lejos, la unidad se acercará automáticamente. " +
-                "Puedes cancelar una orden activa desde el panel de la unidad.\n\n" +
+                "Selecciona una unidad o edificio propio y elige una acción. Si el objetivo está lejos, la unidad se acercará automáticamente. Puedes cancelar una orden activa desde el panel de la unidad.\n\n" +
                 "COMBATE Y APOYO\n" +
-                "Guerreros, Lanceros y Arqueros atacan enemigos cercanos. Los Monjes curan aliados heridos y se acercan si es necesario. " +
-                "Las unidades con poca vida se resaltan en rojo.\n\n" +
+                "Guerreros, Lanceros y Arqueros atacan enemigos cercanos. Los Monjes curan aliados heridos y se acercan si es necesario. Las unidades con poca vida se resaltan en rojo.\n\n" +
                 "ENTRENAMIENTO\n" +
                 "El Centro Urbano muestra qué unidad está entrenando, su progreso y cuántas órdenes quedan en la cola.";
 
@@ -234,9 +234,9 @@ namespace ImperiosEnGuerra.Vistas
                     panel.transform,
                     "Cuerpo",
                     instrucciones,
-                    19,
-                    new Vector2(0f, 20f),
-                    new Vector2(720f, 450f),
+                    18,
+                    new Vector2(0f, 18f),
+                    new Vector2(740f, 470f),
                     TextAnchor.UpperLeft);
 
             cuerpo.horizontalOverflow =
