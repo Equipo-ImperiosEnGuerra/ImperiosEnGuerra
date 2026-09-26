@@ -165,27 +165,35 @@ public class RecoleccionUnityTests
                 panelRect.anchorMin,
                 Is.EqualTo(
                     new Vector2(
-                        0.5f,
+                        0f,
                         1f)));
 
             Assert.That(
                 panelRect.anchorMax,
                 Is.EqualTo(
                     new Vector2(
-                        0.5f,
+                        0f,
                         1f)));
 
             Assert.That(
                 panelRect.pivot,
                 Is.EqualTo(
                     new Vector2(
-                        0.5f,
+                        0f,
                         1f)));
+
+            Assert.That(
+                panelRect.offsetMin.x,
+                Is.EqualTo(12f));
+
+            Assert.That(
+                panelRect.offsetMax.x,
+                Is.EqualTo(282f));
 
             Assert.That(
                 panelRect.offsetMax.y,
                 Is.EqualTo(-58f),
-                "El HUD contextual debe quedar debajo de la barra superior y lejos de la base humana.");
+                "El HUD contextual debe usar el margen izquierdo sin cubrir el mapa.");
         }
         finally
         {
