@@ -11,6 +11,8 @@ public sealed class ServicioJugadorMaquina : IDisposable
     private readonly EstadoPartidaService estadoPartida;
     private readonly ServicioAccionesConcurrentes acciones;
     private readonly TimeSpan intervaloDecision;
+    private readonly TimeSpan graciaCombateInicial;
+    private readonly TimeSpan escalonCombateEntreFacciones;
     private readonly object sincronizacion = new();
     private readonly HashSet<Guid> unidadesAsignadas = new();
     private readonly HashSet<string> centrosAsignados =
@@ -22,6 +24,7 @@ public sealed class ServicioJugadorMaquina : IDisposable
         new HashSet<int>();
 
     private CancellationTokenSource? cancelacion;
+    private DateTime inicioCicloUtc = DateTime.MinValue;
     private bool dispuesto;
 
     public ServicioJugadorMaquina(
@@ -30,7 +33,9 @@ public sealed class ServicioJugadorMaquina : IDisposable
         : this(
             estadoPartida,
             acciones,
-            TimeSpan.FromMilliseconds(500))
+            TimeSpan.FromMilliseconds(500),
+            TimeSpan.FromSeconds(45),
+            TimeSpan.FromSeconds(15))
     {
     }
 
@@ -38,6 +43,21 @@ public sealed class ServicioJugadorMaquina : IDisposable
         EstadoPartidaService estadoPartida,
         ServicioAccionesConcurrentes acciones,
         TimeSpan intervaloDecision)
+        : this(
+            estadoPartida,
+            acciones,
+            intervaloDecision,
+            TimeSpan.Zero,
+            TimeSpan.Zero)
+    {
+    }
+
+    public ServicioJugadorMaquina(
+        EstadoPartidaService estadoPartida,
+        ServicioAccionesConcurrentes acciones,
+        TimeSpan intervaloDecision,
+        TimeSpan graciaCombateInicial,
+        TimeSpan escalonCombateEntreFacciones)
     {
         this.estadoPartida =
             estadoPartida
@@ -50,8 +70,20 @@ public sealed class ServicioJugadorMaquina : IDisposable
         if (intervaloDecision <= TimeSpan.Zero)
             throw new ArgumentOutOfRangeException(nameof(intervaloDecision));
 
+        if (graciaCombateInicial < TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(graciaCombateInicial));
+
+        if (escalonCombateEntreFacciones < TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(escalonCombateEntreFacciones));
+
         this.intervaloDecision =
             intervaloDecision;
+
+        this.graciaCombateInicial =
+            graciaCombateInicial;
+
+        this.escalonCombateEntreFacciones =
+            escalonCombateEntreFacciones;
 
         this.estadoPartida.PartidaFinalizada +=
             DetenerPorFinalizacion;
@@ -94,6 +126,9 @@ public sealed class ServicioJugadorMaquina : IDisposable
 
             cancelacion =
                 nueva;
+
+            inicioCicloUtc =
+                DateTime.UtcNow;
 
             _ = Task.Run(
                 () => EjecutarCicloAsync(
@@ -180,11 +215,16 @@ public sealed class ServicioJugadorMaquina : IDisposable
                     .ToArray();
         }
 
+        bool permitirCombate =
+            CombateHabilitado(
+                indiceMaquina);
+
         DecisionMaquina decision =
             estadoPartida.PrepararDecisionMaquina(
                 indiceMaquina,
                 unidadesExcluidas,
-                centrosExcluidos);
+                centrosExcluidos,
+                permitirCombate);
 
         switch (decision.Tipo)
         {
@@ -513,11 +553,47 @@ public sealed class ServicioJugadorMaquina : IDisposable
                         origen))
                 {
                     cancelacion = null;
+                    inicioCicloUtc =
+                        DateTime.MinValue;
                 }
             }
 
             origen.Dispose();
         }
+    }
+
+    private bool CombateHabilitado(
+        int indiceMaquina)
+    {
+        DateTime inicio;
+
+        lock (sincronizacion)
+        {
+            // Las llamadas directas usadas por pruebas y diagnóstico mantienen
+            // el comportamiento inmediato. La gracia solo rige mientras el
+            // ciclo real de IA está activo.
+            if (cancelacion == null ||
+                inicioCicloUtc ==
+                    DateTime.MinValue)
+            {
+                return true;
+            }
+
+            inicio =
+                inicioCicloUtc;
+        }
+
+        TimeSpan espera =
+            graciaCombateInicial +
+            TimeSpan.FromTicks(
+                escalonCombateEntreFacciones.Ticks *
+                Math.Max(
+                    0,
+                    indiceMaquina));
+
+        return DateTime.UtcNow -
+               inicio >=
+               espera;
     }
 
     private static string ClaveCentro(
