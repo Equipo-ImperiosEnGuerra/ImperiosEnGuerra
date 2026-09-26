@@ -21,8 +21,10 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
         new Dictionary<Guid, ProcesoConcurrente>();
     private readonly Dictionary<Guid, DateTime> proximoMovimientoIdle =
         new Dictionary<Guid, DateTime>();
+    private readonly HashSet<Guid> movimientosIdleActivos =
+        new HashSet<Guid>();
     private static readonly TimeSpan IntervaloMovimientoIdle =
-        TimeSpan.FromSeconds(4);
+        TimeSpan.FromSeconds(8);
 
     private CancellationTokenSource? cancelacion;
     private bool dispuesto;
@@ -202,6 +204,9 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
 
         int iniciadas = 0;
 
+        bool paseoIdleOcupado =
+            HayMovimientoIdleActivo();
+
         foreach (ReaccionAutomatica reaccion in reacciones)
         {
             if (EstaSuspendida(
@@ -212,14 +217,37 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
                 continue;
             }
 
+            if (reaccion.Tipo ==
+                    TipoReaccionAutomatica.MoverIdle &&
+                paseoIdleOcupado)
+            {
+                continue;
+            }
+
             if (EjecutarReaccion(
                     reaccion) != null)
             {
                 iniciadas++;
+
+                if (reaccion.Tipo ==
+                    TipoReaccionAutomatica.MoverIdle)
+                {
+                    paseoIdleOcupado =
+                        true;
+                }
             }
         }
 
         return iniciadas;
+    }
+
+    private bool HayMovimientoIdleActivo()
+    {
+        lock (sincronizacion)
+        {
+            return movimientosIdleActivos.Count >
+                   0;
+        }
     }
 
     private bool EstaSuspendida(
@@ -334,6 +362,13 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
                 procesosAsignados[
                     reaccion.UnidadId] =
                     proceso;
+
+                if (reaccion.Tipo ==
+                    TipoReaccionAutomatica.MoverIdle)
+                {
+                    movimientosIdleActivos.Add(
+                        reaccion.UnidadId);
+                }
             }
 
             _ = proceso.Finalizacion
@@ -351,6 +386,9 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
                             if (reaccion.Tipo ==
                                 TipoReaccionAutomatica.MoverIdle)
                             {
+                                movimientosIdleActivos.Remove(
+                                    reaccion.UnidadId);
+
                                 proximoMovimientoIdle[
                                     reaccion.UnidadId] =
                                     DateTime.UtcNow.Add(
@@ -372,6 +410,9 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
                     reaccion.UnidadId);
 
                 procesosAsignados.Remove(
+                    reaccion.UnidadId);
+
+                movimientosIdleActivos.Remove(
                     reaccion.UnidadId);
             }
 
