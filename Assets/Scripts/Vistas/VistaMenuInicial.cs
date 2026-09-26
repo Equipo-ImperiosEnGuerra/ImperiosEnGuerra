@@ -217,7 +217,7 @@ namespace ImperiosEnGuerra.Vistas
 
             const string instrucciones =
                 "OBJETIVO\n" +
-                "Defiende tu imperio de tres facciones enemigas: Morada, Verde y Amarilla. Ganas al eliminar los Centros Urbanos y las unidades militares de las tres IAs.\n\n" +
+                "Defiende tu imperio de tres facciones enemigas: Morada, Verde y Amarilla. Ganas al eliminar los Centros Urbanos y las unidades militares de las tres IAs. Al inicio desarrollan su economía y luego lanzan ofensivas escalonadas contra tu imperio.\n\n" +
                 "CONQUISTA\n" +
                 "Cuando eliminas por completo una facción enemiga, tu imperio establece automáticamente un nuevo Centro Urbano en la zona conquistada.\n\n" +
                 "ECONOMÍA\n" +
