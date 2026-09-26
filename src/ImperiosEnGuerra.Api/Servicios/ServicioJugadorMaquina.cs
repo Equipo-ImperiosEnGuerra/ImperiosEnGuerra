@@ -196,14 +196,13 @@ public sealed class ServicioJugadorMaquina : IDisposable
     {
         Guid[] unidadesExcluidas;
         Coordenada[] centrosExcluidos;
+        bool frenteMilitarActivo;
 
         lock (sincronizacion)
         {
-            if (combatesAsignados.Contains(
-                    indiceMaquina))
-            {
-                return null;
-            }
+            frenteMilitarActivo =
+                combatesAsignados.Contains(
+                    indiceMaquina);
 
             unidadesExcluidas =
                 unidadesAsignadas.ToArray();
@@ -217,16 +216,64 @@ public sealed class ServicioJugadorMaquina : IDisposable
                     .ToArray();
         }
 
-        bool permitirCombate =
-            CombateHabilitado(
-                indiceMaquina);
+        ProcesoConcurrente? procesoMilitar =
+            null;
 
-        DecisionMaquina decision =
+        if (!frenteMilitarActivo)
+        {
+            DecisionMaquina decisionMilitar =
+                estadoPartida.PrepararDecisionMilitarMaquina(
+                    indiceMaquina,
+                    unidadesExcluidas,
+                    CombateHabilitado(
+                        indiceMaquina));
+
+            procesoMilitar =
+                EjecutarDecisionMaquina(
+                    indiceMaquina,
+                    decisionMilitar);
+        }
+
+        // La economía se decide de forma independiente del frente militar.
+        // Así una recolección o entrenamiento no bloquea patrulla/ataque y,
+        // al mismo tiempo, el combate no detiene la economía de la facción.
+        lock (sincronizacion)
+        {
+            unidadesExcluidas =
+                unidadesAsignadas.ToArray();
+
+            centrosExcluidos =
+                centrosAsignados
+                    .Select(
+                        ParsearCentro)
+                    .Where(
+                        c => c != null)
+                    .ToArray();
+        }
+
+        DecisionMaquina decisionEconomica =
             estadoPartida.PrepararDecisionMaquina(
                 indiceMaquina,
                 unidadesExcluidas,
                 centrosExcluidos,
-                permitirCombate);
+                permitirCombate: false,
+                permitirPatrulla: false);
+
+        ProcesoConcurrente? procesoEconomico =
+            EjecutarDecisionMaquina(
+                indiceMaquina,
+                decisionEconomica);
+
+        return procesoMilitar ??
+               procesoEconomico;
+    }
+
+    private ProcesoConcurrente? EjecutarDecisionMaquina(
+        int indiceMaquina,
+        DecisionMaquina decision)
+    {
+        if (decision == null)
+            return null;
 
         switch (decision.Tipo)
         {
@@ -300,25 +347,9 @@ public sealed class ServicioJugadorMaquina : IDisposable
                             }));
 
             case TipoDecisionMaquina.Mover:
+            case TipoDecisionMaquina.Patrullar:
                 return EjecutarConCombateAsignado(
                     indiceMaquina,
-                    decision.UnidadId,
-                    () =>
-                        acciones.IniciarMovimiento(
-                            new MoverUnidadRequest
-                            {
-                                UnidadId =
-                                    decision.UnidadId.ToString("D"),
-                                Destino =
-                                    new CoordenadaRequest
-                                    {
-                                        X = decision.Objetivo.X,
-                                        Y = decision.Objetivo.Y
-                                    }
-                            }));
-
-            case TipoDecisionMaquina.Patrullar:
-                return EjecutarConUnidadAsignada(
                     decision.UnidadId,
                     () =>
                         acciones.IniciarMovimiento(
@@ -348,9 +379,12 @@ public sealed class ServicioJugadorMaquina : IDisposable
                             new AtacarRequest
                             {
                                 AtacanteId =
-                                    decision.UnidadId.ToString("D"),
+                                    decision.UnidadId
+                                        .ToString("D"),
+
                                 ObjetivoId =
-                                    decision.ObjetivoUnidadId.ToString("D")
+                                    decision.ObjetivoUnidadId
+                                        .ToString("D")
                             }));
 
             default:
