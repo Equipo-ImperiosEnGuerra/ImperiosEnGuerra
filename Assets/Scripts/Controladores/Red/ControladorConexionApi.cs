@@ -2239,93 +2239,58 @@ public bool PuedeCancelarAccion =>
                 nombreHumano = "Jugador",
                 nombreMaquina = "CPU",
 
-                anchoMapa = 10,
-                altoMapa = 10,
+                // El mapa crece para alojar cuatro bases y una economía
+                // compartida sin encerrar corredores entre facciones.
+                anchoMapa = 15,
+                altoMapa = 15,
 
                 centroHumano =
                     new CoordenadaDto(1, 1),
 
+                // La API usa este Centro como IA Roja y deriva:
+                // Verde (13,1) y Amarilla (1,13).
                 centroMaquina =
-                    new CoordenadaDto(8, 8),
+                    new CoordenadaDto(13, 13),
 
-                // Dos nodos por tipo alrededor de cada mitad del mapa.
-                // Se dejan corredores y varias casillas adyacentes libres para
-                // evitar que un recurso quede encerrado por el Centro Urbano
-                // u otros recursos físicos.
+                // Los dos arreglos siguen existiendo por compatibilidad con el
+                // contrato anterior. La API los une en un único conjunto de
+                // recursos físicos compartidos por las cuatro facciones.
                 recursosHumano = new[]
                 {
-                    new RecursoInicialDto(
-                        "Oro",
-                        3,
-                        1),
+                    new RecursoInicialDto("Oro", 4, 2),
+                    new RecursoInicialDto("Oro", 7, 3),
+                    new RecursoInicialDto("Oro", 10, 2),
+                    new RecursoInicialDto("Oro", 7, 7),
 
-                    new RecursoInicialDto(
-                        "Oro",
-                        4,
-                        3),
+                    new RecursoInicialDto("Madera", 2, 5),
+                    new RecursoInicialDto("Madera", 5, 4),
+                    new RecursoInicialDto("Madera", 9, 4),
+                    new RecursoInicialDto("Madera", 3, 9),
 
-                    new RecursoInicialDto(
-                        "Madera",
-                        1,
-                        4),
-
-                    new RecursoInicialDto(
-                        "Madera",
-                        3,
-                        5),
-
-                    new RecursoInicialDto(
-                        "Comida",
-                        4,
-                        1),
-
-                    new RecursoInicialDto(
-                        "Comida",
-                        1,
-                        5),
-
-                    new RecursoInicialDto(
-                        "Comida",
-                        2,
-                        7)
+                    new RecursoInicialDto("Comida", 4, 1),
+                    new RecursoInicialDto("Comida", 6, 5),
+                    new RecursoInicialDto("Comida", 8, 2),
+                    new RecursoInicialDto("Comida", 3, 7),
+                    new RecursoInicialDto("Comida", 6, 8)
                 },
 
                 recursosMaquina = new[]
                 {
-                    new RecursoInicialDto(
-                        "Oro",
-                        6,
-                        8),
+                    new RecursoInicialDto("Oro", 12, 5),
+                    new RecursoInicialDto("Oro", 3, 10),
+                    new RecursoInicialDto("Oro", 6, 12),
+                    new RecursoInicialDto("Oro", 10, 11),
 
-                    new RecursoInicialDto(
-                        "Oro",
-                        5,
-                        6),
+                    new RecursoInicialDto("Madera", 12, 8),
+                    new RecursoInicialDto("Madera", 5, 11),
+                    new RecursoInicialDto("Madera", 9, 12),
+                    new RecursoInicialDto("Madera", 11, 7),
 
-                    new RecursoInicialDto(
-                        "Madera",
-                        8,
-                        5),
-
-                    new RecursoInicialDto(
-                        "Madera",
-                        6,
-                        4),
-
-                    new RecursoInicialDto(
-                        "Comida",
-                        5,
-                        8),
-
-                    new RecursoInicialDto(
-                        "Comida",
-                        8,
-                        4),
-
-                    new RecursoInicialDto(
-                        "Comida",
-                        7,
-                        2)
+                    new RecursoInicialDto("Comida", 11, 3),
+                    new RecursoInicialDto("Comida", 13, 6),
+                    new RecursoInicialDto("Comida", 8, 10),
+                    new RecursoInicialDto("Comida", 12, 10),
+                    new RecursoInicialDto("Comida", 4, 13)
                 }
             };
         }
