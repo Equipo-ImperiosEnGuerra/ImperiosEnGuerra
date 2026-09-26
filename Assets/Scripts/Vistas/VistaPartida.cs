@@ -970,13 +970,14 @@ namespace ImperiosEnGuerra.Vistas
             if (humano)
                 return "Humano";
 
-            string faccion =
-                string.IsNullOrWhiteSpace(
-                    jugador?.faccion)
-                    ? "Roja"
-                    : jugador.faccion;
+            if (string.IsNullOrWhiteSpace(
+                    jugador?.faccion))
+            {
+                // Compatibilidad con snapshots/pruebas anteriores a F7.5.
+                return "Maquina";
+            }
 
-            return $"Maquina_{faccion}";
+            return $"Maquina_{jugador.faccion}";
         }
 
         private static Color ObtenerColorFaccion(
