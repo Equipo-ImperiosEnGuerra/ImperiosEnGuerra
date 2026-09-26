@@ -270,11 +270,28 @@ public class VictoriaFinalTests
                     1,
                     1)));
 
-        maquina.AgregarEdificio(
+        var centroHumano =
+            new CentroUrbano(
+                new Coordenada(
+                    0,
+                    0));
+
+        var centroMaquina =
             new CentroUrbano(
                 new Coordenada(
                     5,
-                    5)));
+                    5));
+
+        humano.AgregarEdificio(
+            centroHumano);
+
+        maquina.AgregarEdificio(
+            centroMaquina);
+
+        mapa.ObtenerCasilla(
+                0,
+                0)
+            .Ocupar();
 
         mapa.ObtenerCasilla(
                 5,
@@ -291,6 +308,16 @@ public class VictoriaFinalTests
 
         estado.EstablecerPartida(
             partida);
+
+        // Simula una condición terminal que ya ocurrió en una partida real,
+        // pero cuya notificación de combate no llegó al cliente.
+        humano.EliminarEdificio(
+            centroHumano);
+
+        mapa.ObtenerCasilla(
+                0,
+                0)
+            .Liberar();
 
         EstadoPartidaResponse respuesta =
             estado.ObtenerEstado();
