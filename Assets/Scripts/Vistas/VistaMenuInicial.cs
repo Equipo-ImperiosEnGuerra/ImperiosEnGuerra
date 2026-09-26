@@ -204,39 +204,41 @@ namespace ImperiosEnGuerra.Vistas
                 CrearContenedorCentrado(
                     padre,
                     "Instrucciones",
-                    new Vector2(820f, 650f));
+                    new Vector2(920f, 700f));
 
             CrearTexto(
                 panel.transform,
                 "Titulo",
                 "CÓMO JUGAR",
                 38,
-                new Vector2(0f, 265f),
-                new Vector2(740f, 62f),
+                new Vector2(0f, 300f),
+                new Vector2(840f, 62f),
                 TextAnchor.MiddleCenter);
 
             const string instrucciones =
-                "OBJETIVO\n" +
-                "Defiende tu imperio de tres facciones enemigas: Morada, Verde y Amarilla. Ganas al eliminar los Centros Urbanos y las unidades militares de las tres IAs. Al inicio desarrollan su economía y luego lanzan ofensivas escalonadas contra tu imperio.\n\n" +
-                "CONQUISTA\n" +
-                "Cuando eliminas por completo una facción enemiga, tu imperio establece automáticamente un nuevo Centro Urbano en la zona conquistada.\n\n" +
-                "ECONOMÍA\n" +
-                "Las cuatro facciones compiten por los mismos nodos de Oro, Madera y Comida. Cuando un nodo se agota, después de un tiempo reaparece otro del mismo tipo en una casilla libre del mapa.\n\n" +
-                "ÓRDENES\n" +
-                "Selecciona una unidad o edificio propio y elige una acción. Si el objetivo está lejos, la unidad se acercará automáticamente. Puedes cancelar una orden activa desde el panel de la unidad.\n\n" +
-                "COMBATE Y APOYO\n" +
-                "Guerreros, Lanceros y Arqueros atacan enemigos cercanos. Los Monjes curan aliados heridos y se acercan si es necesario. Las unidades con poca vida se resaltan en rojo.\n\n" +
-                "ENTRENAMIENTO\n" +
-                "El Centro Urbano muestra qué unidad está entrenando, su progreso y cuántas órdenes quedan en la cola.";
+                "1. EMPIEZA TU ECONOMÍA\n" +
+                "Comienzas con un Centro Urbano y Aldeanos. En la parte superior ves tu Oro, Madera y Comida. Haz clic en un Aldeano, pulsa RECOLECTAR y después haz clic sobre un recurso del mapa. El Aldeano caminará hasta él, recogerá recursos y los llevará a tu Centro Urbano.\n\n" +
+                "2. SELECCIONAR Y MOVER\n" +
+                "Haz clic sobre una unidad o edificio de tu bando. Sus datos y acciones aparecen abajo a la izquierda. Para mover una unidad, pulsa MOVER y luego haz clic en la casilla de destino. Si cambias de idea, puedes seleccionar otra unidad o usar CANCELAR cuando exista una orden activa.\n\n" +
+                "3. CONSTRUIR Y ENTRENAR\n" +
+                "Selecciona un Aldeano y pulsa CONSTRUIR para levantar un nuevo Centro Urbano en una casilla válida. Para crear tropas, selecciona un Centro Urbano, pulsa ENTRENAR y elige Aldeano, Guerrero, Lancero, Arquero o Monje. El juego muestra el progreso y la cola de entrenamiento.\n\n" +
+                "4. COMBATIR Y CURAR\n" +
+                "Selecciona un Guerrero, Lancero o Arquero, pulsa ATACAR y elige una unidad o edificio enemigo. Si está lejos, tu tropa se acercará automáticamente. El Monje usa CURAR: selecciona un aliado herido y el Monje se acercará hasta estar a rango. Las unidades con poca vida se resaltan en rojo.\n\n" +
+                "5. NO DEJES ALDEANOS SIN TAREA\n" +
+                "Cuando un Aldeano termine de recolectar o construir, aparecerá un aviso breve arriba para recordarte que está disponible para una nueva tarea.\n\n" +
+                "6. TU ENEMIGO\n" +
+                "Las facciones Morada, Verde y Amarilla compiten por los mismos recursos y atacan únicamente al jugador humano. Primero desarrollan su economía y después lanzan ofensivas escalonadas. Los recursos agotados reaparecen más tarde en otra casilla libre.\n\n" +
+                "7. CONQUISTA Y VICTORIA\n" +
+                "Una facción cae cuando pierde todos sus Centros Urbanos y sus unidades militares. Al eliminar una IA, obtienes automáticamente un nuevo Centro Urbano en la zona conquistada. Ganas al eliminar las tres facciones. Pierdes si te quedas sin Centros Urbanos y sin unidades militares.";
 
             Text cuerpo =
                 CrearTexto(
                     panel.transform,
                     "Cuerpo",
                     instrucciones,
-                    18,
+                    17,
                     new Vector2(0f, 18f),
-                    new Vector2(740f, 470f),
+                    new Vector2(840f, 545f),
                     TextAnchor.UpperLeft);
 
             cuerpo.horizontalOverflow =
@@ -250,7 +252,7 @@ namespace ImperiosEnGuerra.Vistas
                     panel.transform,
                     "Volver",
                     "VOLVER",
-                    new Vector2(0f, -265f));
+                    new Vector2(0f, -310f));
 
             volver.onClick.AddListener(
                 () => VolverSolicitado?.Invoke());
