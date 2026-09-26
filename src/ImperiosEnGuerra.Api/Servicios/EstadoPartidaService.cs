@@ -582,20 +582,23 @@ public sealed class EstadoPartidaService
     public DecisionMaquina PrepararDecisionMaquina(
         IReadOnlyCollection<Guid>? unidadesExcluidas = null,
         IReadOnlyCollection<Coordenada>? centrosExcluidos = null,
-        bool permitirCombate = true)
+        bool permitirCombate = true,
+        bool permitirPatrulla = true)
     {
         return PrepararDecisionMaquina(
             0,
             unidadesExcluidas,
             centrosExcluidos,
-            permitirCombate);
+            permitirCombate,
+            permitirPatrulla);
     }
 
     public DecisionMaquina PrepararDecisionMaquina(
         int indiceMaquina,
         IReadOnlyCollection<Guid>? unidadesExcluidas = null,
         IReadOnlyCollection<Coordenada>? centrosExcluidos = null,
-        bool permitirCombate = true)
+        bool permitirCombate = true,
+        bool permitirPatrulla = true)
     {
         lock (sincronizacion)
         {
@@ -611,6 +614,29 @@ public sealed class EstadoPartidaService
                     maquina,
                     unidadesExcluidas,
                     centrosExcluidos,
+                    permitirCombate,
+                    permitirPatrulla);
+        }
+    }
+
+    public DecisionMaquina PrepararDecisionMilitarMaquina(
+        int indiceMaquina,
+        IReadOnlyCollection<Guid>? unidadesExcluidas = null,
+        bool permitirCombate = true)
+    {
+        lock (sincronizacion)
+        {
+            Jugador? maquina =
+                partidaActiva?
+                    .JugadoresMaquina
+                    .ElementAtOrDefault(
+                        indiceMaquina);
+
+            return new PlanificadorDecisionMaquina()
+                .PrepararMilitar(
+                    partidaActiva,
+                    maquina,
+                    unidadesExcluidas,
                     permitirCombate);
         }
     }
