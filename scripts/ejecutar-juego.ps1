@@ -4,7 +4,9 @@ $root = Split-Path -Parent $PSScriptRoot
 $apiProject = Join-Path $root "src/ImperiosEnGuerra.Api/ImperiosEnGuerra.Api.csproj"
 $gamePath = Join-Path $root "Builds/Windows/ImperiosEnGuerra.exe"
 $logsDir = Join-Path $root "Logs"
-$apiLog = Join-Path $logsDir "api-runtime.log"
+$apiOutLog = Join-Path $logsDir "api-runtime.out.log"
+$apiErrLog = Join-Path $logsDir "api-runtime.err.log"
+$apiHealthUrl = "http://localhost:5086/api/red/estado"
 
 if (-not (Test-Path $apiProject)) {
     throw "No se encontró la API en: $apiProject"
@@ -21,12 +23,28 @@ $game = $null
 
 try {
     Write-Host "Iniciando API..."
-    $api = Start-Process -FilePath "dotnet" -ArgumentList @("run", "--project", $apiProject) -WorkingDirectory $root -RedirectStandardOutput $apiLog -RedirectStandardError $apiLog -PassThru
+    $argumentosApi = "run --project `"$apiProject`""
+    $api = Start-Process -FilePath "dotnet" -ArgumentList $argumentosApi -WorkingDirectory $root -RedirectStandardOutput $apiOutLog -RedirectStandardError $apiErrLog -PassThru
 
-    Start-Sleep -Seconds 3
+    $apiLista = $false
 
-    if ($api.HasExited) {
-        throw "La API terminó antes de iniciar el juego. Revisa $apiLog"
+    for ($intento = 0; $intento -lt 30; $intento++) {
+        if ($api.HasExited) {
+            throw "La API terminó antes de iniciar el juego. Revisa $apiErrLog"
+        }
+
+        try {
+            Invoke-WebRequest -UseBasicParsing -Uri $apiHealthUrl -TimeoutSec 1 | Out-Null
+            $apiLista = $true
+            break
+        }
+        catch {
+            Start-Sleep -Milliseconds 500
+        }
+    }
+
+    if (-not $apiLista) {
+        throw "La API no respondió en $apiHealthUrl. Revisa $apiOutLog y $apiErrLog"
     }
 
     Write-Host "Iniciando Imperios en Guerra..."
