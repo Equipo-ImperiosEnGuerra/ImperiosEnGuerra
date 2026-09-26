@@ -581,18 +581,21 @@ public sealed class EstadoPartidaService
 
     public DecisionMaquina PrepararDecisionMaquina(
         IReadOnlyCollection<Guid>? unidadesExcluidas = null,
-        IReadOnlyCollection<Coordenada>? centrosExcluidos = null)
+        IReadOnlyCollection<Coordenada>? centrosExcluidos = null,
+        bool permitirCombate = true)
     {
         return PrepararDecisionMaquina(
             0,
             unidadesExcluidas,
-            centrosExcluidos);
+            centrosExcluidos,
+            permitirCombate);
     }
 
     public DecisionMaquina PrepararDecisionMaquina(
         int indiceMaquina,
         IReadOnlyCollection<Guid>? unidadesExcluidas = null,
-        IReadOnlyCollection<Coordenada>? centrosExcluidos = null)
+        IReadOnlyCollection<Coordenada>? centrosExcluidos = null,
+        bool permitirCombate = true)
     {
         lock (sincronizacion)
         {
@@ -607,7 +610,8 @@ public sealed class EstadoPartidaService
                     partidaActiva,
                     maquina,
                     unidadesExcluidas,
-                    centrosExcluidos);
+                    centrosExcluidos,
+                    permitirCombate);
         }
     }
 
