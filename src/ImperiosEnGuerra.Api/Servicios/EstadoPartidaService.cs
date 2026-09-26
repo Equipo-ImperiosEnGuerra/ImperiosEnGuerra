@@ -1851,9 +1851,17 @@ public sealed class EstadoPartidaService
     {
         lock (sincronizacion)
         {
-            return partidaActiva == null
-                ? null
-                : PartidaEstadoMapper.Convertir(partidaActiva);
+            if (partidaActiva == null)
+                return null;
+
+            // Respaldo de consistencia: aunque la condición terminal ya se
+            // evalúa al destruir una entidad, cada snapshot vuelve a validar
+            // el estado real. Así Unity no puede quedarse esperando una
+            // notificación perdida mientras el jugador ya está eliminado.
+            ReevaluarFinalizacionSinBloqueo();
+
+            return PartidaEstadoMapper.Convertir(
+                partidaActiva);
         }
     }
 
@@ -2016,6 +2024,41 @@ public sealed class EstadoPartidaService
         return propietario?.Unidades
             .FirstOrDefault(
                 u => u.Id == id);
+    }
+
+    private void ReevaluarFinalizacionSinBloqueo()
+    {
+        if (partidaActiva == null ||
+            partidaActiva.Finalizada)
+        {
+            return;
+        }
+
+        var evaluador =
+            new EvaluadorVictoria();
+
+        evaluador.Evaluar(
+            partidaActiva,
+            partidaActiva.JugadorHumano);
+
+        if (!partidaActiva.Finalizada)
+        {
+            foreach (Jugador maquina
+                     in partidaActiva.JugadoresMaquina)
+            {
+                evaluador.Evaluar(
+                    partidaActiva,
+                    maquina);
+
+                if (partidaActiva.Finalizada)
+                    break;
+            }
+        }
+
+        if (partidaActiva.Finalizada)
+        {
+            RegistrarFinalizacionSeguro();
+        }
     }
 
     private void RegistrarFinalizacionSeguro()
