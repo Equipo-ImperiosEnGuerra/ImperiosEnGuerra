@@ -36,6 +36,7 @@ namespace ImperiosEnGuerra.Vistas
         {
             CrearBotonCancelarSiFalta();
             AplicarLayoutCompacto();
+            ConfigurarRaycastsNoBloqueantes();
             CrearPantallaResultadoFinal();
         }
 
@@ -80,6 +81,87 @@ namespace ImperiosEnGuerra.Vistas
             }
 
             objeto.SetActive(false);
+        }
+
+        private void ConfigurarRaycastsNoBloqueantes()
+        {
+            // Los fondos y textos informativos del HUD son decorativos.
+            // No deben impedir seleccionar unidades/casillas que queden
+            // visualmente detrás del panel. Los Button conservan su Image
+            // con raycastTarget=true y siguen siendo interactivos.
+            Transform panel =
+                transform.Find(
+                    "PanelContextual");
+
+            if (panel != null)
+            {
+                Image fondoPanel =
+                    panel.GetComponent<Image>();
+
+                if (fondoPanel != null)
+                {
+                    fondoPanel.raycastTarget =
+                        false;
+                }
+
+                DesactivarRaycastGrafico(
+                    panel.Find("Seleccion"));
+
+                DesactivarRaycastGrafico(
+                    panel.Find("Mensaje"));
+
+                Transform selector =
+                    panel.Find(
+                        "SelectorEntrenamiento");
+
+                if (selector != null)
+                {
+                    Image fondoSelector =
+                        selector.GetComponent<Image>();
+
+                    if (fondoSelector != null)
+                    {
+                        fondoSelector.raycastTarget =
+                            false;
+                    }
+                }
+            }
+
+            Transform barraRecursos =
+                transform.Find(
+                    "BarraRecursos");
+
+            if (barraRecursos != null)
+            {
+                Image fondoBarra =
+                    barraRecursos.GetComponent<Image>();
+
+                if (fondoBarra != null)
+                {
+                    fondoBarra.raycastTarget =
+                        false;
+                }
+
+                DesactivarRaycastGrafico(
+                    barraRecursos.Find(
+                        "Recursos"));
+            }
+        }
+
+        private static void DesactivarRaycastGrafico(
+            Transform objetivo)
+        {
+            if (objetivo == null)
+                return;
+
+            Graphic grafico =
+                objetivo.GetComponent<Graphic>();
+
+            if (grafico != null)
+            {
+                grafico.raycastTarget =
+                    false;
+            }
         }
 
         private void AplicarLayoutCompacto()
