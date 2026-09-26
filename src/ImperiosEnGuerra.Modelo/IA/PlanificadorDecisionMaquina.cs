@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ImperiosEnGuerra.Modelo.Combate;
 using ImperiosEnGuerra.Modelo.Core;
 using ImperiosEnGuerra.Modelo.Edificios;
 using ImperiosEnGuerra.Modelo.Map;
@@ -57,6 +58,15 @@ namespace ImperiosEnGuerra.Modelo.IA
             {
                 return DecisionMaquina.SinAccion(
                     "La facción de Máquina indicada no pertenece a la partida.");
+            }
+
+            if (new EvaluadorVictoria()
+                .Evaluar(
+                    maquina)
+                .HayVictoria)
+            {
+                return DecisionMaquina.SinAccion(
+                    "La facción de Máquina ya fue eliminada.");
             }
 
             var excluidas =
