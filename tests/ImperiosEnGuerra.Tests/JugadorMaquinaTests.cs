@@ -169,6 +169,86 @@ public class JugadorMaquinaTests
     }
 
     [Test]
+    public async Task EjecutarPaso_EconomiaYFrenteMilitar_PuedenAvanzarEnParalelo()
+    {
+        Partida partida =
+            CrearPartidaCombate(
+                out _,
+                out _);
+
+        Jugador maquina =
+            partida.JugadorMaquina;
+
+        var aldeano =
+            new Aldeano(
+                new Coordenada(
+                    2,
+                    2));
+
+        maquina.AgregarUnidad(
+            aldeano);
+
+        var comida =
+            new Recurso(
+                TipoRecurso.Comida,
+                new Coordenada(
+                    3,
+                    2),
+                100);
+
+        Assert.That(
+            maquina.Mapa.ColocarRecurso(
+                comida),
+            Is.True);
+
+        var estado =
+            new EstadoPartidaService();
+
+        estado.EstablecerPartida(
+            partida);
+
+        using var gestor =
+            new GestorProcesosConcurrentes();
+
+        var acciones =
+            new ServicioAccionesConcurrentes(
+                estado,
+                gestor,
+                TimeSpan.FromMilliseconds(
+                    250));
+
+        using var ia =
+            new ServicioJugadorMaquina(
+                estado,
+                acciones,
+                TimeSpan.FromMilliseconds(
+                    10));
+
+        ProcesoConcurrente? militar =
+            ia.EjecutarPaso();
+
+        Assert.That(
+            militar,
+            Is.Not.Null);
+
+        Assert.That(
+            ia.UnidadesAsignadas,
+            Is.GreaterThanOrEqualTo(
+                2),
+            "La IA debe poder mover/atacar con una tropa mientras otro Aldeano sostiene la economía.");
+
+        await militar!.Finalizacion;
+
+        Assert.That(
+            SpinWait.SpinUntil(
+                () =>
+                    ia.UnidadesAsignadas <= 1,
+                TimeSpan.FromSeconds(
+                    3)),
+            Is.True);
+    }
+
+    [Test]
     public void CicloAutomatico_SePuedeIniciarYDetenerSinDuplicarlo()
     {
         Partida partida =
