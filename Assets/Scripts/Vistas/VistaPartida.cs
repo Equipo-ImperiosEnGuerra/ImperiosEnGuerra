@@ -10,9 +10,9 @@ namespace ImperiosEnGuerra.Vistas
     {
         [SerializeField] private Camera camara;
         [SerializeField, Min(0.1f)] private float espacioCasilla = 2f;
-        [SerializeField, Min(0.01f)] private float escalaRecursos = 0.75f;
-        [SerializeField, Min(0.01f)] private float escalaEdificios = 0.58f;
-        [SerializeField, Min(0.01f)] private float escalaUnidades = 0.65f;
+        [SerializeField, Min(0.01f)] private float escalaRecursos = 0.88f;
+        [SerializeField, Min(0.01f)] private float escalaEdificios = 0.68f;
+        [SerializeField, Min(0.01f)] private float escalaUnidades = 0.80f;
         [SerializeField] private Sprite suelo;
         [SerializeField] private Sprite oro;
         [SerializeField] private Sprite madera;
@@ -1004,12 +1004,12 @@ namespace ImperiosEnGuerra.Vistas
                         0.35f,
                         1f);
 
-                case "Roja":
+                case "Morada":
                 default:
                     return new Color(
-                        1f,
-                        0.48f,
-                        0.48f,
+                        0.72f,
+                        0.50f,
+                        0.96f,
                         1f);
             }
         }
@@ -1236,7 +1236,8 @@ namespace ImperiosEnGuerra.Vistas
             float aspecto = Mathf.Max(camara.aspect, 0.01f);
             camara.orthographicSize = Mathf.Max(
                 mapa.alto * espacioCasilla / 2f,
-                mapa.ancho * espacioCasilla / (2f * aspecto)) + espacioCasilla;
+                mapa.ancho * espacioCasilla / (2f * aspecto)) +
+                espacioCasilla * 0.35f;
         }
     }
 }
