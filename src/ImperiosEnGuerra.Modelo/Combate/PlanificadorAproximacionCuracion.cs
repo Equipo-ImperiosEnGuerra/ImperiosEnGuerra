@@ -115,7 +115,15 @@ namespace ImperiosEnGuerra.Modelo.Combate
                     propietario);
 
             List<Coordenada> ocupacionesAliadas =
-                propietario.Unidades
+                partida.Jugadores
+                    .Where(
+                        jugador =>
+                            partida.SonAliados(
+                                propietario,
+                                jugador))
+                    .SelectMany(
+                        jugador =>
+                            jugador.Unidades)
                     .Where(
                         u =>
                             !ReferenceEquals(
@@ -124,7 +132,8 @@ namespace ImperiosEnGuerra.Modelo.Combate
                     .Select(
                         u => u.Coordenada)
                     .Where(
-                        c => c != null)
+                        coordenada =>
+                            coordenada != null)
                     .ToList();
 
             var candidatas =
@@ -219,23 +228,17 @@ namespace ImperiosEnGuerra.Modelo.Combate
             var bloqueos =
                 new List<Coordenada>();
 
-            AgregarBloqueos(
-                partida.JugadorHumano,
-                mapa,
-                curador,
-                ReferenceEquals(
-                    partida.JugadorHumano,
-                    propietario),
-                bloqueos);
-
-            AgregarBloqueos(
-                partida.JugadorMaquina,
-                mapa,
-                curador,
-                ReferenceEquals(
-                    partida.JugadorMaquina,
-                    propietario),
-                bloqueos);
+            foreach (Jugador jugador in partida.Jugadores)
+            {
+                AgregarBloqueos(
+                    jugador,
+                    mapa,
+                    curador,
+                    partida.SonAliados(
+                        propietario,
+                        jugador),
+                    bloqueos);
+            }
 
             return bloqueos;
         }
@@ -244,7 +247,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
             Jugador jugador,
             Mapa mapa,
             Unidad curador,
-            bool esPropietario,
+            bool esAliado,
             List<Coordenada> bloqueos)
         {
             if (!ReferenceEquals(
@@ -254,7 +257,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
                 return;
             }
 
-            if (!esPropietario)
+            if (!esAliado)
             {
                 foreach (Unidad unidad
                          in jugador.Unidades)
@@ -283,17 +286,13 @@ namespace ImperiosEnGuerra.Modelo.Combate
             Unidad curador,
             Coordenada posicion)
         {
-            return TieneEntidad(
-                       partida.JugadorHumano,
-                       mapa,
-                       curador,
-                       posicion)
-                   ||
-                   TieneEntidad(
-                       partida.JugadorMaquina,
-                       mapa,
-                       curador,
-                       posicion);
+            return partida.Jugadores.Any(
+                jugador =>
+                    TieneEntidad(
+                        jugador,
+                        mapa,
+                        curador,
+                        posicion));
         }
 
         private static bool TieneEntidad(
