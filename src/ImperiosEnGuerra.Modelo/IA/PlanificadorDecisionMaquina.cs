@@ -180,6 +180,11 @@ namespace ImperiosEnGuerra.Modelo.IA
                         u is Soldado ||
                         u is Monje);
 
+            int militaresPlanificados =
+                militaresPropios +
+                ContarEntrenamientosMilitaresPendientes(
+                    maquina);
+
             int objetivoMilitar =
                 centros.Length >= 2 &&
                 aldeanos.Length >= 3
@@ -191,7 +196,7 @@ namespace ImperiosEnGuerra.Modelo.IA
                     maquina,
                     objetivoMilitar);
 
-            if (militaresPropios < objetivoMilitar &&
+            if (militaresPlanificados < objetivoMilitar &&
                 centroDisponible != null &&
                 !string.IsNullOrWhiteSpace(
                     tipoMilitarObjetivo) &&
@@ -204,7 +209,7 @@ namespace ImperiosEnGuerra.Modelo.IA
                     tipoMilitarObjetivo);
             }
 
-            if (militaresPropios < objetivoMilitar &&
+            if (militaresPlanificados < objetivoMilitar &&
                 disponibles.Length > 0 &&
                 !string.IsNullOrWhiteSpace(
                     tipoMilitarObjetivo))
@@ -691,7 +696,9 @@ namespace ImperiosEnGuerra.Modelo.IA
                 maquina.Unidades.Count(
                     unidad =>
                         unidad is Soldado ||
-                        unidad is Monje);
+                        unidad is Monje) +
+                ContarEntrenamientosMilitaresPendientes(
+                    maquina);
 
             if (militaresActuales >=
                 objetivoMilitar)
@@ -713,7 +720,7 @@ namespace ImperiosEnGuerra.Modelo.IA
                                 Tipo = tipo,
                                 Indice = indice,
                                 Cantidad =
-                                    ContarTipoUnidad(
+                                    ContarTipoUnidadPlanificada(
                                         maquina,
                                         tipo)
                             })
@@ -755,17 +762,74 @@ namespace ImperiosEnGuerra.Modelo.IA
                 .FirstOrDefault();
         }
 
-        private static int ContarTipoUnidad(
+        private static int ContarTipoUnidadPlanificada(
             Jugador maquina,
             string tipoUnidad)
         {
-            return maquina.Unidades.Count(
-                unidad =>
-                    unidad != null &&
-                    string.Equals(
-                        unidad.GetType().Name,
-                        tipoUnidad,
-                        StringComparison.OrdinalIgnoreCase));
+            int creadas =
+                maquina.Unidades.Count(
+                    unidad =>
+                        unidad != null &&
+                        string.Equals(
+                            unidad.GetType().Name,
+                            tipoUnidad,
+                            StringComparison.OrdinalIgnoreCase));
+
+            int pendientes =
+                maquina.Edificios
+                    .OfType<CentroUrbano>()
+                    .SelectMany(
+                        centro =>
+                            centro.ColaEntrenamiento)
+                    .Count(
+                        entrenamiento =>
+                            entrenamiento != null &&
+                            string.Equals(
+                                entrenamiento.TipoUnidad,
+                                tipoUnidad,
+                                StringComparison.OrdinalIgnoreCase));
+
+            return creadas +
+                   pendientes;
+        }
+
+        private static int ContarEntrenamientosMilitaresPendientes(
+            Jugador maquina)
+        {
+            return maquina.Edificios
+                .OfType<CentroUrbano>()
+                .SelectMany(
+                    centro =>
+                        centro.ColaEntrenamiento)
+                .Count(
+                    entrenamiento =>
+                        entrenamiento != null &&
+                        EsTipoMilitar(
+                            entrenamiento.TipoUnidad));
+        }
+
+        private static bool EsTipoMilitar(
+            string tipoUnidad)
+        {
+            return string.Equals(
+                       tipoUnidad,
+                       nameof(Guerrero),
+                       StringComparison.OrdinalIgnoreCase)
+                   ||
+                   string.Equals(
+                       tipoUnidad,
+                       nameof(Lancero),
+                       StringComparison.OrdinalIgnoreCase)
+                   ||
+                   string.Equals(
+                       tipoUnidad,
+                       nameof(Arquero),
+                       StringComparison.OrdinalIgnoreCase)
+                   ||
+                   string.Equals(
+                       tipoUnidad,
+                       nameof(Monje),
+                       StringComparison.OrdinalIgnoreCase);
         }
 
         private int CalcularDeficitUnidad(
