@@ -11,9 +11,9 @@ using ImperiosEnGuerra.Modelo.Unidades;
 namespace ImperiosEnGuerra.Modelo.IA
 {
     /// <summary>
-    /// Política determinista y sencilla de la Máquina:
-    /// crecer a tres Aldeanos, intentar una expansión, crear una primera
-    /// unidad militar y, si ninguna prioridad aplica, continuar recolectando.
+    /// Política determinista de la Máquina:
+    /// desarrolla economía, expande, compone un ejército según la doctrina
+    /// de cada facción y, si ninguna prioridad aplica, continúa recolectando.
     /// Solo decide; nunca modifica directamente el Modelo.
     /// </summary>
     public sealed class PlanificadorDecisionMaquina
@@ -21,13 +21,62 @@ namespace ImperiosEnGuerra.Modelo.IA
         private readonly ConfiguracionEconomia economia =
             new ConfiguracionEconomia();
 
-        private static readonly string[] TiposEjercitoBase =
+        // Cada facción conserva una apertura distinta. No son counters
+        // artificiales: únicamente aprovechan los roles que ya existen
+        // (melee, velocidad, alcance y apoyo) y los costos reales del Modelo.
+        private static readonly string[] PrioridadEquilibradaBase =
         {
+            nameof(Guerrero),
+            nameof(Arquero),
+            nameof(Lancero)
+        };
+
+        private static readonly string[] PrioridadEquilibradaDesarrollada =
+        {
+            nameof(Guerrero),
+            nameof(Arquero),
+            nameof(Lancero),
+            nameof(Monje)
+        };
+
+        private static readonly string[] PrioridadMoradaBase =
+        {
+            nameof(Arquero),
+            nameof(Guerrero),
+            nameof(Lancero)
+        };
+
+        private static readonly string[] PrioridadMoradaDesarrollada =
+        {
+            nameof(Arquero),
+            nameof(Guerrero),
+            nameof(Lancero),
+            nameof(Monje)
+        };
+
+        private static readonly string[] PrioridadVerdeBase =
+        {
+            nameof(Lancero),
             nameof(Guerrero),
             nameof(Arquero)
         };
 
-        private static readonly string[] TiposEjercitoDesarrollado =
+        private static readonly string[] PrioridadVerdeDesarrollada =
+        {
+            nameof(Lancero),
+            nameof(Guerrero),
+            nameof(Arquero),
+            nameof(Monje)
+        };
+
+        private static readonly string[] PrioridadAmarillaBase =
+        {
+            nameof(Guerrero),
+            nameof(Arquero),
+            nameof(Lancero)
+        };
+
+        private static readonly string[] PrioridadAmarillaDesarrollada =
         {
             nameof(Guerrero),
             nameof(Arquero),
@@ -188,8 +237,8 @@ namespace ImperiosEnGuerra.Modelo.IA
             int objetivoMilitar =
                 centros.Length >= 2 &&
                 aldeanos.Length >= 3
-                    ? 4
-                    : 2;
+                    ? 5
+                    : 3;
 
             string tipoMilitarObjetivo =
                 SeleccionarTipoMilitarObjetivo(
@@ -707,50 +756,27 @@ namespace ImperiosEnGuerra.Modelo.IA
             }
 
             string[] tipos =
-                objetivoMilitar >= 4
-                    ? TiposEjercitoDesarrollado
-                    : TiposEjercitoBase;
+                ObtenerPrioridadEjercito(
+                    maquina,
+                    objetivoMilitar >= 5);
 
-            var candidatos =
-                tipos
-                    .Select(
-                        (tipo, indice) =>
-                            new
-                            {
-                                Tipo = tipo,
-                                Indice = indice,
-                                Cantidad =
-                                    ContarTipoUnidadPlanificada(
-                                        maquina,
-                                        tipo)
-                            })
-                    .OrderBy(
-                        candidato =>
-                            candidato.Cantidad)
-                    .ThenBy(
-                        candidato =>
-                            candidato.Indice)
-                    .ToArray();
-
-            var pagable =
-                candidatos.FirstOrDefault(
-                    candidato =>
-                        PuedePagarUnidad(
-                            maquina,
-                            candidato.Tipo));
-
-            if (pagable != null)
-            {
-                return pagable.Tipo;
-            }
-
-            return candidatos
+            // La prioridad estratégica manda sobre "fabricar lo más barato".
+            // Si la unidad objetivo todavía no se puede pagar, Preparar()
+            // ordenará recolectar los recursos que faltan para esa unidad.
+            // Así las tres IAs no convergen siempre en Guerrero al inicio.
+            return tipos
+                .Select(
+                    (tipo, indice) =>
+                        new
+                        {
+                            Tipo = tipo,
+                            Indice = indice,
+                            Cantidad =
+                                ContarTipoUnidadPlanificada(
+                                    maquina,
+                                    tipo)
+                        })
                 .OrderBy(
-                    candidato =>
-                        CalcularDeficitUnidad(
-                            maquina,
-                            candidato.Tipo))
-                .ThenBy(
                     candidato =>
                         candidato.Cantidad)
                 .ThenBy(
@@ -760,6 +786,46 @@ namespace ImperiosEnGuerra.Modelo.IA
                     candidato =>
                         candidato.Tipo)
                 .FirstOrDefault();
+        }
+
+        private static string[] ObtenerPrioridadEjercito(
+            Jugador maquina,
+            bool desarrollada)
+        {
+            string nombre =
+                maquina?.Nombre ??
+                string.Empty;
+
+            if (nombre.IndexOf(
+                    "Morada",
+                    StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return desarrollada
+                    ? PrioridadMoradaDesarrollada
+                    : PrioridadMoradaBase;
+            }
+
+            if (nombre.IndexOf(
+                    "Verde",
+                    StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return desarrollada
+                    ? PrioridadVerdeDesarrollada
+                    : PrioridadVerdeBase;
+            }
+
+            if (nombre.IndexOf(
+                    "Amarilla",
+                    StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return desarrollada
+                    ? PrioridadAmarillaDesarrollada
+                    : PrioridadAmarillaBase;
+            }
+
+            return desarrollada
+                ? PrioridadEquilibradaDesarrollada
+                : PrioridadEquilibradaBase;
         }
 
         private static int ContarTipoUnidadPlanificada(
@@ -830,43 +896,6 @@ namespace ImperiosEnGuerra.Modelo.IA
                        tipoUnidad,
                        nameof(Monje),
                        StringComparison.OrdinalIgnoreCase);
-        }
-
-        private int CalcularDeficitUnidad(
-            Jugador maquina,
-            string tipoUnidad)
-        {
-            if (!economia.IntentarObtenerCostoUnidad(
-                    tipoUnidad,
-                    out CostoRecursos costo))
-            {
-                return int.MaxValue;
-            }
-
-            int faltaOro =
-                Math.Max(
-                    0,
-                    costo.Oro -
-                    maquina.Recursos.ObtenerCantidad(
-                        TipoRecurso.Oro));
-
-            int faltaMadera =
-                Math.Max(
-                    0,
-                    costo.Madera -
-                    maquina.Recursos.ObtenerCantidad(
-                        TipoRecurso.Madera));
-
-            int faltaComida =
-                Math.Max(
-                    0,
-                    costo.Comida -
-                    maquina.Recursos.ObtenerCantidad(
-                        TipoRecurso.Comida));
-
-            return faltaOro +
-                   faltaMadera +
-                   faltaComida;
         }
 
         private DecisionMaquina PrepararRecoleccionParaUnidadMilitar(
