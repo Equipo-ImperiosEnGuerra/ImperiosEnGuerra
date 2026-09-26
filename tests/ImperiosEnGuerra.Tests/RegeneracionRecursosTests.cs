@@ -13,6 +13,7 @@ public class RegeneracionRecursosTests
     {
         Partida partida =
             CrearPartida(
+                TipoRecurso.Oro,
                 out Recurso oro);
 
         oro.Extraer(
@@ -76,6 +77,7 @@ public class RegeneracionRecursosTests
     {
         Partida partida =
             CrearPartida(
+                TipoRecurso.Madera,
                 out Recurso madera);
 
         madera.Extraer(
@@ -121,6 +123,7 @@ public class RegeneracionRecursosTests
     }
 
     private static Partida CrearPartida(
+        TipoRecurso tipo,
         out Recurso recurso)
     {
         var mapa =
@@ -166,7 +169,7 @@ public class RegeneracionRecursosTests
 
         recurso =
             new Recurso(
-                TipoRecurso.Madera,
+                tipo,
                 new Coordenada(
                     3,
                     3));
