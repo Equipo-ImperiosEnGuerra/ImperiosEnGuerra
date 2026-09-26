@@ -25,6 +25,19 @@ namespace ImperiosEnGuerra.Modelo.IA
             IReadOnlyCollection<Guid> unidadesExcluidas = null,
             IReadOnlyCollection<Coordenada> centrosExcluidos = null)
         {
+            return Preparar(
+                partida,
+                partida?.JugadorMaquina,
+                unidadesExcluidas,
+                centrosExcluidos);
+        }
+
+        public DecisionMaquina Preparar(
+            Partida partida,
+            Jugador maquina,
+            IReadOnlyCollection<Guid> unidadesExcluidas = null,
+            IReadOnlyCollection<Coordenada> centrosExcluidos = null)
+        {
             if (partida == null)
             {
                 return DecisionMaquina.SinAccion(
@@ -37,8 +50,14 @@ namespace ImperiosEnGuerra.Modelo.IA
                     "La partida ya finalizó.");
             }
 
-            Jugador maquina =
-                partida.JugadorMaquina;
+            if (maquina == null ||
+                maquina.Tipo != TipoJugador.Maquina ||
+                !partida.Jugadores.Contains(
+                    maquina))
+            {
+                return DecisionMaquina.SinAccion(
+                    "La facción de Máquina indicada no pertenece a la partida.");
+            }
 
             var excluidas =
                 unidadesExcluidas == null
@@ -324,14 +343,12 @@ namespace ImperiosEnGuerra.Modelo.IA
                     continue;
                 }
 
-                if (HayEntidadEn(
-                        partida.JugadorHumano,
-                        mapa,
-                        candidata) ||
-                    HayEntidadEn(
-                        maquina,
-                        mapa,
-                        candidata))
+                if (partida.Jugadores.Any(
+                        jugador =>
+                            HayEntidadEn(
+                                jugador,
+                                mapa,
+                                candidata)))
                 {
                     continue;
                 }
@@ -640,15 +657,12 @@ namespace ImperiosEnGuerra.Modelo.IA
             }
 
             bool entidad =
-                HayEntidadEn(
-                    partida.JugadorHumano,
-                    mapa,
-                    candidata)
-                ||
-                HayEntidadEn(
-                    partida.JugadorMaquina,
-                    mapa,
-                    candidata);
+                partida.Jugadores.Any(
+                    jugador =>
+                        HayEntidadEn(
+                            jugador,
+                            mapa,
+                            candidata));
 
             if (entidad)
                 return false;
@@ -678,14 +692,12 @@ namespace ImperiosEnGuerra.Modelo.IA
                            adyacente.EsTransitable &&
                            mapa.PuedeColocar(
                                vecina) &&
-                           !HayEntidadEn(
-                               partida.JugadorHumano,
-                               mapa,
-                               vecina) &&
-                           !HayEntidadEn(
-                               partida.JugadorMaquina,
-                               mapa,
-                               vecina);
+                           !partida.Jugadores.Any(
+                               jugador =>
+                                   HayEntidadEn(
+                                       jugador,
+                                       mapa,
+                                       vecina));
                 });
         }
 
