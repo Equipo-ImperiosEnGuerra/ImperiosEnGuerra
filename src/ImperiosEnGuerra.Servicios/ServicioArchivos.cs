@@ -241,13 +241,15 @@ namespace ImperiosEnGuerra.Servicios
             }
 
             Jugador[] perdedores =
-                partida.Jugadores
-                    .Where(
-                        jugador =>
-                            !ReferenceEquals(
-                                jugador,
-                                partida.Ganador))
-                    .ToArray();
+                ReferenceEquals(
+                    partida.Ganador,
+                    partida.JugadorHumano)
+                    ? partida.JugadoresMaquina
+                        .ToArray()
+                    : new[]
+                    {
+                        partida.JugadorHumano
+                    };
 
             StringBuilder texto =
                 new StringBuilder();
