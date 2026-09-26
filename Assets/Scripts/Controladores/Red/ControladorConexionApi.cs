@@ -29,10 +29,17 @@ namespace ImperiosEnGuerra.Controladores.Red
         private bool ultimoEstadoPartidaValido;
         private bool sesionVisualActiva;
         private Coroutine sincronizacionPeriodica;
-        private readonly Dictionary<string, bool> aldeanosTrabajando =
+        private readonly Dictionary<string, bool> aldeanosConTarea =
             new Dictionary<string, bool>();
+        private readonly Dictionary<string, CoordenadaEstadoDto> posicionesAldeanos =
+            new Dictionary<string, CoordenadaEstadoDto>();
+        private readonly HashSet<string> avisosAldeanoPendientes =
+            new HashSet<string>();
+        private readonly Dictionary<string, int> quietudAldeanos =
+            new Dictionary<string, int>();
         private bool seguimientoAldeanosInicializado;
 
+        private const int SnapshotsQuietudParaAviso = 3;
         private const float IntervaloSincronizacionEstado = 0.25f;
         private const float IntervaloConsultaProceso = 0.25f;
 
@@ -2246,7 +2253,11 @@ public bool PuedeCancelarAccion =>
 
         private void ReiniciarSeguimientoAldeanos()
         {
-            aldeanosTrabajando.Clear();
+            aldeanosConTarea.Clear();
+            posicionesAldeanos.Clear();
+            avisosAldeanoPendientes.Clear();
+            quietudAldeanos.Clear();
+
             seguimientoAldeanosInicializado =
                 false;
         }
@@ -2282,23 +2293,82 @@ public bool PuedeCancelarAccion =>
                 idsActuales.Add(
                     unidad.id);
 
-                bool trabajando =
-                    TieneTrabajoAldeano(
+                bool tieneTarea =
+                    TieneTareaAldeano(
+                        unidad);
+
+                bool seMovio =
+                    SeMovioDesdeSnapshotAnterior(
                         unidad);
 
                 if (seguimientoAldeanosInicializado &&
-                    aldeanosTrabajando.TryGetValue(
+                    aldeanosConTarea.TryGetValue(
                         unidad.id,
-                        out bool estabaTrabajando) &&
-                    estabaTrabajando &&
-                    !trabajando)
+                        out bool teniaTarea) &&
+                    teniaTarea &&
+                    !tieneTarea)
                 {
-                    quedaronLibres++;
+                    avisosAldeanoPendientes.Add(
+                        unidad.id);
+
+                    quietudAldeanos[
+                        unidad.id] =
+                        0;
                 }
 
-                aldeanosTrabajando[
+                if (tieneTarea)
+                {
+                    avisosAldeanoPendientes.Remove(
+                        unidad.id);
+
+                    quietudAldeanos.Remove(
+                        unidad.id);
+                }
+                else if (avisosAldeanoPendientes.Contains(
+                             unidad.id))
+                {
+                    if (seMovio)
+                    {
+                        // Un Aldeano que todavía cambia de casilla no se
+                        // considera "parado", aunque su paseo automático sea
+                        // de baja prioridad y no tenga OrdenActiva.
+                        quietudAldeanos[
+                            unidad.id] =
+                            0;
+                    }
+                    else
+                    {
+                        int quietud =
+                            quietudAldeanos.TryGetValue(
+                                unidad.id,
+                                out int actual)
+                                ? actual + 1
+                                : 1;
+
+                        quietudAldeanos[
+                            unidad.id] =
+                            quietud;
+
+                        if (quietud >=
+                            SnapshotsQuietudParaAviso)
+                        {
+                            quedaronLibres++;
+
+                            avisosAldeanoPendientes.Remove(
+                                unidad.id);
+
+                            quietudAldeanos.Remove(
+                                unidad.id);
+                        }
+                    }
+                }
+
+                aldeanosConTarea[
                     unidad.id] =
-                    trabajando;
+                    tieneTarea;
+
+                GuardarPosicionAldeano(
+                    unidad);
             }
 
             if (!seguimientoAldeanosInicializado)
@@ -2309,26 +2379,8 @@ public bool PuedeCancelarAccion =>
                 return;
             }
 
-            var eliminados =
-                new List<string>();
-
-            foreach (string id
-                     in aldeanosTrabajando.Keys)
-            {
-                if (!idsActuales.Contains(
-                        id))
-                {
-                    eliminados.Add(
-                        id);
-                }
-            }
-
-            foreach (string id
-                     in eliminados)
-            {
-                aldeanosTrabajando.Remove(
-                    id);
-            }
+            LimpiarSeguimientoAldeanosAusentes(
+                idsActuales);
 
             if (quedaronLibres <= 0 ||
                 vistaHud == null)
@@ -2342,20 +2394,95 @@ public bool PuedeCancelarAccion =>
                     : $"{quedaronLibres} Aldeanos han quedado sin tarea.");
         }
 
-        private static bool TieneTrabajoAldeano(
+        private static bool TieneTareaAldeano(
             UnidadEstadoDto unidad)
         {
             if (unidad == null)
                 return false;
 
-            return unidad.ordenActiva ==
-                       "Recolectar" ||
-                   unidad.ordenActiva ==
-                       "Construir" ||
-                   unidad.estado ==
-                       "Recolectando" ||
-                   unidad.estado ==
-                       "Construyendo";
+            // Cualquier orden real mantiene al Aldeano ocupado. Esto incluye
+            // Mover, Recolectar y Construir; el paseo ambiental MOVER_IDLE no
+            // crea OrdenActiva y se detecta por cambio de coordenada.
+            if (!string.IsNullOrWhiteSpace(
+                    unidad.ordenActiva))
+            {
+                return true;
+            }
+
+            return !string.IsNullOrWhiteSpace(
+                       unidad.estado) &&
+                   unidad.estado !=
+                       "Idle";
+        }
+
+        private bool SeMovioDesdeSnapshotAnterior(
+            UnidadEstadoDto unidad)
+        {
+            if (unidad?.coordenada == null ||
+                !posicionesAldeanos.TryGetValue(
+                    unidad.id,
+                    out CoordenadaEstadoDto anterior) ||
+                anterior == null)
+            {
+                return false;
+            }
+
+            return anterior.x !=
+                       unidad.coordenada.x ||
+                   anterior.y !=
+                       unidad.coordenada.y;
+        }
+
+        private void GuardarPosicionAldeano(
+            UnidadEstadoDto unidad)
+        {
+            if (unidad?.coordenada == null)
+                return;
+
+            posicionesAldeanos[
+                unidad.id] =
+                new CoordenadaEstadoDto
+                {
+                    x =
+                        unidad.coordenada.x,
+
+                    y =
+                        unidad.coordenada.y
+                };
+        }
+
+        private void LimpiarSeguimientoAldeanosAusentes(
+            HashSet<string> idsActuales)
+        {
+            var eliminados =
+                new List<string>();
+
+            foreach (string id
+                     in aldeanosConTarea.Keys)
+            {
+                if (!idsActuales.Contains(
+                        id))
+                {
+                    eliminados.Add(
+                        id);
+                }
+            }
+
+            foreach (string id
+                     in eliminados)
+            {
+                aldeanosConTarea.Remove(
+                    id);
+
+                posicionesAldeanos.Remove(
+                    id);
+
+                avisosAldeanoPendientes.Remove(
+                    id);
+
+                quietudAldeanos.Remove(
+                    id);
+            }
         }
 
         private IniciarPartidaDto CrearPartidaPrueba()
