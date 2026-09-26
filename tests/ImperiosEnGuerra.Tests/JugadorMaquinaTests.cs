@@ -592,6 +592,71 @@ public class JugadorMaquinaTests
     }
 
     [Test]
+    public void Planificador_EnFaseEconomica_NoIniciaCombate()
+    {
+        var mapa =
+            new Mapa(10, 10);
+
+        var humano =
+            new Jugador(
+                "Humano",
+                TipoJugador.Humano,
+                mapa,
+                new RecursosJugador());
+
+        var maquina =
+            new Jugador(
+                "CPU",
+                TipoJugador.Maquina,
+                mapa,
+                new RecursosJugador());
+
+        humano.AgregarEdificio(
+            new CentroUrbano(
+                new Coordenada(8, 8)));
+
+        maquina.AgregarUnidad(
+            new Guerrero(
+                new Coordenada(1, 1)));
+
+        maquina.AgregarUnidad(
+            new Guerrero(
+                new Coordenada(2, 1)));
+
+        mapa.ObtenerCasilla(
+                8,
+                8)
+            .Ocupar();
+
+        var partida =
+            new Partida(
+                humano,
+                maquina);
+
+        DecisionMaquina decision =
+            new PlanificadorDecisionMaquina()
+                .Preparar(
+                    partida,
+                    permitirCombate: false);
+
+        Assert.That(
+            decision.Tipo,
+            Is.Not.EqualTo(
+                TipoDecisionMaquina.Atacar));
+
+        Assert.That(
+            decision.Tipo,
+            Is.Not.EqualTo(
+                TipoDecisionMaquina.Mover),
+            "Durante la gracia inicial no debe comenzar una aproximación ofensiva.");
+
+        Assert.That(
+            decision.Tipo,
+            Is.EqualTo(
+                TipoDecisionMaquina.Patrullar));
+    }
+
+    [Test]
     public void Planificador_ConDosMilitaresYSinMilitaresEnemigos_AsaltaCentro()
     {
         var mapa =
