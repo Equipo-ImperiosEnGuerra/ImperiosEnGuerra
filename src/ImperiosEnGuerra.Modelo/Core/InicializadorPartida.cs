@@ -41,6 +41,7 @@ namespace ImperiosEnGuerra.Modelo.Core
             Coordenada centroMaquina,
             IReadOnlyList<Recurso> recursosMaquina)
         {
+            //Valida y reserva primero las posiciones para evitar cruces entre centros y recursos.
             var posicionesPorMapa =
                 new Dictionary<Mapa, HashSet<(int, int)>>();
 
@@ -56,6 +57,7 @@ namespace ImperiosEnGuerra.Modelo.Core
                 recursosMaquina,
                 posicionesPorMapa);
 
+            //Busca casillas libres cercanas a cada Centro Urbano para ubicar los aldeanos iniciales.
             IReadOnlyList<Coordenada> aldeanosHumano =
                 PlanificarAldeanosIniciales(
                     mapaHumano,
@@ -82,6 +84,7 @@ namespace ImperiosEnGuerra.Modelo.Core
                     mapaMaquina,
                     new RecursosJugador());
 
+            //Después de validar todo, construye el estado inicial de cada jugador.
             ConfigurarMapa(
                 jugadorHumano,
                 centroHumano,
@@ -149,6 +152,7 @@ namespace ImperiosEnGuerra.Modelo.Core
                 centroHumano,
                 reservadas);
 
+            //Reserva los cuatro Centros Urbanos antes de colocar recursos o aldeanos.
             foreach (var maquina in maquinas)
             {
                 if (maquina.Centro == null)
@@ -164,6 +168,7 @@ namespace ImperiosEnGuerra.Modelo.Core
                     reservadas);
             }
 
+            //Los recursos se registran una sola vez porque todas las facciones comparten el mapa.
             ValidarRecursosCompartidos(
                 mapa,
                 recursosCompartidos,
@@ -423,6 +428,7 @@ namespace ImperiosEnGuerra.Modelo.Core
             var resultado =
                 new List<Coordenada>();
 
+            //Cada posición encontrada se reserva para que dos aldeanos no aparezcan en la misma casilla.
             for (int i = 0;
                  i < configuracionInicio.AldeanosIniciales;
                  i++)
@@ -457,6 +463,7 @@ namespace ImperiosEnGuerra.Modelo.Core
             int distanciaMaxima =
                 mapa.Ancho + mapa.Alto;
 
+            //Recorre primero las casillas más cercanas al Centro Urbano.
             for (int distancia = 1;
                  distancia <= distanciaMaxima;
                  distancia++)
@@ -518,6 +525,7 @@ namespace ImperiosEnGuerra.Modelo.Core
             Coordenada centro,
             IReadOnlyList<Recurso> recursos)
         {
+            //El Centro Urbano ocupa su casilla antes de agregar los recursos físicos.
             if (!jugador.Mapa
                 .ObtenerCasilla(
                     centro.X,

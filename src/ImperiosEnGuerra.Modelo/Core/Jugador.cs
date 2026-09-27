@@ -49,6 +49,9 @@ namespace ImperiosEnGuerra.Modelo.Core
             get { return edificios.AsReadOnly(); }
         }
 
+        /// <summary>
+        /// Obras que el jugador mantiene en progreso.
+        /// </summary>
         public IReadOnlyList<ObraConstruccion> ObrasConstruccion
         {
             get { return obrasConstruccion.AsReadOnly(); }
@@ -155,6 +158,7 @@ namespace ImperiosEnGuerra.Modelo.Core
 
             return edificios.Remove(edificio);
         }
+        //Registra una construcción mientras todavía está en progreso.
         public void AgregarObraConstruccion(
             ObraConstruccion obra)
         {
@@ -167,6 +171,7 @@ namespace ImperiosEnGuerra.Modelo.Core
             obrasConstruccion.Add(obra);
         }
 
+        //Retira la obra cuando termina o se cancela.
         public bool EliminarObraConstruccion(
             ObraConstruccion obra)
         {

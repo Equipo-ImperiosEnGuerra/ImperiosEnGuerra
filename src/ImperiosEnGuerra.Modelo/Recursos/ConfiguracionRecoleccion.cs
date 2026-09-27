@@ -36,6 +36,7 @@ namespace ImperiosEnGuerra.Modelo.Recursos
                 };
         }
 
+        //Devuelve cuánto recurso puede extraerse en un ciclo de recolección.
         public int ObtenerTasa(
             TipoRecurso tipo)
         {
@@ -51,6 +52,7 @@ namespace ImperiosEnGuerra.Modelo.Recursos
             return tasa;
         }
 
+        //Evita configurar ciclos que no recolecten una cantidad positiva.
         private static void ValidarTasa(
             int tasa,
             string nombreParametro)

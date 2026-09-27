@@ -10,6 +10,7 @@ namespace ImperiosEnGuerra.Modelo.Recursos
     {
         public const int CantidadInicialPredeterminada = 100;
 
+        //Protege la cantidad restante cuando varias tareas intentan extraer del mismo nodo.
         private readonly object sincronizacion =
             new object();
 
@@ -39,6 +40,7 @@ namespace ImperiosEnGuerra.Modelo.Recursos
             }
         }
 
+        //Indica si el nodo ya no tiene recurso disponible.
         public bool Agotado
         {
             get
@@ -102,6 +104,7 @@ namespace ImperiosEnGuerra.Modelo.Recursos
                 return 0;
             }
 
+            //Lee y descuenta dentro del mismo bloqueo para no entregar más de lo disponible.
             lock (sincronizacion)
             {
                 int extraida =

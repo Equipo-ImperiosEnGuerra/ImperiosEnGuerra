@@ -9,6 +9,7 @@ namespace ImperiosEnGuerra.Modelo.Recursos
     public class RecursosJugador
     {
         private readonly Dictionary<TipoRecurso, int> cantidades;
+        //Evita que varias tareas sumen o gasten el mismo saldo al mismo tiempo.
         private readonly object sincronizacion = new object();
 
         /// <summary>
@@ -117,6 +118,7 @@ namespace ImperiosEnGuerra.Modelo.Recursos
                 return false;
             }
 
+            //Comprueba y descuenta los tres recursos como una sola operación protegida.
             lock (sincronizacion)
             {
                 if (cantidades[TipoRecurso.Oro] < costo.Oro ||
@@ -146,6 +148,7 @@ namespace ImperiosEnGuerra.Modelo.Recursos
                     nameof(costo));
             }
 
+            //El reembolso también se protege porque puede coincidir con otras operaciones económicas.
             lock (sincronizacion)
             {
                 cantidades[TipoRecurso.Oro] += costo.Oro;

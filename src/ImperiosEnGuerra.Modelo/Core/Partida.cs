@@ -5,8 +5,12 @@ using ImperiosEnGuerra.Modelo.Map;
 
 namespace ImperiosEnGuerra.Modelo.Core
 {
+    /// <summary>
+    /// Mantiene a los participantes y las reglas básicas de relación y finalización de la partida.
+    /// </summary>
     public class Partida
     {
+        //Guarda a todos los participantes para poder buscarlos y comparar sus equipos.
         private readonly List<Jugador> jugadores;
 
         public Jugador JugadorHumano { get; }
@@ -58,6 +62,7 @@ namespace ImperiosEnGuerra.Modelo.Core
             };
         }
 
+        //Crea la modalidad actual con un humano y una o más facciones controladas por la máquina.
         public static Partida CrearMultijugador(
             Jugador jugadorHumano,
             IEnumerable<Jugador> jugadoresMaquina)
@@ -148,6 +153,7 @@ namespace ImperiosEnGuerra.Modelo.Core
                 .AsReadOnly();
         }
 
+        //Localiza al propietario de una unidad usando su identificador estable.
         public Jugador BuscarJugadorPorUnidad(
             Guid unidadId)
         {
@@ -157,6 +163,7 @@ namespace ImperiosEnGuerra.Modelo.Core
                         u => u.Id == unidadId));
         }
 
+        //Localiza al propietario de un edificio usando su identificador estable.
         public Jugador BuscarJugadorPorEdificio(
             Guid edificioId)
         {
@@ -172,6 +179,7 @@ namespace ImperiosEnGuerra.Modelo.Core
             if (coordenada == null)
                 return null;
 
+            //Solo devolvemos un propietario cuando la coordenada identifica un único edificio.
             Jugador[] coincidencias =
                 jugadores
                     .Where(
@@ -187,6 +195,7 @@ namespace ImperiosEnGuerra.Modelo.Core
                 : null;
         }
 
+        //Devuelve los rivales según los equipos definidos para Humano vs Máquinas.
         public IReadOnlyList<Jugador> ObtenerEnemigos(
             Jugador jugador)
         {
@@ -215,6 +224,7 @@ namespace ImperiosEnGuerra.Modelo.Core
                 .FirstOrDefault();
         }
 
+        //En esta modalidad las tres IAs pertenecen al mismo equipo.
         public bool SonAliados(
             Jugador primero,
             Jugador segundo)
@@ -253,6 +263,7 @@ namespace ImperiosEnGuerra.Modelo.Core
                        segundo);
         }
 
+        //Registra el resultado una sola vez para no reemplazar al ganador después del cierre.
         public bool IntentarFinalizar(
             Jugador ganador,
             string motivo)

@@ -17,6 +17,7 @@ namespace ImperiosEnGuerra.Modelo.Recursos
 
         public ConfiguracionEconomia()
         {
+            //Centraliza los costos para que todas las acciones consulten los mismos valores.
             costosEdificios =
                 new Dictionary<string, CostoRecursos>(
                     StringComparer.OrdinalIgnoreCase)
@@ -42,6 +43,7 @@ namespace ImperiosEnGuerra.Modelo.Recursos
                 };
         }
 
+        //Busca el costo configurado para un tipo de edificio.
         public bool IntentarObtenerCostoEdificio(
             string tipoEdificio,
             out CostoRecursos costo)
@@ -57,6 +59,7 @@ namespace ImperiosEnGuerra.Modelo.Recursos
                 out costo);
         }
 
+        //Busca el costo configurado para un tipo de unidad.
         public bool IntentarObtenerCostoUnidad(
             string tipoUnidad,
             out CostoRecursos costo)
