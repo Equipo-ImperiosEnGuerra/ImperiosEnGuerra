@@ -242,7 +242,7 @@ public class ReaccionAutomaticaTests
     }
 
     [Test]
-    public void AldeanoIdle_PreparaMovimientoLigero()
+    public void AldeanoHumanoIdle_NoPreparaMovimientoAutomatico()
     {
         var aldeano =
             new Aldeano(
@@ -256,46 +256,13 @@ public class ReaccionAutomaticaTests
                 partida);
 
         Assert.That(
-            reacciones.Count,
-            Is.EqualTo(1));
-
-        Assert.That(
-            reacciones[0].Tipo,
-            Is.EqualTo(
-                TipoReaccionAutomatica.MoverIdle));
-
-        Assert.That(
-            reacciones[0].UnidadId,
-            Is.EqualTo(
-                aldeano.Id));
-
-        Assert.That(
-            reacciones[0].Destino,
-            Is.Not.Null);
-
-        int deltaX =
-            Math.Abs(
-                aldeano.Coordenada.X -
-                reacciones[0].Destino.X);
-
-        int deltaY =
-            Math.Abs(
-                aldeano.Coordenada.Y -
-                reacciones[0].Destino.Y);
-
-        Assert.That(
-            deltaX + deltaY,
-            Is.EqualTo(1),
-            "El paseo ambiental debe avanzar una sola casilla cardinal.");
-
-        Assert.That(
-            deltaX == 0 || deltaY == 0,
-            Is.True,
-            "El paseo automático no debe generar diagonales.");
+            reacciones,
+            Is.Empty,
+            "El Aldeano humano idle debe permanecer quieto para que el HUD pueda detectarlo como inactivo.");
     }
 
     [Test]
-    public void Servicio_ConVariosAldeanosIdle_IniciaSoloUnPaseo()
+    public void Servicio_ConAldeanosHumanosIdle_NoIniciaPaseos()
     {
         humano.AgregarUnidad(
             new Aldeano(
@@ -331,8 +298,8 @@ public class ReaccionAutomaticaTests
 
         Assert.That(
             iniciadas,
-            Is.EqualTo(1),
-            "El paseo ambiental debe limitarse a un Aldeano humano a la vez.");
+            Is.Zero,
+            "Los paseos idle automáticos están reservados a los Aldeanos de IA.");
     }
 
     [Test]
@@ -362,7 +329,7 @@ public class ReaccionAutomaticaTests
     }
 
     [Test]
-    public async Task OrdenManual_CancelaDeambulacionAutomatica()
+    public void AldeanoHumanoIdle_PermaneceDisponibleYSinOrden()
     {
         var aldeano =
             new Aldeano(
@@ -397,31 +364,16 @@ public class ReaccionAutomaticaTests
 
         Assert.That(
             iniciadas,
-            Is.EqualTo(1));
+            Is.Zero);
 
         Assert.That(
             aldeano.OrdenActiva,
-            Is.Null,
-            "La deambulación idle no debe mostrarse como una orden activa.");
+            Is.Null);
 
         Assert.That(
             aldeano.Disponible,
             Is.True,
-            "El paseo idle no debe bloquear Recolectar, Construir o Mover.");
-
-        reacciones.PrepararOrdenManual(
-            aldeano.Id);
-
-        Assert.That(
-            SpinWait.SpinUntil(
-                () =>
-                    !aldeano.OrdenActiva.HasValue,
-                TimeSpan.FromSeconds(1)),
-            Is.True);
-
-        Assert.That(
-            aldeano.Disponible,
-            Is.True);
+            "El Aldeano humano debe seguir disponible y quieto para que el aviso de inactividad funcione.");
     }
 
     [Test]
