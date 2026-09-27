@@ -29,6 +29,7 @@ namespace ImperiosEnGuerra.Controladores
 
         public bool InteraccionBloqueada { get; private set; }
 
+        //Impide nuevos clics y limpia cualquier captura cuando el menú o el resultado final toman el control.
         public void BloquearInteraccion()
         {
             InteraccionBloqueada = true;
@@ -41,6 +42,7 @@ namespace ImperiosEnGuerra.Controladores
             InteraccionBloqueada = false;
         }
 
+        //Cambia temporalmente el siguiente clic del jugador a selección de una casilla destino.
         public void IniciarCapturaDestino()
         {
             CapturandoObjetivoEntidad = false;
@@ -79,6 +81,7 @@ namespace ImperiosEnGuerra.Controladores
             CapturaCancelada?.Invoke();
         }
 
+        //Limpia la selección antes de que VistaPartida destruya o reconstruya sus GameObjects.
         private void OnEnable()
         {
             vistaSuscrita = vistaPartida;
@@ -104,6 +107,7 @@ namespace ImperiosEnGuerra.Controladores
             FinalizarCapturaObjetivoEntidad();
         }
 
+        //Lee el mouse y decide si el clic selecciona una entidad, un recurso o una casilla.
         private void Update()
         {
             if (InteraccionBloqueada)
@@ -130,6 +134,7 @@ namespace ImperiosEnGuerra.Controladores
             }
 
             Vector2 pantalla = Mouse.current.position.ReadValue();
+            //Los clics sobre botones del HUD no deben atravesar la interfaz y seleccionar el mapa.
             if (EventSystem.current != null)
             {
                 var puntero = new PointerEventData(EventSystem.current) { position = pantalla };
@@ -266,6 +271,7 @@ namespace ImperiosEnGuerra.Controladores
             return candidata;
         }
 
+        //Escoge la entidad visible con mayor prioridad gráfica bajo el cursor.
         private EntidadSeleccionableVista ObtenerEntidadEn(Vector3 mundo)
         {
             Physics2D.SyncTransforms();
@@ -293,6 +299,7 @@ namespace ImperiosEnGuerra.Controladores
             return candidata;
         }
 
+        //Actualiza el resaltado visual y notifica al controlador de acciones.
         private void Seleccionar(EntidadSeleccionableVista entidad)
         {
             if (SeleccionActual == entidad)

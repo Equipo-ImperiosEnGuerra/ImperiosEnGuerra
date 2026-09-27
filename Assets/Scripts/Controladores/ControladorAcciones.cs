@@ -28,6 +28,7 @@ namespace ImperiosEnGuerra.Controladores
         private bool EsperandoObjetivo =>
             !string.IsNullOrEmpty(accionPendiente);
 
+        //Conecta los eventos de selección y HUD para traducir clics en intenciones de acción.
         private void OnEnable()
         {
             if (controladorSeleccion != null)
@@ -94,6 +95,7 @@ namespace ImperiosEnGuerra.Controladores
                     : "");
         }
 
+        //Comprueba que la entidad elegida siga siendo válida mientras se espera un destino u objetivo.
         private void Update()
         {
             if (EsperandoObjetivo &&
@@ -268,6 +270,7 @@ namespace ImperiosEnGuerra.Controladores
             }
         }
 
+        //Convierte la casilla elegida en la llamada correspondiente hacia la API.
         private void EnviarObjetivo(int x, int y)
         {
             if (!EsperandoObjetivo)
@@ -353,6 +356,7 @@ namespace ImperiosEnGuerra.Controladores
             }
         }
 
+        //Valida el objetivo visual antes de enviar una orden de ataque o curación.
         private void EnviarObjetivoAtaque(EntidadSeleccionableVista objetivo)
         {
             bool curando =
@@ -494,6 +498,7 @@ namespace ImperiosEnGuerra.Controladores
             return false;
         }
 
+        //Decide qué botones puede mostrar el HUD según la entidad seleccionada y su orden actual.
         private static bool PermiteOpcion(
             EntidadSeleccionableVista entidad,
             string accion)
@@ -549,6 +554,7 @@ namespace ImperiosEnGuerra.Controladores
                 entidad.TipoLogico == "Monje";
         }
 
+        //Guarda la intención y activa el modo de captura adecuado sin modificar el Modelo.
         private void PrepararAccion(string accion)
         {
             if (vistaHud == null)
@@ -763,6 +769,7 @@ namespace ImperiosEnGuerra.Controladores
                 $"Esta acción aún no está disponible.");
         }
 
+        //Después de elegir el tipo entrenado, espera la casilla de referencia para completar la orden.
         private void SeleccionarTipoUnidad(string tipoUnidad)
         {
             if (accionPendiente != "Entrenar" ||

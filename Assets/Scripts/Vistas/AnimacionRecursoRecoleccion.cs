@@ -26,6 +26,7 @@ namespace ImperiosEnGuerra.Vistas
         public bool Recolectando =>
             recolectando;
 
+        //Guarda posición y escala originales antes de aplicar cualquier animación.
         private void Awake()
         {
             Inicializar();
@@ -60,6 +61,7 @@ namespace ImperiosEnGuerra.Vistas
                 valor;
         }
 
+        //Solo modifica transformaciones visuales; la cantidad del recurso sigue viniendo del Modelo.
         private void Update()
         {
             if (!recolectando ||

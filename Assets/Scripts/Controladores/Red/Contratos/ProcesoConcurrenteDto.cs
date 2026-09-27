@@ -2,6 +2,9 @@ using System;
 
 namespace ImperiosEnGuerra.Controladores.Red.Contratos
 {
+    /// <summary>
+    /// Identificador devuelto cuando la API acepta una acción concurrente.
+    /// </summary>
     [Serializable]
     public class ProcesoIniciadoDto
     {
@@ -10,6 +13,9 @@ namespace ImperiosEnGuerra.Controladores.Red.Contratos
         public string estado;
     }
 
+    /// <summary>
+    /// Resultado publicado por el worker que ejecutó la acción en segundo plano.
+    /// </summary>
     [Serializable]
     public class ResultadoProcesoDto
     {

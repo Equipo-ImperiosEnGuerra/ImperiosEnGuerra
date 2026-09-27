@@ -87,6 +87,7 @@ namespace ImperiosEnGuerra.Vistas
             }
         }
 
+        //Construye toda la representación visual cuando todavía no existe una escena sincronizada.
         public void Renderizar(EstadoPartidaDto estado)
         {
             Limpiar();
@@ -136,6 +137,7 @@ namespace ImperiosEnGuerra.Vistas
         /// la selección y permite que varias órdenes concurrentes actualicen
         /// unidades/obras sin interrumpir al jugador.
         /// </summary>
+        //Aplica cambios del snapshot sin recrear toda la escena ni perder la selección actual.
         public void Sincronizar(EstadoPartidaDto estado)
         {
             if (estado == null || estado.mapa == null)
@@ -191,6 +193,7 @@ namespace ImperiosEnGuerra.Vistas
                 estado);
         }
 
+        //Activa u oculta cada nodo visual según siga existiendo recurso en esa posición.
         private void SincronizarRecursos(
             RecursoEstadoDto[] recursos)
         {
@@ -221,6 +224,7 @@ namespace ImperiosEnGuerra.Vistas
             }
         }
 
+        //Detecta qué nodo tiene un Aldeano recolectando cerca para activar su feedback visual.
         private void ActualizarAnimacionRecursosRecoleccion(
             EstadoPartidaDto estado)
         {
@@ -573,6 +577,7 @@ namespace ImperiosEnGuerra.Vistas
             }
         }
 
+        //Actualiza, crea u oculta unidades usando el ID lógico recibido desde la API.
         private void SincronizarUnidades(
             UnidadEstadoDto[] datos,
             bool humano,
@@ -897,6 +902,7 @@ namespace ImperiosEnGuerra.Vistas
             }
         }
 
+        //Descarta índices y GameObjects generados cuando debe reconstruirse toda la Vista.
         private void Limpiar()
         {
             AntesDeLimpiarContenido?.Invoke();
@@ -931,6 +937,7 @@ namespace ImperiosEnGuerra.Vistas
             return contenedor.transform;
         }
 
+        //Dibuja una celda de suelo por cada posición lógica del mapa.
         private void RenderizarMapa(MapaEstadoDto mapa, Transform contenedor)
         {
             if (suelo == null)
@@ -1264,6 +1271,7 @@ namespace ImperiosEnGuerra.Vistas
             return new Vector3(x * espacioCasilla, y * espacioCasilla, 0f);
         }
 
+        //Actualiza una unidad concreta entre snapshots para suavizar el movimiento en pantalla.
         public bool ActualizarMovimientoUnidad(
             string unidadId,
             int x,
@@ -1302,6 +1310,7 @@ namespace ImperiosEnGuerra.Vistas
             return true;
         }
 
+        //Encola destinos visuales sin modificar la coordenada autoritativa del Modelo.
         private void ProgramarMovimientoVisual(
             string unidadId,
             EntidadSeleccionableVista entidad,
@@ -1401,6 +1410,7 @@ namespace ImperiosEnGuerra.Vistas
                 destino);
         }
 
+        //Interpola únicamente los GameObjects hacia los destinos que ya confirmó la API.
         private void Update()
         {
             if (movimientoVisualPausado ||
@@ -1470,6 +1480,7 @@ namespace ImperiosEnGuerra.Vistas
             }
         }
 
+        //Convierte un clic del mundo de Unity en la casilla lógica correspondiente.
         public bool TryObtenerCoordenadaLogica(Vector3 posicionMundo, out int x, out int y)
         {
             x = 0;
@@ -1572,6 +1583,7 @@ namespace ImperiosEnGuerra.Vistas
             return objeto;
         }
 
+        //Centra la cámara y ajusta el zoom para que el mapa completo permanezca visible.
         private void AjustarCamara(MapaEstadoDto mapa)
         {
             if (camara == null)

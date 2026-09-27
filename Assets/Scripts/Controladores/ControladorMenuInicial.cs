@@ -21,6 +21,7 @@ namespace ImperiosEnGuerra.Controladores
 
         [RuntimeInitializeOnLoadMethod(
             RuntimeInitializeLoadType.AfterSceneLoad)]
+        //Crea el controlador automáticamente cuando la escena tiene conexión API pero todavía no tiene menú.
         private static void CrearBootstrap()
         {
             if (Object.FindFirstObjectByType<ControladorConexionApi>() == null ||
@@ -36,6 +37,7 @@ namespace ImperiosEnGuerra.Controladores
             objeto.AddComponent<ControladorMenuInicial>();
         }
 
+        //Busca los componentes de la escena, crea las vistas de menú y conecta sus eventos.
         private void Awake()
         {
             conexionApi =
@@ -139,6 +141,7 @@ namespace ImperiosEnGuerra.Controladores
             }
         }
 
+        //ESC alterna pausa y reanudación únicamente mientras existe una partida jugable.
         private void Update()
         {
             if (!partidaEnCurso ||
@@ -162,6 +165,7 @@ namespace ImperiosEnGuerra.Controladores
             }
         }
 
+        //Solicita al controlador de red que prepare una nueva partida en la API.
         private void Jugar()
         {
             if (conexionApi == null)
@@ -282,6 +286,7 @@ namespace ImperiosEnGuerra.Controladores
                 });
         }
 
+        //Restablece la presentación sin recargar la escena para permitir iniciar otra partida.
         private void VolverAlMenu()
         {
             partidaEnCurso = false;

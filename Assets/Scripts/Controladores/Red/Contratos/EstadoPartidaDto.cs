@@ -2,6 +2,9 @@ using System;
 
 namespace ImperiosEnGuerra.Controladores.Red.Contratos
 {
+    /// <summary>
+    /// Snapshot completo que Unity recibe para actualizar la escena y el HUD.
+    /// </summary>
     [Serializable]
     public class EstadoPartidaDto
     {
@@ -99,6 +102,9 @@ namespace ImperiosEnGuerra.Controladores.Red.Contratos
         public int progreso;
     }
 
+    /// <summary>
+    /// Estado visual de una unidad recibido desde el Modelo a través de la API.
+    /// </summary>
     [Serializable]
     public class UnidadEstadoDto
     {

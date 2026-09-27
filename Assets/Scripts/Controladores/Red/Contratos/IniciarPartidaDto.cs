@@ -2,6 +2,9 @@ using System;
 
 namespace ImperiosEnGuerra.Controladores.Red.Contratos
 {
+    /// <summary>
+    /// Configuración inicial que Unity envía para crear una nueva partida.
+    /// </summary>
     [Serializable]
     public class IniciarPartidaDto
     {
@@ -18,6 +21,9 @@ namespace ImperiosEnGuerra.Controladores.Red.Contratos
         public RecursoInicialDto[] recursosMaquina;
     }
 
+    /// <summary>
+    /// Coordenada serializable usada por los mensajes entre Unity y la API.
+    /// </summary>
     [Serializable]
     public class CoordenadaDto
     {

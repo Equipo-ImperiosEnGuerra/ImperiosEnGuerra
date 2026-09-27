@@ -9,6 +9,10 @@ using UnityEngine.Networking;
 
 namespace ImperiosEnGuerra.Controladores.Red
 {
+    /// <summary>
+    /// Puente entre Unity y la API: envía órdenes, consulta workers y actualiza las Vistas con snapshots.
+    /// Las Coroutines solo coordinan red y presentación; la concurrencia real se ejecuta en C# del lado de la API.
+    /// </summary>
     public class ControladorConexionApi : MonoBehaviour
     {
         [SerializeField]
@@ -121,6 +125,7 @@ public bool PuedeCancelarAccion =>
     ApiDisponible &&
     !PartidaFinalizada;
 
+        //Inicia la petición de movimiento; el worker real se crea en la API.
         public void MoverUnidad(string unidadId, int x, int y)
         {
             if (!PuedeIniciarMovimiento)
@@ -353,6 +358,7 @@ public bool PuedeCancelarAccion =>
                     alCompletar));
         }
 
+        //Sincroniza la pausa visual de Unity con la pausa cooperativa de los workers de la API.
         private IEnumerator CambiarPausaTemporal(
             bool pausar,
             System.Action<bool> alCompletar)
@@ -463,6 +469,7 @@ public bool PuedeCancelarAccion =>
                 true);
         }
 
+        //Detiene la sincronización visual y reinicia el estado local antes de volver al menú.
         public void PrepararRegresoAlMenu()
         {
             // El menú puede mostrarse sin recargar la escena. Así Play Mode
@@ -529,6 +536,7 @@ public bool PuedeCancelarAccion =>
             PausadaPorMenu = false;
         }
 
+        //Envía el DTO como JSON y recibe el ID del proceso concurrente creado por la API.
         private IEnumerator EnviarMovimiento(MoverUnidadDto movimiento)
         {
             movimientosActivos++;
@@ -589,6 +597,7 @@ public bool PuedeCancelarAccion =>
             }
         }
 
+        //Consulta el proceso hasta que el worker publique un resultado final.
         private IEnumerator EsperarResultadoMovimiento(
             string procesoId,
             string unidadId)
@@ -830,6 +839,7 @@ public bool PuedeCancelarAccion =>
             }
         }
 
+        //Usa el mismo patrón petición → proceso → seguimiento para la recolección.
         private IEnumerator EnviarRecoleccion(RecolectarDto recoleccion)
         {
             recoleccionesActivas++;
@@ -1069,6 +1079,7 @@ public bool PuedeCancelarAccion =>
             }
         }
 
+        //Envía la construcción concurrente sin bloquear el hilo principal de Unity.
         private IEnumerator EnviarConstruccion(
             ConstruirDto construccion)
         {
@@ -1252,6 +1263,7 @@ public bool PuedeCancelarAccion =>
         }
         
 
+        //Envía una orden de entrenamiento y luego sigue el progreso del worker remoto.
         private IEnumerator EnviarEntrenamiento(
             EntrenarDto entrenamiento)
         {
@@ -1482,6 +1494,7 @@ public bool PuedeCancelarAccion =>
             }
         }
 
+        //Inicia el ciclo de ataque en la API y conserva Unity como consumidor del resultado.
         private IEnumerator EnviarAtaque(
             AtaqueDto ataque)
         {
@@ -1663,6 +1676,7 @@ public bool PuedeCancelarAccion =>
             }
         }
 
+        //Inicia la curación concurrente y espera su resultado sin ejecutar reglas en Unity.
         private IEnumerator EnviarCuracion(
             CuracionDto curacion)
         {
@@ -1844,6 +1858,7 @@ public bool PuedeCancelarAccion =>
             }
         }
 
+        //Fuerza un snapshot reciente para que la escena refleje cómo terminó la acción.
         private IEnumerator SincronizarEstadoDespuesDeProceso()
         {
             // Los workers limpian OrdenActiva/Estado en sus bloques finally.
@@ -2045,6 +2060,7 @@ public bool PuedeCancelarAccion =>
                 mensaje.Contains("VistaPartida no está configurada");
         }
 
+        //Al iniciar la escena bloquea la interacción hasta confirmar que la API y la partida estén listas.
         private void Start()
         {
             ApiDisponible = false;
@@ -2068,6 +2084,7 @@ public bool PuedeCancelarAccion =>
                 ComprobarConexion());
         }
 
+        //Comprueba primero la disponibilidad del servidor antes de crear la partida.
         private IEnumerator ComprobarConexion()
         {
             iniciandoPartidaDesdeMenu = true;
@@ -2143,6 +2160,7 @@ public bool PuedeCancelarAccion =>
             PartidaIniciadaDesdeMenu?.Invoke();
         }
 
+        //Solicita snapshots periódicos para mantener escena y HUD alineados con el Modelo autoritativo.
         private IEnumerator SincronizarPartidaPeriodicamente()
         {
             var espera =
@@ -2259,6 +2277,7 @@ public bool PuedeCancelarAccion =>
                 $"{request.downloadHandler.text}");
         }
 
+        //Deserializa el snapshot recibido y lo entrega a VistaPartida y VistaHud.
         private IEnumerator ObtenerPartidaActiva(
             string mensajeExito = "Partida recibida correctamente.",
             string contextoError = "",
@@ -2417,6 +2436,7 @@ public bool PuedeCancelarAccion =>
             aldeanosIdleAvisados.Clear();
         }
 
+        //Detecta Aldeanos humanos sin orden para mostrar un aviso visual, sin cambiar su estado lógico.
         private void ActualizarAvisosAldeanosQuietos(
             EstadoPartidaDto estadoPartida)
         {

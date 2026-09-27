@@ -21,6 +21,7 @@ namespace ImperiosEnGuerra.Vistas
         public event Action VolverSolicitado;
         public event Action SalirSolicitado;
 
+        //Construye la interfaz del menú y deja visible la pantalla principal.
         private void Awake()
         {
             Construir();
@@ -77,6 +78,7 @@ namespace ImperiosEnGuerra.Vistas
                     : new Color(0.82f, 0.9f, 1f);
         }
 
+        //Crea Canvas, paneles y botones en tiempo de ejecución sin lógica de gameplay.
         private void Construir()
         {
             if (canvas != null)

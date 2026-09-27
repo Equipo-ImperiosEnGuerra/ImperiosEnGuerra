@@ -19,6 +19,7 @@ namespace ImperiosEnGuerra.Vistas
             fondo != null &&
             fondo.activeSelf;
 
+        //Construye el menú de pausa y lo deja oculto hasta que el controlador lo solicite.
         private void Awake()
         {
             Construir();
@@ -46,6 +47,7 @@ namespace ImperiosEnGuerra.Vistas
             }
         }
 
+        //Crea la capa visual que bloquea clics sobre la partida mientras el menú está abierto.
         private void Construir()
         {
             if (canvas != null)

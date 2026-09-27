@@ -36,6 +36,7 @@ namespace ImperiosEnGuerra.Vistas
         public event Action VolverMenuSolicitado;
         public event Action SalirSolicitado;
 
+        //Prepara los elementos auxiliares del HUD antes de que lleguen datos de la partida.
         private void Awake()
         {
             AplicarEscalaCompacta();
@@ -577,6 +578,7 @@ namespace ImperiosEnGuerra.Vistas
             rect.offsetMax = offsetMax;
         }
 
+        //Los botones solo publican eventos; el controlador decide qué acción solicitar.
         private void OnEnable()
         {
             if (mover != null) mover.onClick.AddListener(SolicitarMover);
@@ -649,6 +651,7 @@ namespace ImperiosEnGuerra.Vistas
                 recursos.text = $"Oro: {oro} | Madera: {madera} | Comida: {comida}";
         }
 
+        //Convierte los datos visuales de la entidad en información legible para el jugador.
         public void MostrarSeleccion(EntidadSeleccionableVista entidad)
         {
             if (seleccion == null)
@@ -849,6 +852,7 @@ namespace ImperiosEnGuerra.Vistas
                 selectorEntrenamiento.SetActive(mostrar);
         }
 
+        //Muestra únicamente las acciones que el controlador autorizó para la selección actual.
         public void MostrarOpciones(bool puedeMover, bool puedeRecolectar, bool puedeConstruir,
             bool puedeEntrenar, bool puedeAtacar, bool mostrarComoCurar = false,
             bool puedeCancelar = false)
@@ -876,6 +880,7 @@ namespace ImperiosEnGuerra.Vistas
             }
         }
 
+        //Bloquea las acciones y presenta la pantalla de victoria o derrota.
         public void MostrarResultadoFinal(
             string ganador,
             string ganadorNombre,

@@ -61,6 +61,7 @@ namespace ImperiosEnGuerra.Vistas
                 y);
         }
 
+        //Copia los datos del snapshot a la representación visual seleccionable.
         public void Configurar(
             CategoriaEntidadVisual categoria,
             string idLogico,
@@ -101,6 +102,7 @@ namespace ImperiosEnGuerra.Vistas
             AplicarColorVisual();
         }
 
+        //Actualiza los datos mostrados sin decidir reglas ni acciones de gameplay.
         public void ActualizarDatosLogicos(
             int x,
             int y,
@@ -129,6 +131,7 @@ namespace ImperiosEnGuerra.Vistas
             AplicarColorVisual();
         }
 
+        //Muestra sobre el edificio el progreso de la primera orden y el tamaño de la cola.
         public void ActualizarEntrenamientoVisual(
             string tipoUnidad,
             int progreso,
@@ -248,6 +251,7 @@ namespace ImperiosEnGuerra.Vistas
             AplicarColorVisual();
         }
 
+        //Combina vida crítica, ataque y selección únicamente como feedback gráfico.
         private void AplicarColorVisual()
         {
             if (Renderer == null)
