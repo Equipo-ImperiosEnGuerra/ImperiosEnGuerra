@@ -14,11 +14,11 @@ using UnityEngine.SceneManagement;
 
 public static class Fase2VistaConfigurator
 {
+    // Utilidad interna de mantenimiento del Editor. Ya no se expone en el menú final.
     private const string RutaEscena = "Assets/Scenes/SampleScene.unity";
     private const string RutaArte = "Assets/Art/TinySwords/";
     private static GameObject contenidoPrueba;
 
-    [MenuItem("Tools/Imperios en Guerra/Fase 2/Probar unidades visuales")]
     public static void ProbarUnidadesVisuales()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -111,7 +111,6 @@ public static class Fase2VistaConfigurator
         }
     }
 
-    [MenuItem("Tools/Imperios en Guerra/Fase 2/Configurar vista inicial")]
     public static void Configurar()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
