@@ -33,36 +33,24 @@ public static class TinySwordsSpriteConfigurator
     private const int MaximoTamanoTextura = 4096;
 
     // =========================================================
-    // MENÚ
+    // UTILIDADES INTERNAS DE IMPORTACIÓN
     // =========================================================
 
-    [MenuItem(
-        "Tools/Imperios en Guerra/Tiny Swords/Configurar unidades"
-    )]
     public static void ConfigurarUnidades()
     {
         ProcesarUnidades();
     }
 
-    [MenuItem(
-        "Tools/Imperios en Guerra/Tiny Swords/Configurar recursos"
-    )]
     public static void ConfigurarRecursos()
     {
         ProcesarRecursos();
     }
 
-    [MenuItem(
-        "Tools/Imperios en Guerra/Tiny Swords/Configurar edificios"
-    )]
     public static void ConfigurarEdificios()
     {
         ProcesarEdificios();
     }
 
-    [MenuItem(
-        "Tools/Imperios en Guerra/Tiny Swords/Configurar todo"
-    )]
     public static void ConfigurarTodo()
     {
         Debug.Log(
