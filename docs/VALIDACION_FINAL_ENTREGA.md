@@ -261,23 +261,28 @@ El archivo revisado es acumulativo y contiene sesiones históricas de versiones 
 
 La lectura con PowerShell usando `-Encoding UTF8` confirmó que el archivo contiene correctamente caracteres como `daño`, `curación`, `está` y `quedó`. La salida corrupta observada con `type` en CMD era únicamente un problema de página de códigos de la consola, no del archivo.
 
-### resultado_final.txt
+### resultado_final.txt — VALIDADO
 
-Debe contener al menos:
+Validado manualmente sobre una derrota real.
+
+Se comprobó:
 
 - `Estado=Finalizada`;
-- regla de victoria;
-- ganador;
-- perdedores;
-- motivo;
+- `ReglaVictoria=AND`;
+- ganador `CPU Morada`;
+- perdedor Humano;
+- motivo de derrota;
 - sección `[MAPA_FINAL]`;
-- dimensiones;
-- recursos físicos restantes;
-- secciones finales por jugador;
-- saldos;
-- edificios;
-- unidades;
+- dimensiones 15x15;
+- recursos físicos restantes con cantidad;
+- sección final del Humano;
+- secciones finales de las 3 IAs;
+- saldos finales;
+- edificios sobrevivientes;
+- unidades sobrevivientes y vida;
 - obras en curso.
+
+La derrota observada es coherente con la regla AND: el Humano conserva Aldeanos, pero queda sin Centros Urbanos y sin unidades militares.
 
 Conservar una copia de los tres archivos como evidencia de entrega.
 
@@ -338,7 +343,7 @@ La entrega queda lista para congelarse cuando:
 [ ] Smoke test completo
 [ ] configuracion.txt verificado
 [ ] log_partida.txt verificado con evidencia limpia final
-[ ] resultado_final.txt verificado
+[x] resultado_final.txt verificado
 [ ] Build standalone generado
 [ ] Launcher probado
 [ ] Evidencias guardadas
