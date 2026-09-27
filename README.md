@@ -213,7 +213,7 @@ Se generan:
 - `log_partida.txt`;
 - `resultado_final.txt`.
 
-`resultado_final.txt` incluye estado final, regla de victoria, ganador, perdedor y motivo.
+`resultado_final.txt` incluye la regla de victoria, ganador, perdedores, motivo y una instantánea lógica del estado final: dimensiones del mapa, recursos físicos restantes, saldos, edificios, unidades y obras en curso.
 
 ## Ejecutar la API
 
@@ -231,7 +231,7 @@ Suite .NET:
 dotnet test tests/ImperiosEnGuerra.Tests/ImperiosEnGuerra.Tests.csproj
 ```
 
-La suite se utiliza como validación principal del Modelo, servicios, concurrencia, networking opcional, ataques, IA y condición de victoria. Antes de la entrega final debe ejecutarse nuevamente desde `main` junto con las pruebas de Unity y el smoke test del build standalone.
+La suite se utiliza como validación principal del Modelo, servicios, concurrencia, networking opcional, ataques, IA y condición de victoria. La última ejecución sobre `main`, después de los hotfixes del archivo final, terminó con **390 pruebas correctas, 0 con errores y 0 omitidas**. Aún debe completarse la validación final de Unity y el smoke test del build standalone.
 
 Las advertencias de acceso denegado a `log_partida.txt` que aparecen en una prueba son intencionales: esa prueba verifica el manejo controlado de errores de IO.
 
