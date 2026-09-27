@@ -23,6 +23,20 @@ El proyecto utiliza **Unity 6000.6.0f1**.
 
 Los integrantes del equipo deben utilizar la misma versión para reducir problemas de compatibilidad.
 
+## Tiny Swords
+
+Los gráficos de **Tiny Swords (Free Pack)** no se redistribuyen dentro del repositorio.
+
+Al abrir Unity, el proyecto detecta si faltan los assets y ofrece una **instalación automática**: basta con seleccionar la carpeta local `Tiny Swords (Free Pack)`. Unity copia únicamente los recursos requeridos y configura sprites/tileset automáticamente.
+
+Como alternativa se conserva:
+
+```bat
+powershell -ExecutionPolicy Bypass -File scripts\instalar_tinyswords.ps1 -Origen "RUTA_AL_PAQUETE"
+```
+
+Guía completa: `docs/INSTALACION_TINY_SWORDS.md`.
+
 ## Arquitectura
 
 El proyecto utiliza **Modelo - Vista - Controlador (MVC)**:

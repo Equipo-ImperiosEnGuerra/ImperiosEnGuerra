@@ -2,7 +2,7 @@
 
 Imperios en Guerra utiliza **Tiny Swords (Free Pack)** de Pixel Frog.
 
-Los sprites no están incluidos en el repositorio, por lo que deben descargarse antes de abrir el proyecto en Unity.
+Los sprites no están incluidos en el repositorio, por lo que cada integrante debe disponer de su propia copia del paquete.
 
 ## 1. Descargar Tiny Swords
 
@@ -10,11 +10,11 @@ Descargar **Tiny Swords (Free Pack)** desde:
 
 https://pixelfrog-assets.itch.io/tiny-swords
 
-No utilizar la versión antigua del paquete.
+No utilizar una versión distinta del paquete.
 
 ## 2. Extraer el ZIP
 
-Extraer el paquete fuera del repositorio.
+Extraerlo fuera del repositorio.
 
 Ejemplo:
 
@@ -23,47 +23,98 @@ C:\Proyectos\AssetsExternos\TinySwords\
 └── Tiny Swords (Free Pack)\
 ```
 
-No copiar manualmente las carpetas dentro de Unity.
+No es necesario copiar manualmente las carpetas a `Assets/`.
 
-## 3. Ejecutar el instalador
+## 3. Instalación automática desde Unity — RECOMENDADA
 
-Abrir CMD o PowerShell en la raíz del proyecto:
+Abrir el proyecto `ImperiosEnGuerra` en Unity.
+
+Si faltan los gráficos locales, el proyecto lo detecta automáticamente y muestra un diálogo:
 
 ```text
-C:\Proyectos\ImperiosEnGuerra>
+Imperios en Guerra — Tiny Swords
+
+Faltan los gráficos locales de Tiny Swords.
+[Seleccionar carpeta] [Ahora no]
 ```
 
-Ejecutar:
+Seleccionar:
+
+- directamente la carpeta `Tiny Swords (Free Pack)`; o
+- la carpeta padre que contiene `Tiny Swords (Free Pack)`.
+
+El bootstrap del Editor:
+
+1. valida que existan `Buildings`, `Terrain` y `Units`;
+2. copia únicamente los gráficos necesarios;
+3. refresca `AssetDatabase`;
+4. configura unidades, recursos y edificios;
+5. configura el tileset y el sub-sprite de suelo;
+6. guarda y refresca los assets;
+7. confirma que Tiny Swords quedó listo.
+
+No agrega los PNG al repositorio: siguen excluidos mediante `.gitignore`.
+
+## 4. Instalación por terminal — alternativa
+
+El instalador original se mantiene como respaldo.
+
+Desde la raíz del proyecto:
 
 ```bat
 powershell -ExecutionPolicy Bypass -File scripts\instalar_tinyswords.ps1 -Origen "C:\Proyectos\AssetsExternos\TinySwords"
 ```
 
-Si Tiny Swords fue extraído en otra ubicación, cambiar únicamente la ruta indicada en `-Origen`.
+El parámetro `-Origen` puede apuntar a:
 
-El script copiará automáticamente los archivos necesarios al proyecto.
+- la carpeta que contiene `Tiny Swords (Free Pack)`; o
+- directamente a `Tiny Swords (Free Pack)`.
 
-## 4. Verificar
+## 5. Verificación
 
-Si todo salió correctamente aparecerá:
+Después de instalar:
+
+1. esperar a que Unity termine de importar;
+2. revisar la Console;
+3. comprobar que no existan errores;
+4. abrir `Assets/Scenes/SampleScene.unity`;
+5. ejecutar Play.
+
+La configuración manual desde menús antiguos del Editor ya no es necesaria.
+
+## 6. Funcionamiento técnico
+
+La instalación automática utiliza:
 
 ```text
-============================================
- Tiny Swords instalado correctamente.
-============================================
-
-Ahora abra el proyecto en Unity.
+Assets/Editor/TinySwordsBootstrap.cs
 ```
 
-## 5. Abrir Unity
+Al abrir Unity:
 
-1. Abrir Unity Hub.
-2. Abrir el proyecto `ImperiosEnGuerra`.
-3. Esperar a que Unity termine de importar y compilar.
-4. Revisar la Console.
-5. Verificar que no existan errores.
+```text
+¿Están los assets requeridos?
+        │
+        ├── Sí → no hace nada
+        │
+        └── No
+             ↓
+      solicita carpeta
+             ↓
+      valida paquete
+             ↓
+      copia gráficos
+             ↓
+      AssetDatabase.Refresh()
+             ↓
+      TinySwordsSpriteConfigurator
+             ↓
+      TinySwordsImporter
+             ↓
+      proyecto listo
+```
 
-No es necesario configurar manualmente los sprites. El proyecto incluye los archivos `.meta` y herramientas necesarias para conservar su configuración.
+En modo batch la ventana automática se desactiva para no bloquear builds o pruebas automatizadas.
 
 ## Resumen
 
@@ -72,11 +123,11 @@ Descargar Tiny Swords
         ↓
 Extraer ZIP
         ↓
-Ejecutar instalar_tinyswords.ps1
-        ↓
 Abrir Unity
         ↓
-Esperar importación
+Seleccionar carpeta cuando se solicite
+        ↓
+Instalación y configuración automáticas
         ↓
 Ejecutar el proyecto
 ```
