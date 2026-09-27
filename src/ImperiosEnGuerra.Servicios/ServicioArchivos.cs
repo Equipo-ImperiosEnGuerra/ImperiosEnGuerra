@@ -35,6 +35,7 @@ namespace ImperiosEnGuerra.Servicios
             }
 
             this.directorioBase = directorioBase;
+            //Asegura que exista la carpeta donde se guardarán los archivos de la partida.
             Directory.CreateDirectory(directorioBase);
         }
 
@@ -73,6 +74,7 @@ namespace ImperiosEnGuerra.Servicios
             StringBuilder texto = new StringBuilder();
             texto.Append("PARTIDA\n");
 
+            //Genera una sección por participante para conservar una configuración inicial legible.
             for (int i = 0;
                  i < partida.Jugadores.Count;
                  i++)
@@ -204,6 +206,7 @@ namespace ImperiosEnGuerra.Servicios
                 throw new ArgumentNullException(nameof(contenido));
             }
 
+            //Agrega el evento al final para conservar el historial previo de la partida.
             File.AppendAllText(
                 Path.Combine(directorioBase, ArchivoLogPartida), contenido + Environment.NewLine);
         }
@@ -240,6 +243,7 @@ namespace ImperiosEnGuerra.Servicios
                     "La partida debe estar finalizada y tener un ganador antes de guardar el resultado.");
             }
 
+            //Determina los perdedores a partir del ganador registrado al finalizar la partida.
             Jugador[] perdedores =
                 ReferenceEquals(
                     partida.Ganador,
@@ -337,6 +341,7 @@ namespace ImperiosEnGuerra.Servicios
                 mapa.Alto);
             texto.Append("RecursosFisicos:\n");
 
+            //Registra los nodos que todavía permanecen en el mapa al terminar.
             foreach (Recurso recurso
                      in mapa.Recursos
                          .OrderBy(r => r.Tipo)

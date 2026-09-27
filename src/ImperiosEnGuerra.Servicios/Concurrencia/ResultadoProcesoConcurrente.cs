@@ -3,6 +3,9 @@ using ImperiosEnGuerra.Modelo.Acciones;
 
 namespace ImperiosEnGuerra.Servicios.Concurrencia
 {
+    /// <summary>
+    /// Estado final que puede producir un proceso ejecutado en segundo plano.
+    /// </summary>
     public enum EstadoProcesoConcurrente
     {
         Completado,
@@ -19,6 +22,7 @@ namespace ImperiosEnGuerra.Servicios.Concurrencia
         public Guid ProcesoId { get; }
         public string Nombre { get; }
         public EstadoProcesoConcurrente Estado { get; }
+        //Conserva el hilo usado por el worker para poder demostrar la ejecución concurrente.
         public int HiloTrabajoId { get; }
         public ResultadoAccion? Resultado { get; }
         public string? ErrorTecnico { get; }
@@ -39,6 +43,7 @@ namespace ImperiosEnGuerra.Servicios.Concurrencia
             ErrorTecnico = errorTecnico;
         }
 
+        //Crea el mensaje que se publica cuando el trabajo termina normalmente.
         internal static ResultadoProcesoConcurrente Completado(
             Guid procesoId,
             string nombre,
@@ -54,6 +59,7 @@ namespace ImperiosEnGuerra.Servicios.Concurrencia
                 null);
         }
 
+        //Crea el mensaje que informa una cancelación solicitada.
         internal static ResultadoProcesoConcurrente Cancelado(
             Guid procesoId,
             string nombre,
@@ -68,6 +74,7 @@ namespace ImperiosEnGuerra.Servicios.Concurrencia
                 null);
         }
 
+        //Crea el mensaje que conserva el error técnico sin lanzarlo hacia el consumidor.
         internal static ResultadoProcesoConcurrente Fallido(
             Guid procesoId,
             string nombre,

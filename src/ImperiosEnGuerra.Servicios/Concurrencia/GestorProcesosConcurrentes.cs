@@ -13,15 +13,19 @@ namespace ImperiosEnGuerra.Servicios.Concurrencia
     /// </summary>
     public sealed class GestorProcesosConcurrentes : IDisposable
     {
+        //Guarda un token por proceso para poder cancelarlo desde otro hilo de forma segura.
         private readonly ConcurrentDictionary<Guid, CancellationTokenSource> cancelaciones =
             new ConcurrentDictionary<Guid, CancellationTokenSource>();
 
+        //La cola permite entregar resultados entre workers sin bloquear al consumidor.
         private readonly ConcurrentQueue<ResultadoProcesoConcurrente> resultados =
             new ConcurrentQueue<ResultadoProcesoConcurrente>();
 
+        //Mantiene acceso directo al resultado cuando se consulta por el ID del proceso.
         private readonly ConcurrentDictionary<Guid, ResultadoProcesoConcurrente> resultadosPorId =
             new ConcurrentDictionary<Guid, ResultadoProcesoConcurrente>();
 
+        //Interlocked y Volatile usan este valor para impedir nuevos trabajos después de cerrar el gestor.
         private int cerrado;
 
         public ProcesoConcurrente Iniciar(
@@ -46,6 +50,7 @@ namespace ImperiosEnGuerra.Servicios.Concurrencia
                 throw new InvalidOperationException(
                     "No se pudo registrar el proceso concurrente.");
 
+            //Ejecuta el trabajo en ThreadPool para no bloquear el hilo que inició la acción.
             Task finalizacion = Task.Run(() =>
             {
                 int hiloTrabajo = Thread.CurrentThread.ManagedThreadId;
@@ -64,6 +69,7 @@ namespace ImperiosEnGuerra.Servicios.Concurrencia
                             hiloTrabajo,
                             resultado));
                 }
+                //Una cancelación solicitada se informa aparte de un error real del proceso.
                 catch (OperationCanceledException)
                 {
                     PublicarResultado(
@@ -83,6 +89,7 @@ namespace ImperiosEnGuerra.Servicios.Concurrencia
                 }
                 finally
                 {
+                    //Retira y libera el token cuando el worker termina por cualquier motivo.
                     cancelaciones.TryRemove(
                         procesoId,
                         out CancellationTokenSource registrada);
@@ -97,6 +104,7 @@ namespace ImperiosEnGuerra.Servicios.Concurrencia
                 finalizacion);
         }
 
+        //Solicita la cancelación; el trabajo decide cuándo observar el CancellationToken.
         public bool Cancelar(Guid procesoId)
         {
             if (!cancelaciones.TryGetValue(
@@ -146,6 +154,7 @@ namespace ImperiosEnGuerra.Servicios.Concurrencia
             return false;
         }
 
+        //Publica el mismo resultado por ID y por cola para soportar ambas formas de consumo.
         private void PublicarResultado(
             ResultadoProcesoConcurrente resultado)
         {
@@ -165,6 +174,7 @@ namespace ImperiosEnGuerra.Servicios.Concurrencia
 
         public void Dispose()
         {
+            //Garantiza que el cierre se ejecute una sola vez aunque varios hilos llamen Dispose.
             if (Interlocked.Exchange(ref cerrado, 1) != 0)
                 return;
 

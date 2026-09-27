@@ -10,6 +10,7 @@ namespace ImperiosEnGuerra.Servicios.Concurrencia
     {
         public Guid Id { get; }
         public string Nombre { get; }
+        //Permite esperar la terminación del worker sin exponer cómo fue creado.
         public Task Finalizacion { get; }
 
         internal ProcesoConcurrente(
