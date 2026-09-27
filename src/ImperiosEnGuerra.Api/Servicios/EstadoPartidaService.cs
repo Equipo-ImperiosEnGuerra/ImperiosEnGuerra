@@ -289,6 +289,27 @@ public sealed class EstadoPartidaService
         }
     }
 
+    public ResultadoAccion AvanzarMovimientoIdle(
+        Guid unidadId,
+        Coordenada siguiente)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+            {
+                return ResultadoAccion.Fallido(
+                    "No hay una partida activa.");
+            }
+
+            return new OperacionPasoMovimiento()
+                .Ejecutar(
+                    partidaActiva,
+                    unidadId,
+                    siguiente,
+                    permitirMovimientoIdle: true);
+        }
+    }
+
     public ResultadoAproximacionRecurso PrepararAproximacionRecurso(
         RecolectarRequest? request,
         bool permitirOrdenMovimientoActiva = false)
