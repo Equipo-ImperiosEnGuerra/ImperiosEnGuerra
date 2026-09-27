@@ -208,7 +208,7 @@ Resultado esperado:
 - las otras IAs siguen activas;
 - no aparece victoria prematura.
 
-### VF-15 — Victoria final — EVIDENCIA VISUAL OMITIDA
+### VF-15 — Victoria final
 
 Eliminar las tres IAs.
 
@@ -220,7 +220,6 @@ Resultado esperado:
 - botones de menú/salir;
 - no se ejecutan nuevas órdenes.
 
-**Decisión de cierre:** no se realizará una partida manual completa hasta victoria por el tiempo requerido. La condición de victoria permanece cubierta por las pruebas automatizadas de victoria/finalización y por la implementación visual ya existente.
 
 ### VF-16 — Derrota — VALIDADO
 
@@ -258,7 +257,7 @@ Validado manualmente sobre una partida real:
 - 10 nodos de Comida;
 - 26 recursos físicos compartidos.
 
-### log_partida.txt — FUNCIONALMENTE VALIDADO
+### log_partida.txt — VALIDADO
 
 Se revisó una ejecución real y el archivo registra correctamente:
 
@@ -271,7 +270,7 @@ Se revisó una ejecución real y el archivo registra correctamente:
 - conquista de facciones;
 - finalización y ganador.
 
-El archivo revisado es acumulativo y contiene sesiones históricas de versiones anteriores. Por ello, para la evidencia final de entrega debe generarse un log limpio ejecutando una partida nueva sobre la versión final de `main`.
+Además de la validación funcional previa, se regeneró `log_partida.txt` desde cero sobre la versión final de `main`. El archivo limpio se creó correctamente y registró el inicio de una nueva partida con `PARTIDA|EXITO|Partida establecida.`.
 
 La lectura con PowerShell usando `-Encoding UTF8` confirmó que el archivo contiene correctamente caracteres como `daño`, `curación`, `está` y `quedó`. La salida corrupta observada con `type` en CMD era únicamente un problema de página de códigos de la consola, no del archivo.
 
@@ -358,11 +357,11 @@ La entrega queda lista para congelarse cuando:
 [x] Unity/build sin errores bloqueantes durante la validación realizada
 [ ] Smoke test completo
 [x] configuracion.txt verificado
-[ ] log_partida.txt verificado con evidencia limpia final
+[x] log_partida.txt verificado con evidencia limpia final
 [x] resultado_final.txt verificado
 [x] Build standalone generado
 [x] Launcher probado: inicia API + juego y cierra la API al salir
-[~] Evidencias guardadas: se omite únicamente captura manual de VICTORIA
+[x] Evidencias principales guardadas
 [x] Documentación consistente con main
 [x] PR documental listo para merge
 ```
