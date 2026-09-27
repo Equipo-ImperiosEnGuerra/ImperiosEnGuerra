@@ -134,7 +134,7 @@ El README fue actualizado durante esta auditoría para:
 1. ~~Actualizar `README.md` al estado final real.~~ **COMPLETADO**
 2. ~~Documentar la modificación de alcance Humano vs Máquina / networking opcional.~~ **COMPLETADO**
 3. ~~Ejecutar suite .NET desde `main`.~~ **COMPLETADO: 390/390 correctas, 0 errores.**
-4. Ejecutar Unity EditMode/PlayMode y smoke test del build.
+4. Ejecutar Unity EditMode/PlayMode y smoke test del build siguiendo `docs/VALIDACION_FINAL_ENTREGA.md`.
 5. Guardar ejemplos reales de los tres archivos obligatorios después de una partida final.
 6. ~~Crear informe final MVC + concurrencia + networking opcional.~~ **COMPLETADO**
 7. ~~Crear UML basado en el código final.~~ **COMPLETADO**
