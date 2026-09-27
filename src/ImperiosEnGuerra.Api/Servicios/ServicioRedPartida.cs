@@ -16,6 +16,7 @@ public sealed class ServicioRedPartida
     private const int TamanoBuffer = 4096;
     private const int TamanoMaximoMensaje = 65536;
 
+    //Mantiene las conexiones activas sin bloquear cuando varios clientes entran o salen a la vez.
     private readonly ConcurrentDictionary<Guid, ConexionRed>
         conexiones = new();
 
@@ -35,6 +36,7 @@ public sealed class ServicioRedPartida
     public int ClientesConectados =>
         conexiones.Count;
 
+    //Escucha un cliente hasta que se desconecta o se cancela la petición.
     public async Task AtenderClienteAsync(
         WebSocket socket,
         CancellationToken cancellationToken)
@@ -59,6 +61,7 @@ public sealed class ServicioRedPartida
 
         try
         {
+            //Cada conexión mantiene su propia espera asíncrona sin bloquear a las demás.
             while (!cancellationToken.IsCancellationRequested &&
                    socket.State == WebSocketState.Open)
             {
@@ -98,6 +101,7 @@ public sealed class ServicioRedPartida
         }
     }
 
+    //Une los fragmentos de WebSocket hasta reconstruir un mensaje de texto completo.
     private async Task<string?> RecibirTextoAsync(
         WebSocket socket,
         CancellationToken cancellationToken)
@@ -132,6 +136,7 @@ public sealed class ServicioRedPartida
                 0,
                 resultado.Count);
 
+            //Limita el tamaño acumulado para evitar mensajes excesivos en memoria.
             if (memoria.Length >
                 TamanoMaximoMensaje)
             {
@@ -147,6 +152,7 @@ public sealed class ServicioRedPartida
             memoria.ToArray());
     }
 
+    //Serializa una sola respuesta y la envía a todos los clientes conectados.
     private async Task DifundirAsync(
         ResultadoDespachoRed resultado,
         CancellationToken cancellationToken)
@@ -175,11 +181,13 @@ public sealed class ServicioRedPartida
 
         if (envios.Length > 0)
         {
+            //Espera todos los envíos en paralelo sin enviar cliente por cliente.
             await Task.WhenAll(
                 envios);
         }
     }
 
+    //El semáforo evita que dos respuestas escriban al mismo WebSocket al mismo tiempo.
     private async Task EnviarSeguroAsync(
         ConexionRed conexion,
         byte[] bytes,
@@ -237,6 +245,7 @@ public sealed class ServicioRedPartida
         }
     }
 
+    //Agrupa el socket y su bloqueo de envío para cada cliente conectado.
     private sealed class ConexionRed : IDisposable
     {
         public Guid Id { get; }

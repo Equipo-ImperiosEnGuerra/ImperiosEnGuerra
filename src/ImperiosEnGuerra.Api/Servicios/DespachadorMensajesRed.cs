@@ -26,6 +26,7 @@ public sealed class DespachadorMensajesRed
             ?? throw new ArgumentNullException(nameof(acciones));
     }
 
+    //Valida el JSON, identifica el tipo de acción y lo envía al servicio concurrente correspondiente.
     public ResultadoDespachoRed Procesar(
         string? json)
     {
@@ -40,6 +41,7 @@ public sealed class DespachadorMensajesRed
 
         try
         {
+            //Primero deserializa el sobre común antes de interpretar los datos específicos de la acción.
             mensaje =
                 JsonSerializer.Deserialize<MensajeRedPartida>(
                     json,
@@ -78,6 +80,7 @@ public sealed class DespachadorMensajesRed
 
         try
         {
+            //Cada tipo reutiliza exactamente los mismos workers que usan los endpoints REST.
             return tipo switch
             {
                 "MOVER" =>
@@ -148,6 +151,7 @@ public sealed class DespachadorMensajesRed
         }
     }
 
+    //Convierte el campo Datos al contrato concreto esperado por la acción.
     private static T? Deserializar<T>(
         JsonElement datos)
         where T : class
@@ -157,6 +161,7 @@ public sealed class DespachadorMensajesRed
             OpcionesJson);
     }
 
+    //Inicia el proceso concurrente y devuelve su ID para poder seguir el resultado.
     private static ResultadoDespachoRed Iniciar<T>(
         MensajeRedPartida mensaje,
         T? request,
