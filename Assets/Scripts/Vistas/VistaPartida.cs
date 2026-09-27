@@ -10,6 +10,14 @@ namespace ImperiosEnGuerra.Vistas
     {
         [SerializeField] private Camera camara;
         [SerializeField, Min(0.1f)] private float espacioCasilla = 2f;
+
+        // La cuadrícula lógica sigue siendo cuadrada (15x15), pero en una
+        // pantalla panorámica dejar el mismo espaciado X/Y produce grandes
+        // franjas vacías laterales. Estos valores solo afectan a la Vista:
+        // X se adapta al aspecto de la ventana y Y conserva la escala base.
+        private float espacioCasillaXActual = 2f;
+        private float espacioCasillaYActual = 2f;
+
         [SerializeField, Min(0.01f)] private float escalaRecursos = 0.88f;
         [SerializeField, Min(0.01f)] private float escalaEdificios = 0.68f;
         [SerializeField, Min(0.01f)] private float escalaUnidades = 0.80f;
@@ -104,6 +112,10 @@ namespace ImperiosEnGuerra.Vistas
 
             anchoVisual = estado.mapa.ancho;
             altoVisual = estado.mapa.alto;
+
+            ActualizarEspaciadoVisual(
+                estado.mapa);
+
             contenidoGenerado = new GameObject("ContenidoGenerado");
             contenidoGenerado.transform.SetParent(transform, false);
             Transform mapa = CrearContenedor("Mapa");
@@ -941,8 +953,9 @@ namespace ImperiosEnGuerra.Vistas
 
             // Cubrir la casilla completa mantiene el terreno continuo al variar la separación.
             Vector3 escalaSuelo = new Vector3(
-                espacioCasilla * suelo.pixelsPerUnit / suelo.rect.width,
-                espacioCasilla * suelo.pixelsPerUnit / suelo.rect.height, 1f);
+                espacioCasillaXActual * suelo.pixelsPerUnit / suelo.rect.width,
+                espacioCasillaYActual * suelo.pixelsPerUnit / suelo.rect.height,
+                1f);
             for (int x = 0; x < mapa.ancho; x++)
             {
                 for (int y = 0; y < mapa.alto; y++)
@@ -1261,7 +1274,20 @@ namespace ImperiosEnGuerra.Vistas
 
         private Vector3 PosicionVisual(float x, float y)
         {
-            return new Vector3(x * espacioCasilla, y * espacioCasilla, 0f);
+            float espacioX =
+                espacioCasillaXActual > 0f
+                    ? espacioCasillaXActual
+                    : espacioCasilla;
+
+            float espacioY =
+                espacioCasillaYActual > 0f
+                    ? espacioCasillaYActual
+                    : espacioCasilla;
+
+            return new Vector3(
+                x * espacioX,
+                y * espacioY,
+                0f);
         }
 
         public bool ActualizarMovimientoUnidad(
@@ -1353,9 +1379,15 @@ namespace ImperiosEnGuerra.Vistas
 
             // Si la Vista quedó muy atrasada no intenta reproducir una cola
             // histórica: se alinea con el Modelo y continúa desde ahí.
+            float escalaPasoMaxima =
+                Mathf.Max(
+                    espacioCasillaXActual,
+                    espacioCasillaYActual,
+                    espacioCasilla);
+
             if (movimiento.Destinos.Count >= 3 ||
                 distanciaVisual >
-                    espacioCasilla * 3.1f)
+                    escalaPasoMaxima * 3.1f)
             {
                 movimiento.Destinos.Clear();
 
@@ -1474,13 +1506,29 @@ namespace ImperiosEnGuerra.Vistas
         {
             x = 0;
             y = 0;
-            if (anchoVisual <= 0 || altoVisual <= 0 || espacioCasilla <= 0f)
+            float espacioX =
+                espacioCasillaXActual > 0f
+                    ? espacioCasillaXActual
+                    : espacioCasilla;
+
+            float espacioY =
+                espacioCasillaYActual > 0f
+                    ? espacioCasillaYActual
+                    : espacioCasilla;
+
+            if (anchoVisual <= 0 ||
+                altoVisual <= 0 ||
+                espacioX <= 0f ||
+                espacioY <= 0f)
             {
                 return false;
             }
 
-            float columna = posicionMundo.x / espacioCasilla;
-            float fila = posicionMundo.y / espacioCasilla;
+            float columna =
+                posicionMundo.x / espacioX;
+
+            float fila =
+                posicionMundo.y / espacioY;
             // Casillas centradas en enteros: borde inferior incluido, superior excluido.
             // Esta comparación también rechaza NaN e infinitos sin convertirlos a int.
             if (!(columna >= -0.5f && columna < anchoVisual - 0.5f &&
@@ -1572,6 +1620,45 @@ namespace ImperiosEnGuerra.Vistas
             return objeto;
         }
 
+        private void ActualizarEspaciadoVisual(
+            MapaEstadoDto mapa)
+        {
+            espacioCasillaYActual =
+                Mathf.Max(
+                    espacioCasilla,
+                    0.1f);
+
+            if (mapa == null ||
+                mapa.ancho <= 0 ||
+                mapa.alto <= 0 ||
+                camara == null)
+            {
+                espacioCasillaXActual =
+                    espacioCasillaYActual;
+
+                return;
+            }
+
+            float aspectoPantalla =
+                Mathf.Max(
+                    camara.aspect,
+                    0.01f);
+
+            // Hace que el rectángulo visual del mapa tenga aproximadamente
+            // el mismo aspecto que la ventana. La cuadrícula lógica, reglas,
+            // pathfinding y coordenadas del Modelo no cambian.
+            espacioCasillaXActual =
+                espacioCasillaYActual *
+                aspectoPantalla *
+                mapa.alto /
+                mapa.ancho;
+
+            espacioCasillaXActual =
+                Mathf.Max(
+                    espacioCasillaXActual,
+                    0.1f);
+        }
+
         private void AjustarCamara(MapaEstadoDto mapa)
         {
             if (camara == null)
@@ -1581,14 +1668,44 @@ namespace ImperiosEnGuerra.Vistas
             }
 
             camara.orthographic = true;
-            camara.transform.position = PosicionVisual((mapa.ancho - 1) / 2f, (mapa.alto - 1) / 2f)
-                + new Vector3(0f, 0f, -10f);
-            camara.transform.rotation = Quaternion.identity;
-            float aspecto = Mathf.Max(camara.aspect, 0.01f);
-            camara.orthographicSize = Mathf.Max(
-                mapa.alto * espacioCasilla / 2f,
-                mapa.ancho * espacioCasilla / (2f * aspecto)) +
-                espacioCasilla * 0.35f;
+            camara.transform.position =
+                PosicionVisual(
+                    (mapa.ancho - 1) / 2f,
+                    (mapa.alto - 1) / 2f) +
+                new Vector3(
+                    0f,
+                    0f,
+                    -10f);
+
+            camara.transform.rotation =
+                Quaternion.identity;
+
+            float aspecto =
+                Mathf.Max(
+                    camara.aspect,
+                    0.01f);
+
+            float mitadAlto =
+                mapa.alto *
+                espacioCasillaYActual /
+                2f;
+
+            float mitadAncho =
+                mapa.ancho *
+                espacioCasillaXActual /
+                (2f * aspecto);
+
+            float margen =
+                Mathf.Min(
+                    espacioCasillaXActual,
+                    espacioCasillaYActual) *
+                0.18f;
+
+            camara.orthographicSize =
+                Mathf.Max(
+                    mitadAlto,
+                    mitadAncho) +
+                margen;
         }
     }
 }
