@@ -274,7 +274,7 @@ Suite .NET:
 dotnet test tests/ImperiosEnGuerra.Tests/ImperiosEnGuerra.Tests.csproj
 ```
 
-La suite se utiliza como validación principal del Modelo, servicios, concurrencia, networking opcional, ataques, IA y condición de victoria. La última ejecución validada terminó con **390 pruebas correctas, 0 con errores y 0 omitidas**. El build Windows standalone también fue generado y ejecutado correctamente. El launcher inicia la API, abre el juego y detiene la API al cerrar. Las evidencias manuales restantes están consolidadas en `docs/PLAN_DE_VALIDACION.md`.
+La suite se utiliza como validación principal del Modelo, servicios, concurrencia, networking opcional, ataques, IA y condición de victoria. La última ejecución validada terminó con **390 pruebas correctas, 0 con errores y 0 omitidas**. El build Windows standalone también fue generado y ejecutado correctamente. El launcher inicia la API, abre el juego y detiene la API al cerrar.
 
 Las advertencias de acceso denegado a `log_partida.txt` que aparecen en una prueba son intencionales: esa prueba verifica el manejo controlado de errores de IO.
 
@@ -305,11 +305,11 @@ Issue → Branch → Desarrollo → Pruebas → Commit → Pull Request → Deve
 
 La versión estable actual incluye el cierre de Fase 7, optimización de snapshots para reducir micro-freezes, menú e instrucciones actualizados y estrategia militar diferenciada para las tres IAs.
 
-Documentación del proyecto:
-- `docs/GUIA_DE_COMPILACION_Y_EJECUCION.md`
-- `docs/MATRIZ_DE_CUMPLIMIENTO_DE_REQUISITOS.md`
+Documentación formal exigida por la guía:
 - `docs/INFORME_TECNICO.md`
 - `docs/DIAGRAMA_DE_CLASES.md`
 - `docs/DIAGRAMA_DE_FLUJO.md`
 - `docs/PRUEBAS_DE_ESCRITORIO.md`
-- `docs/PLAN_DE_VALIDACION.md`
+
+Documentación operativa para preparar los recursos gráficos:
+- `docs/INSTALACION_TINY_SWORDS.md`
