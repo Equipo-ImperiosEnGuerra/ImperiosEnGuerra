@@ -50,9 +50,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
                 if (unidad is Aldeano)
                 {
                     // Los Aldeanos humanos permanecen quietos cuando están
-                    // inactivos para que el HUD pueda detectarlos y avisar al
-                    // jugador. El paseo ambiental se reserva exclusivamente
-                    // para las facciones controladas por IA.
+                    // inactivos. El paseo ambiental queda reservado a las IAs.
                     continue;
                 }
 
@@ -105,6 +103,90 @@ namespace ImperiosEnGuerra.Modelo.Combate
                    !unidad.Destruida &&
                    unidad.Disponible &&
                    !unidad.OrdenActiva.HasValue;
+        }
+
+        private static Coordenada BuscarDestinoIdle(
+            Partida partida,
+            Jugador propietario,
+            Aldeano aldeano)
+        {
+            Mapa mapa =
+                propietario.Mapa;
+
+            // El paseo ambiental es deliberadamente corto y ortogonal:
+            // una sola casilla por vez evita movimientos diagonales caóticos
+            // y reduce el número de rutas concurrentes activas.
+            (int X, int Y)[] desplazamientos =
+            {
+                (1, 0),
+                (0, 1),
+                (-1, 0),
+                (0, -1)
+            };
+
+            int semilla =
+                (aldeano.Id.GetHashCode() ^
+                 aldeano.Coordenada.X * 17 ^
+                 aldeano.Coordenada.Y * 31)
+                & int.MaxValue;
+
+            int inicio =
+                semilla %
+                desplazamientos.Length;
+
+            for (int i = 0;
+                 i < desplazamientos.Length;
+                 i++)
+            {
+                (int X, int Y) desplazamiento =
+                    desplazamientos[
+                        (inicio + i) %
+                        desplazamientos.Length];
+
+                var candidata =
+                    new Coordenada(
+                        aldeano.Coordenada.X +
+                            desplazamiento.X,
+                        aldeano.Coordenada.Y +
+                            desplazamiento.Y);
+
+                Casilla casilla =
+                    mapa.ObtenerCasilla(
+                        candidata.X,
+                        candidata.Y);
+
+                if (casilla == null ||
+                    !casilla.EsTransitable ||
+                    !mapa.PuedeColocar(
+                        candidata) ||
+                    partida.Jugadores.Any(
+                        jugador =>
+                            HayUnidadEn(
+                                jugador,
+                                candidata,
+                                aldeano.Id)))
+                {
+                    continue;
+                }
+
+                return candidata;
+            }
+
+            return null;
+        }
+
+        private static bool HayUnidadEn(
+            Jugador jugador,
+            Coordenada posicion,
+            Guid ignorarId)
+        {
+            return jugador.Unidades.Any(
+                u =>
+                    u != null &&
+                    u.Id != ignorarId &&
+                    u.Coordenada != null &&
+                    u.Coordenada.X == posicion.X &&
+                    u.Coordenada.Y == posicion.Y);
         }
 
         private static Unidad BuscarAliadoHerido(
