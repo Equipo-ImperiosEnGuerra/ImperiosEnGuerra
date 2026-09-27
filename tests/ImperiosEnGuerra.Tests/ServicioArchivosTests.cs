@@ -175,6 +175,47 @@ namespace ImperiosEnGuerra.Tests.Editor
             Assert.That(File.Exists(Ruta("resultado_final.txt")), Is.False);
         }
 
+        [Test]
+        public void GuardarResultadoPartidaFinalizada_IncluyeEstadoFinalDelMapa()
+        {
+            ServicioArchivos servicio =
+                new ServicioArchivos(
+                    directorioTemporal);
+
+            Partida partida =
+                CrearPartidaValida();
+
+            Assert.That(
+                partida.IntentarFinalizar(
+                    partida.JugadorHumano,
+                    "Prueba final"),
+                Is.True);
+
+            servicio.GuardarResultadoPartidaFinalizada(
+                partida);
+
+            string contenido =
+                File.ReadAllText(
+                    Ruta("resultado_final.txt"));
+
+            VerificarLineas(
+                contenido,
+                "Estado=Finalizada",
+                "GanadorNombre=Ana",
+                "[MAPA_FINAL]",
+                "Ancho=5",
+                "Alto=4",
+                "RecursosFisicos:",
+                "Oro=(1,0);Cantidad=100",
+                "Madera=(2,0);Cantidad=100",
+                "Comida=(3,0);Cantidad=100",
+                "[JUGADOR_HUMANO_FINAL]",
+                "Nombre=Ana",
+                "CentroUrbano=(0,0);Vida=300/300",
+                "Aldeano=(0,1);Vida=60/60",
+                "ObrasConstruccion:");
+        }
+
         private string Ruta(string nombre)
         {
             return Path.Combine(directorioTemporal, nombre);

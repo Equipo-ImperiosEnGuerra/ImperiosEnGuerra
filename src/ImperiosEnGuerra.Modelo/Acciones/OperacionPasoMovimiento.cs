@@ -14,7 +14,8 @@ namespace ImperiosEnGuerra.Modelo.Acciones
         public ResultadoAccion Ejecutar(
             Partida partida,
             Guid unidadId,
-            Coordenada siguiente)
+            Coordenada siguiente,
+            bool permitirMovimientoIdle = false)
         {
             if (partida == null)
                 return ResultadoAccion.Fallido(
@@ -33,7 +34,14 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     .First(
                         u => u.Id == unidadId);
 
-            if (unidad.OrdenActiva != TipoAccionJuego.Mover)
+            bool esPaseoIdleValido =
+                permitirMovimientoIdle &&
+                unidad is Aldeano &&
+                unidad.Disponible &&
+                !unidad.OrdenActiva.HasValue;
+
+            if (unidad.OrdenActiva != TipoAccionJuego.Mover &&
+                !esPaseoIdleValido)
             {
                 return ResultadoAccion.Fallido(
                     "La unidad no tiene una orden de movimiento activa.");

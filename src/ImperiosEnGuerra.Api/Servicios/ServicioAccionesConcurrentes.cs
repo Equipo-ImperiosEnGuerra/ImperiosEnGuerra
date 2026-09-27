@@ -41,6 +41,13 @@ public sealed class ServicioAccionesConcurrentes
     private readonly ConfiguracionEntrenamiento configuracionEntrenamiento;
     private bool usarIntervaloCombateConfigurado;
 
+    /// <summary>
+    /// Notifica un impacto de ataque ya aplicado al Modelo.
+    /// Se usa para reacciones defensivas sin acoplar la operación de combate
+    /// con la política de IA.
+    /// </summary>
+    public event Action<Guid, Guid>? ImpactoAplicado;
+
 
     // ============================================================
     // CONSTRUCTOR USADO POR LA API MEDIANTE INYECCIÓN DE DEPENDENCIAS
@@ -407,7 +414,7 @@ public sealed class ServicioAccionesConcurrentes
                     }
 
                     ResultadoAccion resultado =
-                        estadoPartida.AvanzarMovimiento(
+                        estadoPartida.AvanzarMovimientoIdle(
                             unidadId,
                             paso);
 
@@ -1277,6 +1284,10 @@ public sealed class ServicioAccionesConcurrentes
                             return ultimoImpacto;
                         }
 
+                        NotificarImpactoSeguro(
+                            unidadId,
+                            objetivoId);
+
                         if (estadoPartida.EstaFinalizada() ||
                             !estadoPartida.ExisteEntidad(
                                 objetivoId))
@@ -1300,6 +1311,26 @@ public sealed class ServicioAccionesConcurrentes
             proceso);
 
         return proceso;
+    }
+
+
+    private void NotificarImpactoSeguro(
+        Guid atacanteId,
+        Guid objetivoId)
+    {
+        try
+        {
+            ImpactoAplicado?.Invoke(
+                atacanteId,
+                objetivoId);
+        }
+        catch (Exception ex)
+        {
+            // Una reacción auxiliar no debe invalidar el impacto que ya fue
+            // aplicado correctamente al Modelo.
+            Console.WriteLine(
+                $"REACCION_DEFENSIVA_IA_ERROR: {ex.Message}");
+        }
     }
 
 

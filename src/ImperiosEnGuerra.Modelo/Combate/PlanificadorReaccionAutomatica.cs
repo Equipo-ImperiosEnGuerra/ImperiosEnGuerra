@@ -47,22 +47,10 @@ namespace ImperiosEnGuerra.Modelo.Combate
                     continue;
                 }
 
-                if (unidad is Aldeano aldeano)
+                if (unidad is Aldeano)
                 {
-                    Coordenada destinoIdle =
-                        BuscarDestinoIdle(
-                            partida,
-                            humano,
-                            aldeano);
-
-                    if (destinoIdle != null)
-                    {
-                        reacciones.Add(
-                            new ReaccionAutomatica(
-                                aldeano.Id,
-                                destinoIdle));
-                    }
-
+                    // Los Aldeanos humanos permanecen quietos cuando están
+                    // inactivos. El paseo ambiental queda reservado a las IAs.
                     continue;
                 }
 
