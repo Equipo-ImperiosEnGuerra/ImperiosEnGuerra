@@ -17,8 +17,8 @@
 | Requisito de la guía | Estado | Evidencia actual | Acción final |
 |---|---|---|---|
 | C# + Unity, build de escritorio | CUMPLE | Build Windows generado y ejecutado correctamente; launcher inicia API + juego y detiene la API al cerrar; HUD standalone validado | Mantener evidencia final |
-| Código orientado a objetos | CUMPLE | Jerarquías `Unidad`, `Soldado`, `Edificio`; clases `Jugador`, `Mapa`, `Partida`, recursos y operaciones | Documentar clases fundamentales en UML |
-| MVC claro | CUMPLE | `src/ImperiosEnGuerra.Modelo`, `Assets/Scripts/Vistas`, `Assets/Scripts/Controladores`; Modelo sin UnityEngine | Explicar responsabilidades y flujo en informe |
+| Código orientado a objetos | CUMPLE | Jerarquías `Unidad`, `Soldado`, `Edificio`; clases `Jugador`, `Mapa`, `Partida`, recursos y operaciones; `docs/UML_FINAL.md` | Ninguna |
+| MVC claro | CUMPLE | `src/ImperiosEnGuerra.Modelo`, `Assets/Scripts/Vistas`, `Assets/Scripts/Controladores`; Modelo sin UnityEngine; explicado en `docs/INFORME_TECNICO_FINAL.md` | Ninguna |
 | Mapa lógico y representación gráfica | CUMPLE | `Mapa`, `Casilla`, `VistaPartida`, escena Unity | Evidencia visual final |
 | Oro, Madera y Comida | CUMPLE | `TipoRecurso`, `Recurso`, `RecursosJugador`, HUD | Ninguna |
 | Centro Urbano inicial | CUMPLE | `CentroUrbano`, `InicializadorPartida` | Ninguna |
@@ -57,7 +57,7 @@
 | Diagrama de clases UML | CUMPLE | `docs/UML_FINAL.md` contiene diagrama Mermaid basado en las clases y relaciones reales | Revisión final de consistencia |
 | Diagrama de flujo | CUMPLE | `docs/DIAGRAMA_FLUJO_FINAL.md` documenta flujo general, acciones concurrentes, recolección, construcción, entrenamiento, combate, IA y pausa | Revisión final de consistencia |
 | Pruebas de escritorio formales | CUMPLE / VALIDAR | `docs/PRUEBAS_ESCRITORIO_FINAL.md` formaliza casos normales, inválidos, límite y concurrentes; las pruebas manuales finales siguen pendientes | Completar evidencia manual y build |
-| Documentación formal | PENDIENTE DOCUMENTAR | Existen README y documentos por fase | Consolidar entrega final |
+| Documentación formal | CUMPLE / VALIDAR EVIDENCIA | README, auditoría, informe técnico, UML, diagramas de flujo, pruebas de escritorio y checklist de validación final consolidados | Conservar evidencias finales pendientes indicadas en el checklist |
 
 ## Hallazgos importantes
 
@@ -140,4 +140,4 @@ El README fue actualizado durante esta auditoría para:
 7. ~~Crear UML basado en el código final.~~ **COMPLETADO**
 8. ~~Crear diagrama de flujo.~~ **COMPLETADO**
 9. ~~Crear documento de pruebas de escritorio.~~ **COMPLETADO; faltan evidencias manuales indicadas dentro del documento.**
-10. Hacer revisión final de consistencia entre documentación y código.
+10. ~~Hacer revisión final de consistencia entre documentación y código.~~ **COMPLETADO para el PR documental; quedan únicamente evidencias manuales señaladas en el checklist.**
