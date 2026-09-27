@@ -311,8 +311,7 @@ namespace ImperiosEnGuerra.Servicios
                 AgregarJugadorFinal(
                     texto,
                     partida,
-                    partida.Jugadores[i],
-                    i);
+                    partida.Jugadores[i]);
             }
 
             GuardarResultadoFinal(
@@ -357,8 +356,7 @@ namespace ImperiosEnGuerra.Servicios
         private static void AgregarJugadorFinal(
             StringBuilder texto,
             Partida partida,
-            Jugador jugador,
-            int indice)
+            Jugador jugador)
         {
             string seccion;
 
