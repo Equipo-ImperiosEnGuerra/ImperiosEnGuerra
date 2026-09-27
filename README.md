@@ -21,12 +21,72 @@ Proyecto académico de Programación Orientada a Objetos desarrollado en C# y Un
 
 **Versión requerida de Unity:** `6000.6.0f1`.
 
-## Inicio rápido en una PC nueva
+## Inicio rápido
 
-Para una copia recién descargada/clonada, **no abra Unity primero**. En Windows:
+La forma recomendada depende de si se usa un **paquete de Release** ya construido o una copia del **código fuente**.
+
+### Opción A — Ejecutar un paquete de Release
+
+Los paquetes publicados en GitHub ya incluyen el build de escritorio correspondiente, por lo que **no requieren Unity ni Tiny Swords para jugar**.
+
+Requisito común:
+
+- **.NET 10 SDK** instalado y disponible en `PATH`, porque el launcher inicia la API local con `dotnet run`.
+
+#### Windows x64
+
+1. descargue y extraiga `ImperiosEnGuerra-v1.0.0-Entrega-Windows.zip`;
+2. abra una terminal en la carpeta extraída;
+3. ejecute:
+
+```bat
+scripts\ejecutar-juego.bat
+```
+
+El launcher:
+
+```text
+inicia la API local
+        ↓
+espera a que responda
+        ↓
+abre Builds/Windows/ImperiosEnGuerra.exe
+        ↓
+al cerrar el juego, detiene la API
+```
+
+#### Linux x64
+
+1. descargue y extraiga `ImperiosEnGuerra-v1.0.0-Entrega-Linux.zip`;
+2. abra una terminal en la carpeta extraída;
+3. dé permiso de ejecución al launcher si hace falta:
+
+```bash
+chmod +x scripts/ejecutar-juego.sh
+```
+
+4. ejecute:
+
+```bash
+./scripts/ejecutar-juego.sh
+```
+
+El launcher inicia la API local, ejecuta `Builds/Linux/ImperiosEnGuerra.x86_64` y detiene la API al salir.
+
+> Si Linux informa que el ejecutable no tiene permiso, puede ejecutar también:
+>
+> ```bash
+> chmod +x Builds/Linux/ImperiosEnGuerra.x86_64
+> ```
+
+### Opción B — Preparar el proyecto desde el código fuente
+
+En una copia recién descargada o clonada, **no abra Unity antes de instalar Tiny Swords**, porque los PNG externos deben quedar asociados a los `.meta` versionados por el proyecto.
+
+#### Windows — código fuente
 
 1. descargue y extraiga **Tiny Swords (Free Pack)** fuera del repositorio;
-2. ejecute desde la raíz:
+2. desde la raíz ejecute:
 
 ```bat
 PREPARAR_PROYECTO.bat
@@ -34,19 +94,65 @@ PREPARAR_PROYECTO.bat
 
 3. el asistente comprueba **.NET 10 SDK**, muestra la versión de Unity requerida, protege los `.meta` versionados y solicita la carpeta local de Tiny Swords si hace falta;
 4. abra el proyecto con **Unity 6000.6.0f1**;
-5. genere una vez:
+5. espere a que Unity termine de importar y compilar;
+6. genere:
 
 ```text
 Imperios en Guerra > Build > Build Windows x64
 ```
 
-6. ejecute el juego con:
+7. ejecute:
 
 ```bat
 scripts\ejecutar-juego.bat
 ```
 
-`Builds/` no se versiona, por lo que una descarga del código fuente necesita generar el ejecutable una vez antes de usar el launcher.
+#### Linux — código fuente
+
+1. instale **.NET 10 SDK**, **PowerShell (`pwsh`)** y **Unity 6000.6.0f1**;
+2. descargue y extraiga **Tiny Swords (Free Pack)** fuera del repositorio;
+3. desde la raíz, antes de abrir Unity, instale los gráficos con:
+
+```bash
+pwsh ./scripts/instalar_tinyswords.ps1 -Origen "/ruta/a/Tiny Swords (Free Pack)"
+```
+
+4. restaure las dependencias de la API:
+
+```bash
+dotnet restore src/ImperiosEnGuerra.Api/ImperiosEnGuerra.Api.csproj
+```
+
+5. abra el proyecto con **Unity 6000.6.0f1** y espere a que finalice la importación;
+6. genere:
+
+```text
+Imperios en Guerra > Build > Build Linux x64
+```
+
+7. dé permiso de ejecución al launcher:
+
+```bash
+chmod +x scripts/ejecutar-juego.sh
+```
+
+8. ejecute:
+
+```bash
+./scripts/ejecutar-juego.sh
+```
+
+### Rutas de build esperadas
+
+```text
+Windows:
+Builds/Windows/ImperiosEnGuerra.exe
+
+Linux:
+Builds/Linux/ImperiosEnGuerra.x86_64
+```
+
+`Builds/` no se versiona en Git. Por eso una descarga del **código fuente** necesita generar el ejecutable una vez; los paquetes publicados en **Releases** ya incluyen el build correspondiente.
 
 ## Tiny Swords
 
@@ -270,7 +376,7 @@ Suite .NET:
 dotnet test tests/ImperiosEnGuerra.Tests/ImperiosEnGuerra.Tests.csproj
 ```
 
-La suite se utiliza como validación principal del Modelo, servicios, concurrencia, networking opcional, ataques, IA y condición de victoria. La última ejecución validada terminó con **390 pruebas correctas, 0 con errores y 0 omitidas**. El build Windows standalone también fue generado y ejecutado correctamente. El launcher inicia la API, abre el juego y detiene la API al cerrar.
+La suite se utiliza como validación principal del Modelo, servicios, concurrencia, networking opcional, ataques, IA y condición de victoria. La última ejecución validada terminó con **390 pruebas correctas, 0 con errores y 0 omitidas**. Los paquetes standalone de **Windows x64 y Linux x64** fueron generados y validados. En ambas plataformas el launcher inicia la API local, abre el juego y detiene la API al cerrar.
 
 Las advertencias de acceso denegado a `log_partida.txt` que aparecen en una prueba son intencionales: esa prueba verifica el manejo controlado de errores de IO.
 
