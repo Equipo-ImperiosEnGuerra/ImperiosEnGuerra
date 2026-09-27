@@ -258,13 +258,11 @@ Issue → Branch → Desarrollo → Pruebas → Commit → Pull Request → Deve
 - Fase 5: **TERMINADA**
 - Fase 6: **TERMINADA**
 - Fase 7: **TERMINADA E INTEGRADA EN MAIN**
-- Auditoría y documentación final: **EN DESARROLLO**
+- Auditoría y documentación final: **TERMINADA**
 
 La versión estable actual incluye el cierre de Fase 7, optimización de snapshots para reducir micro-freezes, menú e instrucciones actualizados y estrategia militar diferenciada para las tres IAs.
 
-Documentación relevante:
-- `docs/FASE_5_AVANCES_Y_ESTADO_CERRADA.md`
-- `docs/FASE_6_AVANCES_Y_ESTADO_CERRADA.md`
+Documentación final relevante:
 - `docs/BUILD_Y_EJECUCION.md`
 - `docs/AUDITORIA_FINAL_GUIA.md`
 - `docs/INFORME_TECNICO_FINAL.md`
