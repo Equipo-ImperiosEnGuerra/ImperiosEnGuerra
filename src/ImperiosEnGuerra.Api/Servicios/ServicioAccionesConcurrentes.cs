@@ -414,7 +414,7 @@ public sealed class ServicioAccionesConcurrentes
                     }
 
                     ResultadoAccion resultado =
-                        estadoPartida.AvanzarMovimiento(
+                        estadoPartida.AvanzarMovimientoIdle(
                             unidadId,
                             paso);
 
