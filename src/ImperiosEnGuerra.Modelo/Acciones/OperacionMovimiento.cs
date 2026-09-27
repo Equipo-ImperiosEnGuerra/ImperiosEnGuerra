@@ -14,6 +14,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
             Partida partida,
             SolicitudMovimiento solicitud)
         {
+            //Primero calcula y valida la ruta; esta operación no decide por dónde moverse.
             ResultadoPlanMovimiento plan =
                 new PlanificadorMovimiento()
                     .Preparar(
@@ -43,6 +44,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                             u.Id ==
                             solicitud.UnidadId);
 
+            //El movimiento inmediato conserva compatibilidad moviendo directamente al destino validado.
             if (plan.Pasos.Count > 0)
             {
                 unidad.EstablecerDestino(

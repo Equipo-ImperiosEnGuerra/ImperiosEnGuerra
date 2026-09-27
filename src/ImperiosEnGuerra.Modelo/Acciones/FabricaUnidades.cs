@@ -4,6 +4,9 @@ using ImperiosEnGuerra.Modelo.Unidades;
 
 namespace ImperiosEnGuerra.Modelo.Acciones
 {
+    /// <summary>
+    /// Crea la clase concreta de unidad solicitada en una posición lógica.
+    /// </summary>
     public static class FabricaUnidades
     {
         public static Unidad Crear(
@@ -16,6 +19,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                 return null;
             }
 
+            //Compara sin distinguir mayúsculas para aceptar el mismo nombre desde API o Unity.
             if (string.Equals(tipoUnidad, nameof(Aldeano), StringComparison.OrdinalIgnoreCase))
                 return new Aldeano(coordenada);
             if (string.Equals(tipoUnidad, nameof(Guerrero), StringComparison.OrdinalIgnoreCase))

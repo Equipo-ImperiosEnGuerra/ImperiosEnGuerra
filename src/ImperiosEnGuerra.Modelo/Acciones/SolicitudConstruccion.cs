@@ -3,6 +3,9 @@ using ImperiosEnGuerra.Modelo.Map;
 
 namespace ImperiosEnGuerra.Modelo.Acciones
 {
+    /// <summary>
+    /// Identifica al Aldeano, el tipo de edificio y la casilla donde se quiere construir.
+    /// </summary>
     public sealed class SolicitudConstruccion : SolicitudAccion
     {
         public Guid AldeanoId { get; }

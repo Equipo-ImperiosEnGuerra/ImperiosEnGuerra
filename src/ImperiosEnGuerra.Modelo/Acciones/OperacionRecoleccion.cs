@@ -7,6 +7,9 @@ using ImperiosEnGuerra.Modelo.Unidades;
 
 namespace ImperiosEnGuerra.Modelo.Acciones
 {
+    /// <summary>
+    /// Valida que un Aldeano pueda iniciar una recolección sobre un recurso existente.
+    /// </summary>
     public sealed class OperacionRecoleccion
     {
         public ResultadoAccion Ejecutar(
@@ -53,6 +56,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                 return ResultadoAccion.Fallido(
                     "El objetivo está fuera del mapa.");
 
+            //La solicitud apunta a una posición; el mapa resuelve el nodo físico que existe allí.
             Recurso recurso = mapa.ObtenerRecursoEn(objetivo);
 
             if (recurso == null)

@@ -34,6 +34,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     .First(
                         u => u.Id == unidadId);
 
+            //El paseo ambiental de un Aldeano IA puede avanzar sin registrar una orden de movimiento normal.
             bool esPaseoIdleValido =
                 permitirMovimientoIdle &&
                 unidad is Aldeano &&
@@ -92,6 +93,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     "El paso contiene un recurso físico.");
             }
 
+            //Se distingue entre aliados y enemigos porque solo los aliados pueden atravesarse temporalmente.
             bool hayUnidadAliada =
                 partida.Jugadores
                     .Where(
@@ -168,6 +170,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                 origen.Liberar();
             }
 
+            //La posición lógica cambia solo después de superar todas las validaciones del paso.
             unidad.EstablecerDestino(
                 siguiente);
 

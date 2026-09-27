@@ -7,6 +7,9 @@ using ImperiosEnGuerra.Modelo.Unidades;
 
 namespace ImperiosEnGuerra.Modelo.Acciones
 {
+    /// <summary>
+    /// Valida una construcción terminada y agrega el edificio al estado del jugador.
+    /// </summary>
     public sealed class OperacionConstruccion
     {
         public ResultadoAccion Ejecutar(
@@ -60,6 +63,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                 return ResultadoAccion.Fallido(
                     "El tipo de edificio es obligatorio.");
 
+            //Por ahora el único edificio permitido por las reglas del proyecto es el Centro Urbano.
             if (!string.Equals(
                 solicitud.TipoEdificio,
                 nameof(CentroUrbano),
@@ -69,6 +73,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     "El tipo de edificio indicado no está permitido.");
             }
 
+            //La entidad lógica se crea en la misma casilla validada para la construcción.
             CentroUrbano edificio =
                 new CentroUrbano(solicitud.Destino);
 

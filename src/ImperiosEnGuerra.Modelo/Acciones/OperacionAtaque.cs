@@ -8,6 +8,9 @@ using ImperiosEnGuerra.Modelo.Unidades;
 
 namespace ImperiosEnGuerra.Modelo.Acciones
 {
+    /// <summary>
+    /// Valida un impacto de combate, aplica el daño y retira entidades destruidas.
+    /// </summary>
     public sealed class OperacionAtaque
     {
         public ResultadoAccion Ejecutar(
@@ -46,6 +49,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     "La unidad atacante no es una unidad militar ofensiva permitida.");
             }
 
+            //El objetivo puede ser una unidad o un edificio enemigo.
             Jugador objetivoPropietario =
                 partida.BuscarJugadorPorUnidad(
                     solicitud.ObjetivoId)
@@ -145,6 +149,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     $"Edificio {objetivoEdificio.GetType().Name}";
             }
 
+            //Si sobrevive al impacto, la operación termina sin retirar la entidad del mapa.
             if (vidaRestante > 0)
             {
                 return ResultadoAccion.Exitoso(
@@ -167,12 +172,14 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                 LiberarCasilla(objetivoPropietario.Mapa, objetivoEdificio.Coordenada);
             }
 
+            //Después de destruir una entidad se vuelve a comprobar si esa facción fue eliminada.
             EvaluacionVictoria evaluacion =
                 new EvaluadorVictoria()
                     .Evaluar(
                         partida,
                         objetivoPropietario);
 
+            //El Centro de conquista solo aparece al eliminar por primera vez una IA.
             bool centroConquistaCreado =
                 !objetivoYaEliminadoAntesDelImpacto &&
                 evaluacion.HayVictoria &&
@@ -206,6 +213,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                 mensaje);
         }
 
+        //Intenta ocupar la casilla liberada para establecer el nuevo Centro Urbano humano.
         private static bool IntentarCrearCentroConquista(
             Partida partida,
             Coordenada posicion)

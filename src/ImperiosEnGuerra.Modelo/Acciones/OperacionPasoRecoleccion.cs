@@ -97,6 +97,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     "El Aldeano debe estar junto al recurso para recolectar.");
             }
 
+            //Un recurso agotado termina el ciclo sin tratarlo como error de ejecución.
             if (recurso.Agotado)
             {
                 return ResultadoPasoRecoleccion.Exitoso(
@@ -107,6 +108,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     recurso.Tipo);
             }
 
+            //Una carga llena también finaliza el paso para que el flujo continúe hacia el depósito.
             if (aldeano.CapacidadDisponible <= 0)
             {
                 return ResultadoPasoRecoleccion.Exitoso(
@@ -125,6 +127,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     "El Aldeano debe depositar su carga actual antes de recolectar otro tipo de recurso.");
             }
 
+            //La extracción real se delega al Aldeano, que protege su carga y al recurso compartido.
             int extraida =
                 aldeano.RecolectarDesde(
                     recurso,

@@ -7,6 +7,9 @@ using ImperiosEnGuerra.Modelo.Unidades;
 
 namespace ImperiosEnGuerra.Modelo.Acciones
 {
+    /// <summary>
+    /// Valida el punto de aparición y agrega al jugador una unidad ya entrenada.
+    /// </summary>
     public sealed class OperacionEntrenamiento
     {
         public ResultadoAccion Ejecutar(
@@ -83,6 +86,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                 propietario);
         }
 
+        //Ambas entradas terminan aquí después de identificar al dueño del Centro Urbano.
         private ResultadoAccion EjecutarConPropietario(
             Partida partida,
             SolicitudEntrenamiento solicitud,
@@ -120,6 +124,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     "La posición de aparición no está disponible.");
             }
 
+            //La fábrica traduce el nombre recibido al tipo concreto de unidad permitido.
             Unidad unidad =
                 FabricaUnidades.Crear(
                     solicitud.TipoUnidad,
@@ -141,6 +146,7 @@ namespace ImperiosEnGuerra.Modelo.Acciones
                     "No se pudo ocupar la posición de aparición.");
             }
 
+            //La unidad solo se registra después de reservar correctamente su casilla de aparición.
             propietario.AgregarUnidad(
                 unidad);
 
