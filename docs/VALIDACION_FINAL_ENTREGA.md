@@ -352,7 +352,7 @@ Guardar capturas de:
 La entrega queda lista para congelarse cuando:
 
 ```text
-[ ] Suite .NET final sin errores
+[x] Suite .NET final sin errores: 390/390
 [x] Unity/build sin errores bloqueantes durante la validación realizada
 [ ] Smoke test completo
 [x] configuracion.txt verificado
@@ -361,6 +361,6 @@ La entrega queda lista para congelarse cuando:
 [x] Build standalone generado
 [x] Launcher probado: inicia API + juego y cierra la API al salir
 [ ] Evidencias guardadas
-[ ] Documentación consistente con main
-[ ] PR documental listo para merge
+[x] Documentación consistente con main
+[x] PR documental listo para merge
 ```
