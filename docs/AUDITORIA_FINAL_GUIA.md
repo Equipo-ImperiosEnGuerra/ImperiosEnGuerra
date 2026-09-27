@@ -43,7 +43,7 @@
 | Anuncio de ganador | CUMPLE | HUD/pantalla final bloqueante | Evidencia visual |
 | `configuracion.txt` | CUMPLE | `ServicioArchivos.GuardarConfiguracionInicial` | Adjuntar ejemplo generado |
 | `log_partida.txt` | CUMPLE / VALIDAR EVIDENCIA | `ServicioArchivos.RegistrarEvento`; validado con log real que contiene acciones, rechazos, curación, regeneración, conquista y finalización | Regenerar un log limpio con la versión final para adjuntarlo como evidencia |
-| `resultado_final.txt` | CUMPLE | `GuardarResultadoPartidaFinalizada` conserva ganador/motivo y añade estado final del mapa, recursos, saldos, edificios, unidades y obras | Adjuntar ejemplo generado |
+| `resultado_final.txt` | CUMPLE | Validado con una derrota real: ganador, perdedor, motivo, mapa final 15x15, recursos restantes, saldos, edificios, unidades, vida y obras | Evidencia obtenida |
 | System.IO | CUMPLE | `ServicioArchivos` centralizado | Ninguna |
 | Manejo de excepciones | CUMPLE / VALIDAR | Validaciones, try/catch y pruebas de errores de IO/red | Consolidar evidencia |
 | Colecciones | CUMPLE | List, Dictionary y colecciones concurrentes en Modelo/Servicios | Ninguna |
