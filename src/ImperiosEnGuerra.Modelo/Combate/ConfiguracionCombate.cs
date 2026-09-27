@@ -9,6 +9,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
     /// </summary>
     public sealed class ConfiguracionCombate
     {
+        //Centraliza la vida, daño, alcance e intervalo usados por cada tipo de entidad.
         private readonly Dictionary<string, EstadisticasCombate> porTipo =
             new Dictionary<string, EstadisticasCombate>(
                 StringComparer.OrdinalIgnoreCase)
@@ -62,6 +63,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
                         0d)
             };
 
+        //Devuelve las estadísticas exactas configuradas para un tipo conocido.
         public EstadisticasCombate Obtener(
             string tipo)
         {
@@ -126,6 +128,9 @@ namespace ImperiosEnGuerra.Modelo.Combate
         }
     }
 
+    /// <summary>
+    /// Agrupa los valores de combate que una unidad o edificio recibe al crearse.
+    /// </summary>
     public sealed class EstadisticasCombate
     {
         public string Tipo { get; }

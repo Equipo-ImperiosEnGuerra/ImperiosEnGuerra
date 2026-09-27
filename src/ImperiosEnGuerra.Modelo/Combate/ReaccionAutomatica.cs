@@ -3,6 +3,9 @@ using ImperiosEnGuerra.Modelo.Map;
 
 namespace ImperiosEnGuerra.Modelo.Combate
 {
+    /// <summary>
+    /// Acciones que el sistema puede preparar sin una orden manual del jugador.
+    /// </summary>
     public enum TipoReaccionAutomatica
     {
         Atacar,
@@ -10,6 +13,9 @@ namespace ImperiosEnGuerra.Modelo.Combate
         MoverIdle
     }
 
+    /// <summary>
+    /// Describe una reacción preparada para que otro servicio decida cuándo ejecutarla.
+    /// </summary>
     public sealed class ReaccionAutomatica
     {
         public TipoReaccionAutomatica Tipo { get; }

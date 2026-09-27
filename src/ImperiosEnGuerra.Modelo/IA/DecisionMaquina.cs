@@ -3,6 +3,9 @@ using ImperiosEnGuerra.Modelo.Map;
 
 namespace ImperiosEnGuerra.Modelo.IA
 {
+    /// <summary>
+    /// Acciones que la IA puede solicitar después de evaluar el estado de la partida.
+    /// </summary>
     public enum TipoDecisionMaquina
     {
         Ninguna,
@@ -15,6 +18,9 @@ namespace ImperiosEnGuerra.Modelo.IA
         Atacar
     }
 
+    /// <summary>
+    /// Guarda una decisión de IA sin ejecutarla ni modificar directamente el Modelo.
+    /// </summary>
     public sealed class DecisionMaquina
     {
         public TipoDecisionMaquina Tipo { get; }
@@ -46,6 +52,7 @@ namespace ImperiosEnGuerra.Modelo.IA
             Motivo = motivo ?? string.Empty;
         }
 
+        //Permite que la IA termine un ciclo sin inventar una acción cuando no hay una opción válida.
         public static DecisionMaquina SinAccion(string motivo)
         {
             return new DecisionMaquina(
@@ -211,6 +218,7 @@ namespace ImperiosEnGuerra.Modelo.IA
                 "Preparar ataque contra la unidad enemiga más cercana.");
         }
 
+        //Evita crear decisiones asociadas a una unidad sin identidad válida.
         private static void ValidarUnidad(Guid unidadId)
         {
             if (unidadId == Guid.Empty)

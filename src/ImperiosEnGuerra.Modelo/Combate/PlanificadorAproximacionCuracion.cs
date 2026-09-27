@@ -95,6 +95,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
                     "El Monje y el aliado no comparten el mismo mapa lógico.");
             }
 
+            //Si el aliado ya está en rango, el Monje puede curar sin desplazarse.
             if (Distancia(
                     curador.Coordenada,
                     objetivo.Coordenada) <=
@@ -139,6 +140,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
             var candidatas =
                 new List<(Coordenada Punto, IReadOnlyList<Coordenada> Pasos)>();
 
+            //Busca casillas libres desde las que el aliado quede dentro del alcance de curación.
             for (int x = 0;
                  x < mapa.Ancho;
                  x++)
@@ -200,6 +202,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
                     "No existe una ruta transitable hasta una posición válida de curación.");
             }
 
+            //Elige primero la ruta con menos pasos y usa la posición como desempate estable.
             var mejor =
                 candidatas
                     .OrderBy(
@@ -333,6 +336,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
                    a.Y == b.Y;
         }
 
+        //La curación usa la misma distancia de cuadrícula que el alcance de combate.
         private static int Distancia(
             Coordenada a,
             Coordenada b)

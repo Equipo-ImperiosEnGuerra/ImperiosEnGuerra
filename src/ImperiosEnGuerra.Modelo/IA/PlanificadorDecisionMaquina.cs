@@ -181,6 +181,7 @@ namespace ImperiosEnGuerra.Modelo.IA
                             c.Coordenada,
                             centrosExcluidos));
 
+            //Primero asegura una base mínima de aldeanos para sostener la economía.
             if (aldeanos.Length < 3 &&
                 centroDisponible != null &&
                 PuedePagarUnidad(
@@ -192,6 +193,7 @@ namespace ImperiosEnGuerra.Modelo.IA
                     nameof(Aldeano));
             }
 
+            //Después intenta expandirse con un segundo Centro Urbano cuando puede pagarlo.
             if (centros.Length < 2 &&
                 disponibles.Length > 0 &&
                 PuedePagarEdificio(
@@ -223,6 +225,7 @@ namespace ImperiosEnGuerra.Modelo.IA
                 }
             }
 
+            //El tamaño objetivo del ejército aumenta cuando la economía ya está desarrollada.
             int militaresPropios =
                 maquina.Unidades.Count(
                     u =>
@@ -258,6 +261,7 @@ namespace ImperiosEnGuerra.Modelo.IA
                     tipoMilitarObjetivo);
             }
 
+            //Si falta dinero para la tropa objetivo, asigna un Aldeano al recurso que más necesita.
             if (militaresPlanificados < objetivoMilitar &&
                 disponibles.Length > 0 &&
                 !string.IsNullOrWhiteSpace(
@@ -276,6 +280,7 @@ namespace ImperiosEnGuerra.Modelo.IA
                 }
             }
 
+            //Solo abre el frente militar cuando el servicio que coordina la IA lo permite.
             if (permitirCombate)
             {
                 DecisionMaquina combate =
@@ -306,6 +311,7 @@ namespace ImperiosEnGuerra.Modelo.IA
                         "No hay unidades disponibles para una nueva decisión.");
             }
 
+            //Si ninguna prioridad anterior aplica, mantiene la economía recolectando un nodo cercano.
             Recurso[] recursos =
                 maquina.Mapa.Recursos
                     .Where(
@@ -689,6 +695,7 @@ namespace ImperiosEnGuerra.Modelo.IA
             return null;
         }
 
+        //Elige un objetivo humano y decide entre atacar ya o acercar una unidad militar.
         private static DecisionMaquina PrepararCombate(
             Partida partida,
             Jugador maquina,
@@ -731,6 +738,7 @@ namespace ImperiosEnGuerra.Modelo.IA
             Coordenada objetivoCoordenada =
                 null;
 
+            //Mientras haya tropas humanas, las prioriza antes que el Centro Urbano.
             if (militaresEnemigos.Length > 0)
             {
                 Unidad objetivoMilitar =
@@ -816,6 +824,7 @@ namespace ImperiosEnGuerra.Modelo.IA
                     objetivoId);
         }
 
+        //Busca una casilla libre desde la que el atacante pueda quedar dentro de su alcance.
         private static Coordenada BuscarCasillaAproximacion(
             Partida partida,
             Unidad atacante,
@@ -1044,6 +1053,7 @@ namespace ImperiosEnGuerra.Modelo.IA
                        StringComparison.OrdinalIgnoreCase);
         }
 
+        //Calcula qué recurso falta para la unidad objetivo y busca un Aldeano que pueda obtenerlo.
         private DecisionMaquina PrepararRecoleccionParaUnidadMilitar(
             Jugador maquina,
             IReadOnlyList<Aldeano> disponibles,
@@ -1250,6 +1260,7 @@ namespace ImperiosEnGuerra.Modelo.IA
                        costo.Comida);
         }
 
+        //Busca hacia afuera desde la base hasta encontrar una casilla válida para expandirse.
         private static Coordenada BuscarCasillaExpansion(
             Partida partida,
             Jugador maquina,

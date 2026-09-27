@@ -4,6 +4,9 @@ using ImperiosEnGuerra.Modelo.Map;
 
 namespace ImperiosEnGuerra.Modelo.Combate
 {
+    /// <summary>
+    /// Indica si el atacante ya está en rango o qué ruta debe seguir para quedar en posición.
+    /// </summary>
     public sealed class ResultadoAproximacionAtaque
     {
         private readonly List<Coordenada> pasos;

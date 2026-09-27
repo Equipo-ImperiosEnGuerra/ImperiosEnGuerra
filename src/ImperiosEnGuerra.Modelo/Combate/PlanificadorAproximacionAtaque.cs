@@ -82,6 +82,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
                 return ResultadoAproximacionAtaque.Fallido(
                     "No existe la entidad enemiga objetivo indicada.");
 
+            //Si el objetivo ya está dentro del alcance no hace falta mover al atacante.
             if (DistanciaCombate(
                     atacante.Coordenada,
                     objetivo) <= atacante.AlcanceAtaque)
@@ -125,6 +126,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
             var candidatas =
                 new List<(Coordenada Punto, IReadOnlyList<Coordenada> Pasos)>();
 
+            //Busca casillas libres desde las que el objetivo quede dentro del alcance de ataque.
             for (int x = 0; x < mapa.Ancho; x++)
             {
                 for (int y = 0; y < mapa.Alto; y++)
@@ -175,6 +177,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
                     "No existe una ruta transitable hasta una posición de ataque válida.");
             }
 
+            //Prefiere la posición alcanzable con menos pasos hasta quedar en rango.
             var mejor =
                 candidatas
                     .OrderBy(c => c.Pasos.Count)
@@ -304,6 +307,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
                    a.Y == b.Y;
         }
 
+        //En combate una diagonal inmediata también cuenta como una casilla de alcance.
         private static int DistanciaCombate(
             Coordenada a,
             Coordenada b)

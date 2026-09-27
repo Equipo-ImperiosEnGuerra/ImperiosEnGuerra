@@ -19,6 +19,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
             if (jugador == null)
                 throw new ArgumentNullException(nameof(jugador));
 
+            //La derrota exige cumplir las dos condiciones: sin Centro Urbano y sin militares.
             bool sinCentroUrbano =
                 !jugador.Edificios
                     .OfType<CentroUrbano>()
@@ -53,6 +54,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
                 return evaluacion;
             }
 
+            //Si cae el Humano, gana una facción de Máquina que todavía siga activa.
             if (ReferenceEquals(
                     jugadorAfectado,
                     partida.JugadorHumano))
@@ -75,6 +77,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
                 return evaluacion;
             }
 
+            //El Humano solo gana cuando las tres facciones enemigas ya fueron eliminadas.
             bool todasLasIasEliminadas =
                 partida.JugadoresMaquina
                     .All(
@@ -101,6 +104,9 @@ namespace ImperiosEnGuerra.Modelo.Combate
         }
     }
 
+    /// <summary>
+    /// Guarda por separado las dos condiciones usadas por la regla AND de victoria.
+    /// </summary>
     public sealed class EvaluacionVictoria
     {
         public bool SinCentroUrbano { get; }

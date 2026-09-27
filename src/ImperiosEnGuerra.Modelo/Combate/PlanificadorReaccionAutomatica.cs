@@ -39,6 +39,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
             Jugador humano =
                 partida.JugadorHumano;
 
+            //Solo las unidades humanas libres pueden recibir una reacción automática.
             foreach (Unidad unidad in humano.Unidades)
             {
                 if (!EstaLibre(
@@ -56,6 +57,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
 
                 if (unidad is Monje monje)
                 {
+                    //Los Monjes buscan primero un aliado herido dentro del radio de detección.
                     Unidad aliado =
                         BuscarAliadoHerido(
                             humano,
@@ -77,6 +79,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
                 if (!(unidad is Soldado))
                     continue;
 
+                //Los soldados atacan automáticamente solo si detectan un enemigo cercano.
                 Guid objetivoId =
                     BuscarObjetivoEnemigo(
                         unidad,
@@ -189,6 +192,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
                     u.Coordenada.Y == posicion.Y);
         }
 
+        //Prioriza aliados cercanos y, en empate, al que tenga menor proporción de vida.
         private static Unidad BuscarAliadoHerido(
             Jugador propietario,
             Monje monje,
@@ -217,6 +221,7 @@ namespace ImperiosEnGuerra.Modelo.Combate
                 .FirstOrDefault();
         }
 
+        //Busca unidades y edificios enemigos; a igual distancia prioriza una unidad.
         private static Guid BuscarObjetivoEnemigo(
             Unidad atacante,
             IEnumerable<Jugador> enemigos,

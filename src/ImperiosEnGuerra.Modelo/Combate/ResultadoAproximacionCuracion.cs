@@ -4,6 +4,9 @@ using ImperiosEnGuerra.Modelo.Map;
 
 namespace ImperiosEnGuerra.Modelo.Combate
 {
+    /// <summary>
+    /// Indica si el Monje ya está en rango o qué ruta debe seguir para poder curar.
+    /// </summary>
     public sealed class ResultadoAproximacionCuracion
     {
         private readonly List<Coordenada> pasos;
