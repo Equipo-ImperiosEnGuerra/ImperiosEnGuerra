@@ -267,3 +267,5 @@ Documentación relevante:
 - `docs/FASE_6_AVANCES_Y_ESTADO_CERRADA.md`
 - `docs/BUILD_Y_EJECUCION.md`
 - `docs/AUDITORIA_FINAL_GUIA.md`
+- `docs/INFORME_TECNICO_FINAL.md`
+- `docs/UML_FINAL.md`
