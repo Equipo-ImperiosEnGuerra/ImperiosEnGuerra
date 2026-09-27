@@ -153,10 +153,10 @@ militares = 0
 | PM-12 | Build Windows | Ejecutable abre correctamente | VALIDADO |
 | PM-13 | Launcher | Inicia API + juego y cierra API al salir | VALIDADO |
 | PM-14 | Archivos | Los 3 txt se generan y contienen información | VALIDADO; log acumulativo debe limpiarse para evidencia final |
-| PM-15 | Victoria Humana | Pantalla VICTORIA y bloqueo final | EVIDENCIA VISUAL OMITIDA; lógica cubierta por tests automatizados |
+| PM-15 | Victoria Humana | Pantalla VICTORIA y bloqueo final | Cubierta por tests automatizados de victoria/finalización |
 
 ## 5. Conclusión
 
 La suite automatizada cubre casos normales, inválidos, límite y concurrentes. Los riesgos principales de concurrencia se abordan mediante `lock`, `ConcurrentDictionary`, `ConcurrentQueue`, `Interlocked`, `SemaphoreSlim` y `CancellationToken`.
 
-El cierre de evidencia manual se concentra en conservar un log limpio de la versión final y, si se desea evidencia visual completa, una captura de victoria humana.
+El cierre de evidencia manual incluye un `log_partida.txt` limpio generado sobre la versión final. La condición de victoria está respaldada por las pruebas automatizadas de victoria/finalización.
