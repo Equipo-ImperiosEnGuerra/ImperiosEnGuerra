@@ -271,3 +271,4 @@ Documentación relevante:
 - `docs/UML_FINAL.md`
 - `docs/DIAGRAMA_FLUJO_FINAL.md`
 - `docs/PRUEBAS_ESCRITORIO_FINAL.md`
+- `docs/VALIDACION_FINAL_ENTREGA.md`
