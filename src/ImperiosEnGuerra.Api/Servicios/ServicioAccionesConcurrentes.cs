@@ -17,12 +17,16 @@ using ImperiosEnGuerra.Modelo.Core;
 
 namespace ImperiosEnGuerra.Api.Servicios;
 
+/// <summary>
+/// Coordina las acciones que avanzan en segundo plano y comunica sus resultados con el estado de la partida.
+/// </summary>
 public sealed class ServicioAccionesConcurrentes
 {
     private readonly EstadoPartidaService estadoPartida;
     private readonly GestorProcesosConcurrentes gestorProcesos;
     private readonly ServicioOrdenesUnidad servicioOrdenes;
 
+    //Relaciona cada unidad con su worker activo para poder cancelarlo al recibir una nueva orden.
     private readonly ConcurrentDictionary<Guid, Guid>
         procesosPorUnidad =
             new ConcurrentDictionary<Guid, Guid>();
@@ -181,11 +185,13 @@ public sealed class ServicioAccionesConcurrentes
     public bool PausadoTemporalmente =>
         !puertaPausa.IsSet;
 
+    //Cierra la puerta cooperativa para que los workers esperen sin perder su progreso.
     public void PausarTemporal()
     {
         puertaPausa.Reset();
     }
 
+    //Abre de nuevo la puerta y permite que los workers continúen desde donde estaban.
     public void ReanudarTemporal()
     {
         puertaPausa.Set();
@@ -196,6 +202,7 @@ public sealed class ServicioAccionesConcurrentes
     // MOVIMIENTO
     // ============================================================
 
+    //Inicia un worker que recorre la ruta paso a paso y replantea si aparece una colisión.
     public ProcesoConcurrente IniciarMovimiento(
         MoverUnidadRequest? request)
     {
@@ -290,6 +297,7 @@ public sealed class ServicioAccionesConcurrentes
 
                         if (!resultadoPaso.Exito)
                         {
+                            //Si el mapa cambió, vuelve a calcular la ruta en vez de bloquear el worker.
                             replanteos++;
 
                             if (replanteos > maximoReplanes)
@@ -435,6 +443,7 @@ public sealed class ServicioAccionesConcurrentes
     // RECOLECCIÓN
     // ============================================================
 
+    //Mantiene en un mismo worker el ciclo recurso → carga → depósito → regreso.
     public ProcesoConcurrente IniciarRecoleccion(
         RecolectarRequest? request)
     {
@@ -637,6 +646,7 @@ public sealed class ServicioAccionesConcurrentes
                     TipoRecurso tipoObjetivo =
                         planInicial.TipoRecurso.Value;
 
+                    //Repite extracción y depósito hasta agotar el nodo o recibir una cancelación.
                     while (true)
                     {
                         token.ThrowIfCancellationRequested();
@@ -820,6 +830,7 @@ public sealed class ServicioAccionesConcurrentes
     // CONSTRUCCIÓN
     // ============================================================
 
+    //Reserva costo y obra, mueve al Aldeano y aplica el progreso en varios pasos cancelables.
     public ProcesoConcurrente IniciarConstruccion(
         ConstruirRequest? request)
     {
@@ -968,6 +979,7 @@ public sealed class ServicioAccionesConcurrentes
                 }
                 finally
                 {
+                    //Si el worker no termina, libera la obra y devuelve los recursos reservados.
                     if (!completada &&
                         obraId != Guid.Empty)
                     {
@@ -1002,6 +1014,7 @@ public sealed class ServicioAccionesConcurrentes
     // ENTRENAMIENTO
     // ============================================================
 
+    //Encola el entrenamiento, espera su turno y avanza el progreso sin bloquear otras acciones.
     public ProcesoConcurrente IniciarEntrenamiento(
         EntrenarRequest? request)
     {
@@ -1042,6 +1055,7 @@ public sealed class ServicioAccionesConcurrentes
                     if (!encolado.Exito)
                         return encolado;
 
+                    //Cada orden espera de forma cancelable hasta llegar al frente de la cola.
                     while (!estadoPartida.EsTurnoEntrenamiento(
                         centroUrbano,
                         entrenamientoId))
@@ -1138,6 +1152,7 @@ public sealed class ServicioAccionesConcurrentes
     // ATAQUE
     // ============================================================
 
+    //Acerca al atacante si hace falta y repite impactos mientras el objetivo siga existiendo.
     public ProcesoConcurrente IniciarAtaque(
         AtacarRequest? request)
     {
@@ -1258,6 +1273,7 @@ public sealed class ServicioAccionesConcurrentes
                         ResultadoAccion.Exitoso(
                             "Ataque iniciado.");
 
+                    //El ataque continúa por intervalos hasta destrucción, fin de partida o cancelación.
                     while (true)
                     {
                         token.ThrowIfCancellationRequested();
@@ -1338,6 +1354,7 @@ public sealed class ServicioAccionesConcurrentes
     // CURACIÓN
     // ============================================================
 
+    //Acerca al Monje y aplica pulsos de curación hasta completar la vida o cancelar la orden.
     public ProcesoConcurrente IniciarCuracion(
         CurarRequest? request)
     {
@@ -1644,6 +1661,7 @@ public sealed class ServicioAccionesConcurrentes
             procesoId);
     }
 
+    //Busca el proceso asociado a la unidad y solicita su cancelación mediante CancellationToken.
     public bool CancelarPorUnidad(
         Guid unidadId)
     {
@@ -1687,6 +1705,7 @@ public sealed class ServicioAccionesConcurrentes
         procesosPorUnidad[unidadId] =
             proceso.Id;
 
+        //Elimina la asociación cuando termina el worker para no dejar unidades marcadas como ocupadas.
         _ = proceso.Finalizacion
             .ContinueWith(
                 tarea =>
@@ -1733,6 +1752,7 @@ public sealed class ServicioAccionesConcurrentes
         gestorProcesos.ProcesosActivos;
 
 
+    //Reintenta la planificación cuando el bloqueo es temporal y otra unidad puede liberar la zona.
     private ResultadoAproximacionRecurso
         PrepararAproximacionRecursoConReintentos(
             RecolectarRequest? request,
@@ -2054,6 +2074,7 @@ public sealed class ServicioAccionesConcurrentes
             "Aldeano posicionado junto a la obra.");
     }
 
+    //Da unos intentos al mismo paso antes de obligar al flujo superior a replantear la ruta.
     private ResultadoAccion AvanzarMovimientoConReintentos(
         Guid unidadId,
         Coordenada siguiente,
@@ -2096,6 +2117,7 @@ public sealed class ServicioAccionesConcurrentes
     }
 
 
+    //Introduce una espera distinta por unidad para reducir choques repetidos entre workers.
     private void EsperarCesionPaso(
         Guid unidadId,
         CancellationToken token,
@@ -2209,6 +2231,7 @@ public sealed class ServicioAccionesConcurrentes
     // ESPERA CANCELABLE
     // ============================================================
 
+    //Combina pausa y cancelación para que ningún worker modifique el Modelo mientras el juego está pausado.
     private void EsperarAntesDeAplicar(
         CancellationToken token,
         TimeSpan retardo)
