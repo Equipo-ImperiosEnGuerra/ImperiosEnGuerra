@@ -38,6 +38,7 @@ namespace ImperiosEnGuerra.Vistas
 
         private void Awake()
         {
+            AplicarEscalaCompacta();
             CrearBotonCancelarSiFalta();
             AplicarLayoutCompacto();
             ConfigurarRaycastsNoBloqueantes();
@@ -352,6 +353,31 @@ namespace ImperiosEnGuerra.Vistas
             }
         }
 
+        private void AplicarEscalaCompacta()
+        {
+            CanvasScaler escalador =
+                GetComponent<CanvasScaler>();
+
+            if (escalador == null)
+                return;
+
+            // El build de escritorio usa una resolución mayor que la referencia
+            // histórica 1280x720. ScaleWithScreenSize hacía crecer el HUD
+            // aproximadamente 1.5x a 1920x1080.
+            //
+            // Mantener un tamaño de píxel compacto evita que el panel contextual
+            // invada visualmente el mapa. En ventanas pequeñas todavía se reduce
+            // de forma proporcional, pero nunca crece por encima de 1x.
+            escalador.uiScaleMode =
+                CanvasScaler.ScaleMode.ConstantPixelSize;
+
+            escalador.scaleFactor =
+                Mathf.Clamp(
+                    Screen.height / 720f,
+                    0.75f,
+                    1f);
+        }
+
         private void AplicarLayoutCompacto()
         {
             RectTransform panel =
@@ -370,7 +396,7 @@ namespace ImperiosEnGuerra.Vistas
                 Vector2.zero,
                 Vector2.zero,
                 new Vector2(12f, 12f),
-                new Vector2(282f, 242f));
+                new Vector2(282f, 282f));
 
             ConfigurarRectHijo(
                 panel,
@@ -378,7 +404,7 @@ namespace ImperiosEnGuerra.Vistas
                 new Vector2(0f, 1f),
                 new Vector2(1f, 1f),
                 new Vector2(0.5f, 1f),
-                new Vector2(12f, -64f),
+                new Vector2(12f, -104f),
                 new Vector2(-12f, -8f));
 
             ConfigurarRectHijo(
@@ -387,8 +413,8 @@ namespace ImperiosEnGuerra.Vistas
                 new Vector2(0f, 1f),
                 new Vector2(1f, 1f),
                 new Vector2(0.5f, 1f),
-                new Vector2(12f, -106f),
-                new Vector2(-12f, -68f));
+                new Vector2(12f, -146f),
+                new Vector2(-12f, -108f));
 
             string[] acciones =
             {
