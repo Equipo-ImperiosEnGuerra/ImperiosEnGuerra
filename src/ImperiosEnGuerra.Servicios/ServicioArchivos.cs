@@ -300,8 +300,178 @@ namespace ImperiosEnGuerra.Servicios
                 .Append(partida.MotivoFinalizacion)
                 .Append('\n');
 
+            AgregarMapaFinal(
+                texto,
+                partida);
+
+            for (int i = 0;
+                 i < partida.Jugadores.Count;
+                 i++)
+            {
+                AgregarJugadorFinal(
+                    texto,
+                    partida,
+                    partida.Jugadores[i],
+                    i);
+            }
+
             GuardarResultadoFinal(
                 texto.ToString());
+        }
+
+        private static void AgregarMapaFinal(
+            StringBuilder texto,
+            Partida partida)
+        {
+            var mapa =
+                partida.JugadorHumano.Mapa;
+
+            texto.Append('\n');
+            texto.Append("[MAPA_FINAL]\n");
+            texto.AppendFormat(
+                CultureInfo.InvariantCulture,
+                "Ancho={0}\n",
+                mapa.Ancho);
+            texto.AppendFormat(
+                CultureInfo.InvariantCulture,
+                "Alto={0}\n",
+                mapa.Alto);
+            texto.Append("RecursosFisicos:\n");
+
+            foreach (Recurso recurso
+                     in mapa.Recursos
+                         .OrderBy(r => r.Tipo)
+                         .ThenBy(r => r.Coordenada.X)
+                         .ThenBy(r => r.Coordenada.Y))
+            {
+                texto.AppendFormat(
+                    CultureInfo.InvariantCulture,
+                    "{0}=({1},{2});Cantidad={3}\n",
+                    recurso.Tipo,
+                    recurso.Coordenada.X,
+                    recurso.Coordenada.Y,
+                    recurso.CantidadRestante);
+            }
+        }
+
+        private static void AgregarJugadorFinal(
+            StringBuilder texto,
+            Partida partida,
+            Jugador jugador,
+            int indice)
+        {
+            string seccion;
+
+            if (ReferenceEquals(
+                    jugador,
+                    partida.JugadorHumano))
+            {
+                seccion =
+                    "JUGADOR_HUMANO_FINAL";
+            }
+            else
+            {
+                int indiceMaquina =
+                    partida.JugadoresMaquina
+                        .ToList()
+                        .IndexOf(
+                            jugador);
+
+                seccion =
+                    indiceMaquina <= 0
+                        ? "JUGADOR_MAQUINA_FINAL"
+                        : $"JUGADOR_MAQUINA_{indiceMaquina + 1}_FINAL";
+            }
+
+            texto.Append('\n');
+            texto.Append('[')
+                .Append(seccion)
+                .Append("]\n");
+            texto.Append("Nombre=")
+                .Append(jugador.Nombre)
+                .Append('\n');
+            texto.Append("Tipo=")
+                .Append(jugador.Tipo)
+                .Append('\n');
+
+            AgregarRecursoAlmacenado(
+                texto,
+                jugador,
+                TipoRecurso.Oro);
+            AgregarRecursoAlmacenado(
+                texto,
+                jugador,
+                TipoRecurso.Madera);
+            AgregarRecursoAlmacenado(
+                texto,
+                jugador,
+                TipoRecurso.Comida);
+
+            texto.Append("Edificios:\n");
+
+            foreach (var edificio
+                     in jugador.Edificios
+                         .OrderBy(e => e.GetType().Name, StringComparer.Ordinal)
+                         .ThenBy(e => e.Coordenada.X)
+                         .ThenBy(e => e.Coordenada.Y))
+            {
+                texto.AppendFormat(
+                    CultureInfo.InvariantCulture,
+                    "{0}=({1},{2});Vida={3}/{4}\n",
+                    edificio.GetType().Name,
+                    edificio.Coordenada.X,
+                    edificio.Coordenada.Y,
+                    edificio.VidaActual,
+                    edificio.VidaMaxima);
+            }
+
+            texto.Append("Unidades:\n");
+
+            foreach (var unidad
+                     in jugador.Unidades
+                         .OrderBy(u => u.GetType().Name, StringComparer.Ordinal)
+                         .ThenBy(u => u.Coordenada?.X ?? int.MinValue)
+                         .ThenBy(u => u.Coordenada?.Y ?? int.MinValue))
+            {
+                if (unidad.Coordenada == null)
+                {
+                    texto.Append(unidad.GetType().Name)
+                        .Append("=(sin_posicion)")
+                        .AppendFormat(
+                            CultureInfo.InvariantCulture,
+                            ";Vida={0}/{1}\n",
+                            unidad.VidaActual,
+                            unidad.VidaMaxima);
+
+                    continue;
+                }
+
+                texto.AppendFormat(
+                    CultureInfo.InvariantCulture,
+                    "{0}=({1},{2});Vida={3}/{4}\n",
+                    unidad.GetType().Name,
+                    unidad.Coordenada.X,
+                    unidad.Coordenada.Y,
+                    unidad.VidaActual,
+                    unidad.VidaMaxima);
+            }
+
+            texto.Append("ObrasConstruccion:\n");
+
+            foreach (var obra
+                     in jugador.ObrasConstruccion
+                         .OrderBy(o => o.TipoEdificio, StringComparer.Ordinal)
+                         .ThenBy(o => o.Coordenada.X)
+                         .ThenBy(o => o.Coordenada.Y))
+            {
+                texto.AppendFormat(
+                    CultureInfo.InvariantCulture,
+                    "{0}=({1},{2});Progreso={3}\n",
+                    obra.TipoEdificio,
+                    obra.Coordenada.X,
+                    obra.Coordenada.Y,
+                    obra.Progreso);
+            }
         }
     }
 }
