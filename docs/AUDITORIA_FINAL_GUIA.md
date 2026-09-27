@@ -16,7 +16,7 @@
 
 | Requisito de la guía | Estado | Evidencia actual | Acción final |
 |---|---|---|---|
-| C# + Unity, build de escritorio | CUMPLE / VALIDAR | Build Windows generado y ejecutado correctamente; launcher inicia API y juego; HUD standalone validado | Confirmar cierre automático de API y completar smoke test final |
+| C# + Unity, build de escritorio | CUMPLE | Build Windows generado y ejecutado correctamente; launcher inicia API + juego y detiene la API al cerrar; HUD standalone validado | Mantener evidencia final |
 | Código orientado a objetos | CUMPLE | Jerarquías `Unidad`, `Soldado`, `Edificio`; clases `Jugador`, `Mapa`, `Partida`, recursos y operaciones | Documentar clases fundamentales en UML |
 | MVC claro | CUMPLE | `src/ImperiosEnGuerra.Modelo`, `Assets/Scripts/Vistas`, `Assets/Scripts/Controladores`; Modelo sin UnityEngine | Explicar responsabilidades y flujo en informe |
 | Mapa lógico y representación gráfica | CUMPLE | `Mapa`, `Casilla`, `VistaPartida`, escena Unity | Evidencia visual final |
@@ -134,7 +134,7 @@ El README fue actualizado durante esta auditoría para:
 1. ~~Actualizar `README.md` al estado final real.~~ **COMPLETADO**
 2. ~~Documentar la modificación de alcance Humano vs Máquina / networking opcional.~~ **COMPLETADO**
 3. ~~Ejecutar suite .NET desde `main`.~~ **COMPLETADO: 390/390 correctas, 0 errores.**
-4. Ejecutar Unity EditMode/PlayMode y smoke test del build siguiendo `docs/VALIDACION_FINAL_ENTREGA.md`.
+4. Ejecutar Unity EditMode/PlayMode y smoke test del build siguiendo `docs/VALIDACION_FINAL_ENTREGA.md`. **BUILD + LAUNCHER VALIDADOS; quedan evidencias manuales específicas.**
 5. Guardar ejemplos reales de los tres archivos obligatorios después de una partida final.
 6. ~~Crear informe final MVC + concurrencia + networking opcional.~~ **COMPLETADO**
 7. ~~Crear UML basado en el código final.~~ **COMPLETADO**
