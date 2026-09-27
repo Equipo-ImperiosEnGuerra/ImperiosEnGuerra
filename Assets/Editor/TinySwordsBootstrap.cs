@@ -202,6 +202,22 @@ public static class TinySwordsBootstrap
         TinySwordsSpriteConfigurator.ConfigurarTodo();
         TinySwordsImporter.Configurar();
 
+        bool sueloConfigurado =
+            AssetDatabase
+                .LoadAllAssetsAtPath(
+                    TinySwordsImporter.RutaTilemap)
+                .OfType<Sprite>()
+                .Any(
+                    sprite =>
+                        sprite.name ==
+                        "Tilemap_color1_9");
+
+        if (!sueloConfigurado)
+        {
+            throw new InvalidOperationException(
+                "Tiny Swords se copió, pero Unity no pudo configurar el sub-sprite de suelo requerido.");
+        }
+
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
