@@ -35,7 +35,7 @@ Controladores = puente
 
 ---
 
-# 2. UML principal — Arquitectura MVC
+## 2. UML principal — Arquitectura MVC
 
 Este es el diagrama principal de la arquitectura MVC. Los bloques muestran qué clases pertenecen a cada responsabilidad.
 
@@ -339,7 +339,7 @@ Estos apoyan al Controlador y al Modelo sin convertir la Vista en responsable de
 
 ---
 
-# 3. UML del dominio del Modelo
+## 3. UML del dominio del Modelo
 
 Este segundo diagrama muestra con más detalle la parte de POO del Modelo.
 
@@ -500,7 +500,7 @@ CentroUrbano "1" o-- "*" EntrenamientoPendiente
 
 ---
 
-# 4. Dependencias permitidas en MVC
+## 4. Dependencias permitidas en MVC
 
 La arquitectura del proyecto puede resumirse así:
 
@@ -546,7 +546,7 @@ Task / ThreadPool
 
 ---
 
-# 5. Correspondencia con carpetas reales
+## 5. Correspondencia con carpetas reales
 
 | Capa | Ubicación principal | Clases representativas | Responsabilidad |
 |---|---|---|---|
@@ -558,7 +558,7 @@ Task / ThreadPool
 
 ---
 
-# 6. Ejemplo MVC real: atacar
+## 6. Ejemplo MVC real: atacar
 
 ```text
 1. VISTA
