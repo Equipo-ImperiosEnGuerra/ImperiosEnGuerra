@@ -231,7 +231,7 @@ Suite .NET:
 dotnet test tests/ImperiosEnGuerra.Tests/ImperiosEnGuerra.Tests.csproj
 ```
 
-La suite se utiliza como validación principal del Modelo, servicios, concurrencia, networking opcional, ataques, IA y condición de victoria. La última ejecución sobre `main`, después de los hotfixes del archivo final, terminó con **390 pruebas correctas, 0 con errores y 0 omitidas**. Aún debe completarse la validación final de Unity y el smoke test del build standalone.
+La suite se utiliza como validación principal del Modelo, servicios, concurrencia, networking opcional, ataques, IA y condición de victoria. La última ejecución validada terminó con **390 pruebas correctas, 0 con errores y 0 omitidas**. El build Windows standalone también fue generado y ejecutado correctamente; queda por cerrar la evidencia manual final indicada en `docs/VALIDACION_FINAL_ENTREGA.md`.
 
 Las advertencias de acceso denegado a `log_partida.txt` que aparecen en una prueba son intencionales: esa prueba verifica el manejo controlado de errores de IO.
 
