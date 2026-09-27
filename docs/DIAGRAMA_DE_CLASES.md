@@ -4,6 +4,19 @@
 
 La guía del proyecto exige que el **diagrama de clases UML ilustre la arquitectura MVC y las relaciones entre las clases fundamentales**. Por eso este documento no presenta únicamente la jerarquía de unidades: primero muestra de forma explícita **Modelo, Controlador y Vista**, y después detalla el dominio principal.
 
+### 1.1 Justificación de los elementos fundamentales
+
+Se seleccionan estas clases y servicios porque representan el flujo esencial exigido por la guía:
+
+- `Partida` y `Jugador`: concentran participantes, estado global y condición de finalización.
+- `Mapa`, `Recurso`, `Unidad` y `Edificio`: representan el estado lógico que cambia al mover, recolectar, construir, entrenar y atacar.
+- `ControladorSeleccion`, `ControladorAcciones` y `ControladorConexionApi`: reciben la interacción de Unity y coordinan las solicitudes sin trasladar reglas de negocio a la Vista.
+- `VistaPartida` y `VistaHud`: representan gráficamente el estado sin decidir reglas del juego.
+- `EstadoPartidaService` y `ServicioAccionesConcurrentes`: coordinan las operaciones de aplicación y el acceso sincronizado al Modelo.
+- `GestorProcesosConcurrentes`: evidencia la ejecución con Task/ThreadPool y la cancelación de procesos.
+- `ServicioRedPartida` y `DespachadorMensajesRed`: representan la comunicación WebSocket + JSON requerida técnicamente por la guía original.
+- `ServicioArchivos`: concentra la generación de los archivos requeridos mediante `System.IO`.
+
 La regla arquitectónica aplicada en el proyecto es:
 
 ```text
@@ -220,12 +233,12 @@ namespace SERVICIOS_TRANSVERSALES {
     }
 
     class ServicioRedPartida {
-        <<Networking opcional>>
+        <<Networking>>
         +AtenderClienteAsync(...)
     }
 
     class DespachadorMensajesRed {
-        <<Networking opcional>>
+        <<Networking>>
         +DespacharAsync(...)
     }
 }
@@ -319,7 +332,7 @@ No todo encaja estrictamente como entidad MVC. El proyecto también tiene servic
 
 - `GestorProcesosConcurrentes`: ejecución concurrente;
 - `ServicioArchivos`: `System.IO`;
-- `ServicioRedPartida`: WebSocket opcional;
+- `ServicioRedPartida`: comunicación WebSocket + JSON;
 - `DespachadorMensajesRed`: JSON/red.
 
 Estos apoyan al Controlador y al Modelo sin convertir la Vista en responsable de lógica del juego.
