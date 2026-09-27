@@ -166,7 +166,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A[Cliente WebSocket] --> B[/ws/partida]
+    A[Cliente WebSocket] --> B["/ws/partida"]
     B --> C[ServicioRedPartida.AtenderClienteAsync]
     C --> D[Recibir mensaje de texto]
     D --> E[DespachadorMensajesRed]
