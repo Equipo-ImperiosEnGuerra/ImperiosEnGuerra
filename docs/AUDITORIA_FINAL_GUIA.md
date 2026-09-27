@@ -3,7 +3,7 @@
 **Proyecto:** Imperios en Guerra  
 **Referencia principal:** Guía de Proyecto: Implementación del Juego "Age of Empires" en C# y Unity  
 **Rama de auditoría:** `docs/auditoria-final-guia`  
-**Base:** `main` sincronizado después de los PR #119 y #120
+**Base:** `main` sincronizado después del PR #122
 
 ## Criterios de estado
 
@@ -16,7 +16,7 @@
 
 | Requisito de la guía | Estado | Evidencia actual | Acción final |
 |---|---|---|---|
-| C# + Unity, build de escritorio | CUMPLE / VALIDAR | Proyecto Unity, scripts C#, `BuildStandaloneImperios.cs`, scripts de ejecución y `docs/BUILD_Y_EJECUCION.md` | Ejecutar smoke test final del build de `main` |
+| C# + Unity, build de escritorio | CUMPLE / VALIDAR | Build Windows generado y ejecutado correctamente; launcher inicia API y juego; HUD standalone validado | Confirmar cierre automático de API y completar smoke test final |
 | Código orientado a objetos | CUMPLE | Jerarquías `Unidad`, `Soldado`, `Edificio`; clases `Jugador`, `Mapa`, `Partida`, recursos y operaciones | Documentar clases fundamentales en UML |
 | MVC claro | CUMPLE | `src/ImperiosEnGuerra.Modelo`, `Assets/Scripts/Vistas`, `Assets/Scripts/Controladores`; Modelo sin UnityEngine | Explicar responsabilidades y flujo en informe |
 | Mapa lógico y representación gráfica | CUMPLE | `Mapa`, `Casilla`, `VistaPartida`, escena Unity | Evidencia visual final |
@@ -40,8 +40,8 @@
 | Dos jugadores / dos instancias | NO APLICA — ALCANCE ACTUALIZADO | La guía original lo exigía; el alcance final aceptado es 1 Humano vs 3 Máquinas | Ninguna implementación adicional |
 | Comunicación de acciones a la aplicación del oponente | NO APLICA — ALCANCE ACTUALIZADO | El networking entre dos jugadores dejó de ser obligatorio; el WebSocket existente se conserva como extensión | Ninguna implementación adicional |
 | Condición de victoria | CUMPLE con decisión de diseño | `EvaluadorVictoria` y regla actual AND: sin Centros Urbanos y sin militares | Documentar que la guía dice “y/o” y justificar la regla final aprobada |
-| Anuncio de ganador | CUMPLE | HUD/pantalla final bloqueante | Evidencia visual |
-| `configuracion.txt` | CUMPLE | `ServicioArchivos.GuardarConfiguracionInicial` | Adjuntar ejemplo generado |
+| Anuncio de ganador | CUMPLE / VALIDAR | Pantalla de DERROTA validada visualmente; pantalla final bloqueante implementada | Falta evidencia visual de VICTORIA humana |
+| `configuracion.txt` | CUMPLE | Validado con partida real: mapa 15x15, Humano + 3 IAs, bases/unidades iniciales y 26 recursos físicos | Evidencia obtenida |
 | `log_partida.txt` | CUMPLE / VALIDAR EVIDENCIA | `ServicioArchivos.RegistrarEvento`; validado con log real que contiene acciones, rechazos, curación, regeneración, conquista y finalización | Regenerar un log limpio con la versión final para adjuntarlo como evidencia |
 | `resultado_final.txt` | CUMPLE | Validado con una derrota real: ganador, perdedor, motivo, mapa final 15x15, recursos restantes, saldos, edificios, unidades, vida y obras | Evidencia obtenida |
 | System.IO | CUMPLE | `ServicioArchivos` centralizado | Ninguna |
