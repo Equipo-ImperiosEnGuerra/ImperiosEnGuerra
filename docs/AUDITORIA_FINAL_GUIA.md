@@ -54,7 +54,7 @@
 | Pruebas de ataques | CUMPLE | múltiples suites de ataque y concurrencia | Consolidar resultados |
 | Pruebas de victoria | CUMPLE | `VictoriaFinalTests.cs` y pruebas visuales | Consolidar resultados |
 | Informe breve MVC/concurrencia/red | CUMPLE | `docs/INFORME_TECNICO_FINAL.md` documenta MVC, POO, concurrencia, sincronización, archivos, excepciones y networking opcional | Revisión final de consistencia |
-| Diagrama de clases UML | CUMPLE | `docs/UML_FINAL.md` contiene diagrama Mermaid basado en las clases y relaciones reales | Revisión final de consistencia |
+| Diagrama de clases UML | CUMPLE | `docs/UML_FINAL.md` separa explícitamente MODELO, CONTROLADOR/APLICACIÓN, VISTA UNITY y servicios transversales, y además detalla herencia/composición del dominio | Ninguna |
 | Diagrama de flujo | CUMPLE | `docs/DIAGRAMA_FLUJO_FINAL.md` documenta flujo general, acciones concurrentes, recolección, construcción, entrenamiento, combate, IA y pausa | Revisión final de consistencia |
 | Pruebas de escritorio formales | CUMPLE / VALIDAR | `docs/PRUEBAS_ESCRITORIO_FINAL.md` formaliza casos normales, inválidos, límite y concurrentes; las pruebas manuales finales siguen pendientes | Completar evidencia manual y build |
 | Documentación formal | CUMPLE / VALIDAR EVIDENCIA | README, auditoría, informe técnico, UML, diagramas de flujo, pruebas de escritorio y checklist de validación final consolidados | Conservar evidencias finales pendientes indicadas en el checklist |
