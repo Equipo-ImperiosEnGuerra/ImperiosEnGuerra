@@ -17,8 +17,12 @@ using System.Linq; // para usar FirstOrDefault()
 
 namespace ImperiosEnGuerra.Api.Servicios;
 
+/// <summary>
+/// Coordina el acceso al estado compartido de la partida y conecta la API con las operaciones del Modelo.
+/// </summary>
 public sealed class EstadoPartidaService
 {
+    //Protege la partida porque varias acciones y servicios pueden consultarla o modificarla al mismo tiempo.
     private readonly object sincronizacion = new();
     private readonly ServicioArchivos? servicioArchivos;
     private readonly ConfiguracionEconomia configuracionEconomia =
@@ -39,6 +43,7 @@ public sealed class EstadoPartidaService
             servicioArchivos ?? throw new ArgumentNullException(nameof(servicioArchivos));
     }
 
+    //Valida la petición HTTP y delega el movimiento real a la operación del Modelo.
     public ResultadoAccion MoverUnidad(MoverUnidadRequest? request)
     {
         lock (sincronizacion)
@@ -78,6 +83,7 @@ public sealed class EstadoPartidaService
         }
     }
 
+    //Calcula una ruta válida sin mover todavía la unidad.
     public ResultadoPlanMovimiento PrepararMovimientoProgresivo(
         MoverUnidadRequest? request,
         bool permitirOrdenMovimientoActiva = false)
@@ -202,6 +208,7 @@ public sealed class EstadoPartidaService
         }
     }
 
+    //Reserva la unidad para una acción y evita que dos órdenes normales empiecen a la vez.
     public bool IntentarIniciarOrdenUnidad(
         Guid unidadId,
         TipoAccionJuego tipo)
@@ -271,6 +278,7 @@ public sealed class EstadoPartidaService
         }
     }
 
+    //Aplica un solo paso de una ruta ya planificada.
     public ResultadoAccion AvanzarMovimiento(
         Guid unidadId,
         Coordenada siguiente)
@@ -416,6 +424,7 @@ public sealed class EstadoPartidaService
         }
     }
 
+    //Reemplaza un nodo agotado por otro del mismo tipo en una casilla disponible.
     public bool IntentarRegenerarRecurso(
         TipoRecurso tipo,
         Coordenada origenAgotado,
@@ -447,6 +456,7 @@ public sealed class EstadoPartidaService
                 return false;
             }
 
+            //Reúne todas las posiciones donde el nuevo nodo puede aparecer sin superponerse.
             var candidatas =
                 new List<Coordenada>();
 
@@ -614,6 +624,7 @@ public sealed class EstadoPartidaService
             permitirPatrulla);
     }
 
+    //Pide al planificador una decisión para una IA concreta sin ejecutarla todavía.
     public DecisionMaquina PrepararDecisionMaquina(
         int indiceMaquina,
         IReadOnlyCollection<Guid>? unidadesExcluidas = null,
@@ -682,6 +693,7 @@ public sealed class EstadoPartidaService
         }
     }
 
+    //Prepara un contraataque solo para la unidad de IA que recibió el impacto.
     public DecisionMaquina PrepararContraataqueMaquina(
         Guid defensorId,
         Guid atacanteId)
@@ -862,6 +874,7 @@ public sealed class EstadoPartidaService
         }
     }
 
+    //Descuenta el costo antes de iniciar la construcción para evitar gastar los mismos recursos dos veces.
     public ResultadoAccion ReservarCostoConstruccion(
         Guid aldeanoId,
         string tipoEdificio,
@@ -955,6 +968,7 @@ public sealed class EstadoPartidaService
         }
     }
 
+    //Reserva el costo usando al propietario real del Centro Urbano que solicitó el entrenamiento.
     public ResultadoAccion ReservarCostoEntrenamiento(
         EntrenarRequest? request,
         out CostoRecursos costo,
@@ -1083,6 +1097,7 @@ public sealed class EstadoPartidaService
         }
     }
 
+    //Devuelve el costo al dueño de la unidad cuando una acción reservada no logra terminar.
     public void ReembolsarCosto(
         Guid unidadId,
         CostoRecursos costo)
@@ -1101,6 +1116,7 @@ public sealed class EstadoPartidaService
         }
     }
 
+    //Reserva la casilla y registra una obra pendiente antes de comenzar el progreso concurrente.
     public ResultadoAccion IniciarObra(
         ConstruirRequest? request,
         out Guid obraId)
@@ -1287,6 +1303,7 @@ public sealed class EstadoPartidaService
 
             if (terminada)
             {
+                //Al llegar al 100% la obra deja de ser pendiente y se convierte en edificio real.
                 propietario
                     .EliminarObraConstruccion(
                         obra);
@@ -1469,6 +1486,7 @@ public sealed class EstadoPartidaService
             out centroUrbano);
     }
 
+    //Valida el Centro Urbano y agrega la orden a su cola sin crear todavía la unidad.
     private ResultadoAccion EncolarEntrenamientoInterno(
         EntrenarRequest? request,
         TipoJugador? propietarioTipo,
@@ -1667,6 +1685,7 @@ public sealed class EstadoPartidaService
         }
     }
 
+    //Crea la unidad únicamente cuando la orden llegó al frente de la cola y alcanzó el 100%.
     private ResultadoSpawnEntrenamiento CompletarEntrenamientoConSpawnInterno(
         Jugador? propietario,
         CentroUrbano? centro,
@@ -1737,6 +1756,7 @@ public sealed class EstadoPartidaService
                 "La casilla de aparición dejó de estar disponible.");
         }
 
+        //La unidad se agrega primero y se revierte si la cola cambió antes de completar la operación.
         propietario.AgregarUnidad(
             unidad);
 
@@ -1925,6 +1945,7 @@ public sealed class EstadoPartidaService
         }
     }
 
+    //Ejecuta un impacto y, si destruye una entidad, permite que el Modelo evalúe la victoria.
     public ResultadoAccion Atacar(AtacarRequest? request)
     {
         lock (sincronizacion)
@@ -2016,6 +2037,7 @@ public sealed class EstadoPartidaService
         }
     }
 
+    //Genera el snapshot que consume Unity sin exponer directamente las clases internas del Modelo.
     public EstadoPartidaResponse? ObtenerEstado()
     {
         lock (sincronizacion)
@@ -2034,6 +2056,7 @@ public sealed class EstadoPartidaService
         }
     }
 
+    //Reemplaza la partida activa y reinicia el control de finalización para una nueva sesión.
     public void EstablecerPartida(Partida partida)
     {
         ArgumentNullException.ThrowIfNull(partida);
@@ -2212,6 +2235,7 @@ public sealed class EstadoPartidaService
                 u => u.Id == id);
     }
 
+    //Vuelve a comprobar la regla terminal antes de entregar un snapshot como respaldo de consistencia.
     private void ReevaluarFinalizacionSinBloqueo()
     {
         if (partidaActiva == null ||
@@ -2248,6 +2272,7 @@ public sealed class EstadoPartidaService
         }
     }
 
+    //Guarda el resultado final y notifica a otros servicios una sola vez.
     private void RegistrarFinalizacionSeguro()
     {
         if (partidaActiva == null ||
@@ -2296,6 +2321,7 @@ public sealed class EstadoPartidaService
             $"Comida {recursos.ObtenerCantidad(TipoRecurso.Comida)}";
     }
 
+    //Registra en archivo si una acción terminó con éxito o fue rechazada.
     private ResultadoAccion RegistrarResultado(
         string accion,
         ResultadoAccion resultado)
@@ -2305,6 +2331,7 @@ public sealed class EstadoPartidaService
         return resultado;
     }
 
+    //Los errores de escritura se informan sin detener la simulación.
     private void RegistrarEventoSeguro(string contenido)
     {
         if (servicioArchivos == null)

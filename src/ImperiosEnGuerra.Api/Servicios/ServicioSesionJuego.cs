@@ -18,6 +18,7 @@ public sealed class ServicioSesionJuego : IDisposable
     private readonly ServicioRegeneracionRecursos regeneracionRecursos;
     private readonly TimeSpan tiempoMaximoSinLatido;
     private readonly TimeSpan intervaloRevision;
+    //Protege el estado de sesión porque el monitor y las peticiones HTTP trabajan en paralelo.
     private readonly object sincronizacion = new();
 
     private readonly CancellationTokenSource cancelacionMonitor =
@@ -102,6 +103,7 @@ public sealed class ServicioSesionJuego : IDisposable
         ultimoLatidoUtc =
             DateTime.MinValue;
 
+        //El monitor corre en segundo plano para detectar cuándo Unity deja de enviar latidos.
         tareaMonitor =
             Task.Run(
                 () => MonitorearAsync(
@@ -141,6 +143,7 @@ public sealed class ServicioSesionJuego : IDisposable
         }
     }
 
+    //Activa la sesión y pone en marcha IA, reacciones y regeneración.
     public bool Activar()
     {
         ThrowSiDispuesto();
@@ -164,6 +167,7 @@ public sealed class ServicioSesionJuego : IDisposable
         return true;
     }
 
+    //Actualiza la última señal recibida desde Unity para saber que la partida sigue abierta.
     public bool RegistrarLatido()
     {
         ThrowSiDispuesto();
@@ -194,6 +198,7 @@ public sealed class ServicioSesionJuego : IDisposable
         return true;
     }
 
+    //Pausa desde el menú sin cancelar definitivamente los workers de acciones.
     public bool PausarTemporal()
     {
         ThrowSiDispuesto();
@@ -226,6 +231,7 @@ public sealed class ServicioSesionJuego : IDisposable
         return cambio;
     }
 
+    //Reactiva los servicios automáticos y permite continuar los workers pausados.
     public bool ReanudarTemporal()
     {
         ThrowSiDispuesto();
@@ -259,6 +265,7 @@ public sealed class ServicioSesionJuego : IDisposable
         return estabaPausada;
     }
 
+    //Detiene la sesión completa y cancela las acciones que todavía siguen en ejecución.
     public bool Pausar()
     {
         bool estabaActiva;
@@ -289,6 +296,7 @@ public sealed class ServicioSesionJuego : IDisposable
         return estabaActiva;
     }
 
+    //Mantiene activos los tres procesos automáticos que acompañan una partida en curso.
     private void AsegurarServiciosActivos()
     {
         jugadorMaquina.Iniciar();
@@ -296,6 +304,7 @@ public sealed class ServicioSesionJuego : IDisposable
         regeneracionRecursos.Iniciar();
     }
 
+    //Revisa periódicamente el latido sin bloquear el hilo que atiende las peticiones de la API.
     private async Task MonitorearAsync(
         CancellationToken token)
     {
@@ -325,6 +334,7 @@ public sealed class ServicioSesionJuego : IDisposable
 
                 if (debePausar)
                 {
+                    //Si Unity dejó de responder, evita que la partida siga avanzando sola.
                     jugadorMaquina.Detener();
                     reacciones.Detener();
                     regeneracionRecursos.Detener();
@@ -346,6 +356,7 @@ public sealed class ServicioSesionJuego : IDisposable
         }
     }
 
+    //Cancela el monitor y libera sus recursos cuando la aplicación se cierra.
     public void Dispose()
     {
         if (dispuesto)
