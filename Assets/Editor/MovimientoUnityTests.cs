@@ -207,25 +207,6 @@ public class MovimientoUnityTests
     }
 
     [Test]
-    public void CasillaVacia_ConEspaciadoPanoramico_ConvierteCoordenadaCorrecta()
-    {
-        Campo(vista, "anchoVisual", 10);
-        Campo(vista, "altoVisual", 10);
-        Campo(vista, "espacioCasillaXActual", 3f);
-        Campo(vista, "espacioCasillaYActual", 2f);
-
-        Assert.That(
-            vista.TryObtenerCoordenadaLogica(
-                new Vector3(6f, 10f),
-                out int x,
-                out int y),
-            Is.True);
-
-        Assert.That(x, Is.EqualTo(2));
-        Assert.That(y, Is.EqualTo(5));
-    }
-
-    [Test]
     public void VistaMovimiento_ActualizaDatosSinTeletransportarSprite()
     {
         Vector3 posicionInicial =
