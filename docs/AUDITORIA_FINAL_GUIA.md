@@ -3,7 +3,7 @@
 **Proyecto:** Imperios en Guerra  
 **Referencia principal:** Guía de Proyecto: Implementación del Juego "Age of Empires" en C# y Unity  
 **Rama de auditoría:** `docs/auditoria-final-guia`  
-**Base:** `main` después del PR #113
+**Base:** `main` sincronizado después de los PR #119 y #120
 
 ## Criterios de estado
 
@@ -43,13 +43,13 @@
 | Anuncio de ganador | CUMPLE | HUD/pantalla final bloqueante | Evidencia visual |
 | `configuracion.txt` | CUMPLE | `ServicioArchivos.GuardarConfiguracionInicial` | Adjuntar ejemplo generado |
 | `log_partida.txt` | CUMPLE | `ServicioArchivos.RegistrarEvento` | Adjuntar ejemplo generado |
-| `resultado_final.txt` | CUMPLE | `GuardarResultadoPartidaFinalizada` | Adjuntar ejemplo generado |
+| `resultado_final.txt` | CUMPLE | `GuardarResultadoPartidaFinalizada` conserva ganador/motivo y añade estado final del mapa, recursos, saldos, edificios, unidades y obras | Adjuntar ejemplo generado |
 | System.IO | CUMPLE | `ServicioArchivos` centralizado | Ninguna |
 | Manejo de excepciones | CUMPLE / VALIDAR | Validaciones, try/catch y pruebas de errores de IO/red | Consolidar evidencia |
 | Colecciones | CUMPLE | List, Dictionary y colecciones concurrentes en Modelo/Servicios | Ninguna |
 | Mensajes claros al usuario | CUMPLE | HUD, mensajes de error, progreso, victoria/derrota, menú/instrucciones | Revisar visual final |
 | Cuidado visual real | CUMPLE / VALIDAR | Tiny Swords, HUD, sprites, menú y feedback visual | Capturas/build final |
-| Pruebas normales, inválidas, límite y concurrentes | CUMPLE / VALIDAR | Suite extensa .NET + Unity EditMode | Reejecutar suite desde `main` después de los últimos merges |
+| Pruebas normales, inválidas, límite y concurrentes | CUMPLE / VALIDAR | Suite .NET ejecutada sobre `main`: 390 correctas, 0 errores, 0 omitidas; existen además pruebas Unity EditMode | Ejecutar validación final de Unity y smoke test del build |
 | Pruebas de networking | CUMPLE a nivel unitario/integración | `NetworkingTests.cs` | Añadir evidencia de prueba manual si aplica |
 | Pruebas de ataques | CUMPLE | múltiples suites de ataque y concurrencia | Consolidar resultados |
 | Pruebas de victoria | CUMPLE | `VictoriaFinalTests.cs` y pruebas visuales | Consolidar resultados |
@@ -103,7 +103,22 @@ sin unidades militares
 
 La regla está implementada y probada, pero la documentación final debe aclarar que se tomó una decisión concreta sobre una formulación ambigua de la guía.
 
-### 4. README actualizado
+### 4. Validación .NET y archivo final
+
+Después de integrar el estado final del mapa en `resultado_final.txt` y corregir el hotfix de compilación, se ejecutó la suite sobre `main`:
+
+```text
+Total: 390
+Correctas: 390
+Errores: 0
+Omitidas: 0
+```
+
+Las dos advertencias de acceso denegado a `log_partida.txt` corresponden a una prueba intencional de manejo de errores de IO.
+
+El archivo `resultado_final.txt` ahora conserva la información anterior de ganador/perdedores y agrega una instantánea lógica del estado final del mapa: dimensiones, recursos físicos restantes, saldos por jugador, edificios, unidades y obras en curso.
+
+### 5. README actualizado
 
 El README fue actualizado durante esta auditoría para:
 
@@ -118,9 +133,9 @@ El README fue actualizado durante esta auditoría para:
 
 1. ~~Actualizar `README.md` al estado final real.~~ **COMPLETADO**
 2. ~~Documentar la modificación de alcance Humano vs Máquina / networking opcional.~~ **COMPLETADO**
-3. Ejecutar suite .NET desde `main`.
+3. ~~Ejecutar suite .NET desde `main`.~~ **COMPLETADO: 390/390 correctas, 0 errores.**
 4. Ejecutar Unity EditMode/PlayMode y smoke test del build.
-5. Guardar ejemplos de los tres archivos obligatorios.
+5. Guardar ejemplos reales de los tres archivos obligatorios después de una partida final.
 6. Crear informe final MVC + concurrencia + networking opcional.
 7. Crear UML basado en el código final.
 8. Crear diagrama de flujo.
