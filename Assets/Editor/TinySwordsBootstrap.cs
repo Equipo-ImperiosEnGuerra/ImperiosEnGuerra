@@ -56,6 +56,7 @@ public static class TinySwordsBootstrap
         "Units/Red Units/Pawn/Pawn_Idle.png"
     };
 
+    //Programa la verificación después de que Unity termine de cargar el proyecto.
     static TinySwordsBootstrap()
     {
         if (Application.isBatchMode)
@@ -163,6 +164,7 @@ public static class TinySwordsBootstrap
                         archivo)));
     }
 
+    //Copia solo las carpetas gráficas necesarias y luego configura su importación en Unity.
     internal static void InstalarDesde(
         string rutaSeleccionada)
     {
@@ -279,6 +281,7 @@ public static class TinySwordsBootstrap
                        "Units"));
     }
 
+    //Copia únicamente imágenes y conserva la estructura relativa del paquete original.
     private static void CopiarCarpetaGrafica(
         string origen,
         string destino)

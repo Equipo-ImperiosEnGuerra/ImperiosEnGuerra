@@ -4,6 +4,9 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>
+/// Comprueba que los menús creen sus controles y muestren instrucciones pensadas para el jugador.
+/// </summary>
 public class MenuInicialUnityTests
 {
     [Test]

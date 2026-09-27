@@ -111,6 +111,7 @@ public static class Fase2VistaConfigurator
         }
     }
 
+    //Prepara VistaPartida, selección y referencias gráficas dentro de SampleScene.
     public static void Configurar()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -219,6 +220,7 @@ public static class Fase2VistaConfigurator
             .FirstOrDefault(objeto => objeto.name == nombre);
     }
 
+    //Carga únicamente los sprites que la Vista usa durante la partida.
     private static Dictionary<string, Sprite> CargarSprites()
     {
         var sprites = new Dictionary<string, Sprite>
@@ -277,6 +279,7 @@ public static class Fase2VistaConfigurator
         return sprite;
     }
 
+    //Detiene la configuración si falta un gráfico local requerido de Tiny Swords.
     private static string ValidarArchivo(string rutaRelativa)
     {
         string ruta = RutaArte + rutaRelativa;

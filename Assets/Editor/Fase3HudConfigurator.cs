@@ -17,6 +17,7 @@ public static class Fase3HudConfigurator
     // Utilidad interna de mantenimiento del Editor. Ya no se expone en el menú final.
     private const string RutaEscena = "Assets/Scenes/SampleScene.unity";
 
+    //Abre la escena necesaria y deja creado el HUD con sus referencias de controladores.
     public static void ConfigurarHudYAcciones()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -54,6 +55,7 @@ public static class Fase3HudConfigurator
         Debug.Log("HUD y acciones configurados y SampleScene guardada. Inicie la API y ejecute Play.");
     }
 
+    //Construye o reutiliza los objetos de interfaz sin agregar reglas de gameplay.
     public static void Configurar(Scene escena, ControladorConexionApi conexion, ControladorSeleccion seleccion)
     {
         GameObject raiz = Buscar(escena, "HudPartida");
@@ -285,6 +287,7 @@ public static class Fase3HudConfigurator
             .SelectMany(raiz => raiz.GetComponentsInChildren<T>(true)).FirstOrDefault();
     }
 
+    //Crea o reutiliza un RectTransform y deja su layout en un estado conocido.
     private static RectTransform Rect(Transform padre, string nombre, Vector2 minimo, Vector2 maximo,
         Vector2 pivote, Vector2 offsetMinimo, Vector2 offsetMaximo)
     {

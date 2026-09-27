@@ -8,6 +8,9 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>
+/// Comprueba interacción con recursos, cancelación, avisos visuales y contratos de recolección.
+/// </summary>
 public class RecoleccionUnityTests
 {
     private GameObject raiz;
@@ -21,6 +24,7 @@ public class RecoleccionUnityTests
     private const string IdAldeano =
         "22222222-2222-2222-2222-222222222222";
 
+    //Prepara un Aldeano humano y los controladores usados por las pruebas de recolección.
     [SetUp]
     public void Preparar()
     {

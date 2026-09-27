@@ -8,6 +8,9 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>
+/// Comprueba selección de objetivos, cancelación y contrato visual de las órdenes de ataque.
+/// </summary>
 public class AtaqueUnityTests
 {
     private GameObject raiz;
@@ -25,6 +28,7 @@ public class AtaqueUnityTests
     private const string IdObjetivo =
         "55555555-5555-5555-5555-555555555555";
 
+    //Prepara controlador, HUD y entidades humanas/enemigas para cada prueba de ataque.
     [SetUp]
     public void Preparar()
     {

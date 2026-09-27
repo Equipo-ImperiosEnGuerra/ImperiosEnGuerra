@@ -8,6 +8,9 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>
+/// Comprueba preparación, cancelación, DTOs y actualización visual de las órdenes de movimiento.
+/// </summary>
 public class MovimientoUnityTests
 {
     private GameObject raiz;
@@ -19,6 +22,7 @@ public class MovimientoUnityTests
     private Text mensaje;
     private const string IdModelo = "11111111-1111-1111-1111-111111111111";
 
+    //Crea una unidad humana y conecta los controladores sin iniciar una partida real.
     [SetUp]
     public void Preparar()
     {

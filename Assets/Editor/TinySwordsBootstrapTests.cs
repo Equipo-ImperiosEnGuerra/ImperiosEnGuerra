@@ -3,10 +3,14 @@ using System;
 using System.IO;
 using NUnit.Framework;
 
+/// <summary>
+/// Comprueba que la instalación automática reconozca rutas válidas y rechace carpetas incorrectas.
+/// </summary>
 public class TinySwordsBootstrapTests
 {
     private string temporal;
 
+    //Cada prueba trabaja sobre una carpeta temporal independiente.
     [SetUp]
     public void Preparar()
     {

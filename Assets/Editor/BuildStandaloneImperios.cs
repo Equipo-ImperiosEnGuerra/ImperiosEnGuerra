@@ -6,6 +6,9 @@ using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 
+/// <summary>
+/// Genera builds de escritorio usando las escenas habilitadas en la configuración de Unity.
+/// </summary>
 public static class BuildStandaloneImperios
 {
     private const string MenuBase =
@@ -46,6 +49,7 @@ public static class BuildStandaloneImperios
             BuildTarget.StandaloneLinux64);
     }
 
+    //Reúne escenas, prepara la ruta de salida y delega la compilación a BuildPipeline.
     private static void EjecutarBuild(
         BuildTarget target)
     {
@@ -104,6 +108,7 @@ public static class BuildStandaloneImperios
         Debug.Log(
             $"BUILD_INICIO: {target} -> {salida}");
 
+        //Unity realiza aquí la compilación real para la plataforma seleccionada.
         BuildReport reporte =
             BuildPipeline.BuildPlayer(
                 opciones);

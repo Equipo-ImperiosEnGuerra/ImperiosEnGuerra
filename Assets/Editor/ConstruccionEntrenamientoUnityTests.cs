@@ -8,6 +8,9 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>
+/// Comprueba preparación, cancelación, cola visual y contratos de construcción y entrenamiento.
+/// </summary>
 public class ConstruccionEntrenamientoUnityTests
 {
     private GameObject raiz;
@@ -26,6 +29,7 @@ public class ConstruccionEntrenamientoUnityTests
     private const string IdAldeano =
         "33333333-3333-3333-3333-333333333333";
 
+    //Crea un Aldeano, un Centro Urbano y el HUD necesarios para probar ambas acciones.
     [SetUp]
     public void Preparar()
     {

@@ -8,6 +8,9 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>
+/// Comprueba feedback visual de combate, mensajes finales y bloqueo de interacción al terminar.
+/// </summary>
 public class EstadoFinalVisualUnityTests
 {
     [Test]

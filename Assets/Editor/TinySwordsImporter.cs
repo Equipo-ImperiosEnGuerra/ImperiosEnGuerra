@@ -5,6 +5,9 @@ using UnityEditor;
 using UnityEditor.U2D.Sprites;
 using UnityEngine;
 
+/// <summary>
+/// Configura el tileset de Tiny Swords y garantiza que exista el sub-sprite de suelo usado por la Vista.
+/// </summary>
 public static class TinySwordsImporter
 {
     // La configuración necesaria se ejecuta automáticamente al importar el tileset.
@@ -50,6 +53,7 @@ public static class TinySwordsImporter
         }
     }
 
+    //Ajusta el importador y crea el recorte exacto que representa la baldosa de suelo.
     private static void ConfigurarTilemap()
     {
         TextureImporter importer = AssetImporter.GetAtPath(RutaTilemap) as TextureImporter;
@@ -169,6 +173,9 @@ public static class TinySwordsImporter
     }
 }
 
+/// <summary>
+/// Revisa automáticamente el tileset cuando Unity vuelve a importarlo.
+/// </summary>
 public sealed class TinySwordsAssetPostprocessor : AssetPostprocessor
 {
     private static void OnPostprocessAllAssets(
