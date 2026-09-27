@@ -255,7 +255,7 @@ public class DefensaReactivaIaTests
 
         frenteNormal =
             new Guerrero(
-                new Coordenada(1, 1));
+                new Coordenada(2, 1));
 
         unidadAtacada =
             new Guerrero(
