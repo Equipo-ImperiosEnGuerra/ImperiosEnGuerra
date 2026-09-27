@@ -10,6 +10,7 @@ namespace ImperiosEnGuerra.Modelo.IA
         Construir,
         Entrenar,
         Mover,
+        Pasear,
         Patrullar,
         Atacar
     }
@@ -146,6 +147,26 @@ namespace ImperiosEnGuerra.Modelo.IA
                 null,
                 null,
                 "Acercar una unidad militar al enemigo.");
+        }
+
+        public static DecisionMaquina Pasear(
+            Guid aldeanoId,
+            Coordenada destino)
+        {
+            ValidarUnidad(aldeanoId);
+
+            if (destino == null)
+                throw new ArgumentNullException(nameof(destino));
+
+            return new DecisionMaquina(
+                TipoDecisionMaquina.Pasear,
+                aldeanoId,
+                Guid.Empty,
+                destino,
+                null,
+                null,
+                null,
+                "Paseo ambiental de baja prioridad para un Aldeano sin tarea.");
         }
 
         public static DecisionMaquina Patrullar(
