@@ -259,7 +259,7 @@ Se revisó una ejecución real y el archivo registra correctamente:
 
 El archivo revisado es acumulativo y contiene sesiones históricas de versiones anteriores. Por ello, para la evidencia final de entrega debe generarse un log limpio ejecutando una partida nueva sobre la versión final de `main`.
 
-La visualización con `type` en CMD muestra caracteres como `da├▒o` o `curaci├│n`; esto debe verificarse con una lectura UTF-8 antes de atribuirlo al archivo, porque puede ser un problema de página de códigos de la consola.
+La lectura con PowerShell usando `-Encoding UTF8` confirmó que el archivo contiene correctamente caracteres como `daño`, `curación`, `está` y `quedó`. La salida corrupta observada con `type` en CMD era únicamente un problema de página de códigos de la consola, no del archivo.
 
 ### resultado_final.txt
 
