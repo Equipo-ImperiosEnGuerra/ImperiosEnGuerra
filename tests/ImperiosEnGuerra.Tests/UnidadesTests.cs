@@ -6,10 +6,10 @@ using ImperiosEnGuerra.Modelo.Recursos;
 
 namespace ImperiosEnGuerra.Tests.Editor
 {
-    /// <summary>
-/// Comprueba herencia, velocidades, carga del Aldeano e identidad estable de las unidades.
-/// </summary>
-public class UnidadesTests
+        /// <summary>
+    /// Comprueba herencia, velocidades, carga del Aldeano e identidad estable de las unidades.
+    /// </summary>
+    public class UnidadesTests
     {
         [Test]
         public void Guerrero_EsSoldadoYConservaCoordenada()

@@ -5,10 +5,10 @@ using ImperiosEnGuerra.Modelo.Unidades;
 
 namespace ImperiosEnGuerra.Tests.Editor
 {
-    /// <summary>
-/// Comprueba cómo las órdenes cambian el estado de una unidad y cómo vuelve a Idle al terminar o cancelar.
-/// </summary>
-public class EstadoUnidadTests
+        /// <summary>
+    /// Comprueba cómo las órdenes cambian el estado de una unidad y cómo vuelve a Idle al terminar o cancelar.
+    /// </summary>
+    public class EstadoUnidadTests
     {
         [Test]
         public void UnidadNueva_IniciaIdleYSinOrden()

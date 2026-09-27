@@ -9,10 +9,10 @@ using ImperiosEnGuerra.Modelo.Unidades;
 
 namespace ImperiosEnGuerra.Tests.Editor
 {
-    /// <summary>
-/// Comprueba validaciones y comportamiento base de Jugador, Partida e InicializadorPartida.
-/// </summary>
-public class ModeloCoreTests
+        /// <summary>
+    /// Comprueba validaciones y comportamiento base de Jugador, Partida e InicializadorPartida.
+    /// </summary>
+    public class ModeloCoreTests
     {
         [TestCase(TipoJugador.Humano)]
         [TestCase(TipoJugador.Maquina)]

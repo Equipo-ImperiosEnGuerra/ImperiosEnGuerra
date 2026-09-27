@@ -9,10 +9,10 @@ using NUnit.Framework;
 
 namespace ImperiosEnGuerra.Tests
 {
-    /// <summary>
-/// Comprueba ejecución paralela, cancelación y publicación segura de resultados de los workers.
-/// </summary>
-public class GestorProcesosConcurrentesTests
+        /// <summary>
+    /// Comprueba ejecución paralela, cancelación y publicación segura de resultados de los workers.
+    /// </summary>
+    public class GestorProcesosConcurrentesTests
     {
         [Test]
         public async Task DosProcesos_PuedenEstarActivosAlMismoTiempo()

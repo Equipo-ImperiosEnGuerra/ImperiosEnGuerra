@@ -7,10 +7,10 @@ using NUnit.Framework;
 
 namespace ImperiosEnGuerra.Tests.Editor
 {
-    /// <summary>
-/// Comprueba que el identificador estable de una unidad sobreviva al mapeo hacia la respuesta de la API.
-/// </summary>
-public class IdentidadUnidadMapperTests
+        /// <summary>
+    /// Comprueba que el identificador estable de una unidad sobreviva al mapeo hacia la respuesta de la API.
+    /// </summary>
+    public class IdentidadUnidadMapperTests
     {
         [Test]
         public void Convertir_ConservaIdEstableOriginadoEnModelo()
