@@ -19,9 +19,7 @@ Proyecto académico de Programación Orientada a Objetos desarrollado en C# y Un
 
 ## Versión de Unity
 
-El proyecto utiliza **Unity 6000.6.0f1**.
-
-Los integrantes del equipo deben utilizar la misma versión para reducir problemas de compatibilidad.
+**Versión requerida de Unity:** `6000.6.0f1`.
 
 ## Inicio rápido en una PC nueva
 
@@ -94,9 +92,9 @@ Los workers modifican el **Modelo C#**, nunca directamente `UnityEngine`. Unity 
 
 Los tiempos del prototipo se mantienen configurables y el combate usa intervalos propios por tipo de unidad.
 
-## Jugabilidad RTS
+## Funcionalidades implementadas
 
-Actualmente están implementados:
+El proyecto incluye:
 
 - mapa lógico y recursos físicos de oro, madera y comida;
 - Centro Urbano inicial y Aldeanos;
@@ -114,7 +112,7 @@ Actualmente están implementados:
 - condición de victoria/derrota;
 - costos económicos del prototipo centralizados en `ConfiguracionEconomia`.
 
-La guía disponible no fija valores numéricos de vida, daño, armadura ni alcance por tipo de unidad. Por decisión explícita del equipo, Fase 6 incorpora un **balance propio del prototipo**, centralizado y documentado como tal.
+La guía del proyecto no fija valores numéricos de vida, daño, armadura ni alcance por tipo de unidad. Por esta razón, el prototipo utiliza un **balance propio**, centralizado en la configuración del juego.
 
 ## Balance de combate del prototipo
 
@@ -202,7 +200,7 @@ La IA no abandona su plan solo porque otra unidad sea más barata: puede ordenar
 
 ## Economía visible y spawn
 
-La escena de prueba distribuye recursos dejando corredores y casillas de interacción. Actualmente utiliza:
+La escena de juego distribuye recursos dejando corredores y casillas de interacción. La configuración utilizada es:
 
 - 8 nodos de Oro;
 - 8 nodos de Madera;
@@ -217,11 +215,9 @@ El selector de entrenamiento muestra costos compactos:
 
 El spawn de unidades entrenadas evita bordes cuando existe una alternativa interior y prioriza casillas con más salidas libres. Las marcas temporales de ocupación del spawn se liberan al abandonar la casilla para no dejar obstáculos fantasma.
 
-## Networking opcional
+## Comunicación en red
 
-La guía original exigía comunicación entre dos instancias de jugadores. **Ese requisito dejó de ser necesario para el alcance final indicado posteriormente por el docente**. La versión entregable funciona como Humano vs 3 Máquinas y no necesita un segundo cliente Unity.
-
-Aun así, el repositorio conserva networking mediante **WebSocket + JSON** como extensión técnica y como demostración de escucha concurrente, manteniendo además la API REST utilizada por Unity.
+El proyecto conserva una implementación de comunicación mediante **WebSocket + JSON** como componente técnico adicional, junto con la API REST utilizada por Unity. Debido al alcance final Humano vs 3 Máquinas, la ejecución del juego no depende de un segundo cliente Unity.
 
 Endpoint WebSocket:
 
@@ -278,38 +274,26 @@ La suite se utiliza como validación principal del Modelo, servicios, concurrenc
 
 Las advertencias de acceso denegado a `log_partida.txt` que aparecen en una prueba son intencionales: esa prueba verifica el manejo controlado de errores de IO.
 
-## Flujo de Git
+## Entregables
 
-Ramas principales:
+- Código fuente del proyecto.
+- `configuracion.txt`.
+- `log_partida.txt`.
+- `resultado_final.txt`.
+- Informe técnico sobre MVC, concurrencia y comunicación en red.
+- Diagrama de clases UML.
+- Diagrama de flujo.
+- Pruebas de escritorio.
 
-- `main`: versiones estables.
-- `develop`: integración.
-- ramas `feature/*`: trabajo por fase/tarea.
+## Documentación
 
-Flujo:
+Documentación formal asociada a los entregables:
 
-Issue → Branch → Desarrollo → Pruebas → Commit → Pull Request → Develop → Main
-
-## Estado
-
-- Fase 0: **TERMINADA**
-- Fase 1: **TERMINADA**
-- Fase 2: **TERMINADA**
-- Fase 3: **TERMINADA**
-- Fase 4: **TERMINADA**
-- Etapa 4.5: **TERMINADA**
-- Fase 5: **TERMINADA**
-- Fase 6: **TERMINADA**
-- Fase 7: **TERMINADA E INTEGRADA EN MAIN**
-- Auditoría y documentación final: **TERMINADA**
-
-La versión estable actual incluye el cierre de Fase 7, optimización de snapshots para reducir micro-freezes, menú e instrucciones actualizados y estrategia militar diferenciada para las tres IAs.
-
-Documentación formal exigida por la guía:
 - `docs/INFORME_TECNICO.md`
 - `docs/DIAGRAMA_DE_CLASES.md`
 - `docs/DIAGRAMA_DE_FLUJO.md`
 - `docs/PRUEBAS_DE_ESCRITORIO.md`
 
 Documentación operativa para preparar los recursos gráficos:
+
 - `docs/INSTALACION_TINY_SWORDS.md`
