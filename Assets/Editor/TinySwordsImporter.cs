@@ -7,12 +7,13 @@ using UnityEngine;
 
 public static class TinySwordsImporter
 {
+    // La configuración necesaria se ejecuta automáticamente al importar el tileset.
+    // Se conserva el método manual como utilidad interna, sin exponerlo en el menú final.
     internal const string RutaTilemap =
         "Assets/Art/TinySwords/Terrain/Tileset/Tilemap_color1.png";
 
     private const string NombreSuelo = "Tilemap_color1_9";
 
-    [MenuItem("Tools/Imperios en Guerra/Configurar Tiny Swords")]
     public static void Configurar()
     {
         try
