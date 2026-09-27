@@ -434,6 +434,16 @@ namespace ImperiosEnGuerra.Vistas
                 int fila =
                     i / 3;
 
+                // Atacar/Curar comparte la misma fila visual que Mover.
+                // Nunca coincide con Recolectar para la misma unidad:
+                // soldados/monjes no muestran Recolectar y aldeanos no
+                // muestran Atacar/Curar.
+                if (acciones[i] == "Atacar")
+                {
+                    columna = 1;
+                    fila = 0;
+                }
+
                 float x =
                     12f + columna * 82f;
 
