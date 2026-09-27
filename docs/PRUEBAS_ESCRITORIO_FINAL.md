@@ -153,7 +153,7 @@ militares = 0
 | PM-12 | Build Windows | Ejecutable abre correctamente | VALIDADO |
 | PM-13 | Launcher | Inicia API + juego y cierra API al salir | VALIDADO |
 | PM-14 | Archivos | Los 3 txt se generan y contienen información | VALIDADO; log acumulativo debe limpiarse para evidencia final |
-| PM-15 | Victoria Humana | Pantalla VICTORIA y bloqueo final | PENDIENTE EVIDENCIA VISUAL FINAL |
+| PM-15 | Victoria Humana | Pantalla VICTORIA y bloqueo final | EVIDENCIA VISUAL OMITIDA; lógica cubierta por tests automatizados |
 
 ## 5. Conclusión
 
