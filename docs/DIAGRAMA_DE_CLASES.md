@@ -1,8 +1,21 @@
-# UML final — Imperios en Guerra
+# Diagrama de Clases — Imperios en Guerra
 
 ## 1. Objetivo del diagrama
 
 La guía del proyecto exige que el **diagrama de clases UML ilustre la arquitectura MVC y las relaciones entre las clases fundamentales**. Por eso este documento no presenta únicamente la jerarquía de unidades: primero muestra de forma explícita **Modelo, Controlador y Vista**, y después detalla el dominio principal.
+
+### 1.1 Justificación de los elementos fundamentales
+
+Se seleccionan estas clases y servicios porque representan el flujo esencial exigido por la guía:
+
+- `Partida` y `Jugador`: concentran participantes, estado global y condición de finalización.
+- `Mapa`, `Recurso`, `Unidad` y `Edificio`: representan el estado lógico que cambia al mover, recolectar, construir, entrenar y atacar.
+- `ControladorSeleccion`, `ControladorAcciones` y `ControladorConexionApi`: reciben la interacción de Unity y coordinan las solicitudes sin trasladar reglas de negocio a la Vista.
+- `VistaPartida` y `VistaHud`: representan gráficamente el estado sin decidir reglas del juego.
+- `EstadoPartidaService` y `ServicioAccionesConcurrentes`: coordinan las operaciones de aplicación y el acceso sincronizado al Modelo.
+- `GestorProcesosConcurrentes`: evidencia la ejecución con Task/ThreadPool y la cancelación de procesos.
+- `ServicioRedPartida` y `DespachadorMensajesRed`: representan la comunicación WebSocket + JSON requerida técnicamente por la guía original.
+- `ServicioArchivos`: concentra la generación de los archivos requeridos mediante `System.IO`.
 
 La regla arquitectónica aplicada en el proyecto es:
 
@@ -22,9 +35,9 @@ Controladores = puente
 
 ---
 
-# 2. UML principal — Arquitectura MVC
+## 2. UML principal — Arquitectura MVC
 
-Este es el diagrama principal para explicar a la profesora. Los bloques dejan visible qué clases pertenecen a cada responsabilidad.
+Este es el diagrama principal de la arquitectura MVC. Los bloques muestran qué clases pertenecen a cada responsabilidad.
 
 ```mermaid
 classDiagram
@@ -220,12 +233,12 @@ namespace SERVICIOS_TRANSVERSALES {
     }
 
     class ServicioRedPartida {
-        <<Networking opcional>>
+        <<Networking>>
         +AtenderClienteAsync(...)
     }
 
     class DespachadorMensajesRed {
-        <<Networking opcional>>
+        <<Networking>>
         +DespacharAsync(...)
     }
 }
@@ -319,14 +332,14 @@ No todo encaja estrictamente como entidad MVC. El proyecto también tiene servic
 
 - `GestorProcesosConcurrentes`: ejecución concurrente;
 - `ServicioArchivos`: `System.IO`;
-- `ServicioRedPartida`: WebSocket opcional;
+- `ServicioRedPartida`: comunicación WebSocket + JSON;
 - `DespachadorMensajesRed`: JSON/red.
 
 Estos apoyan al Controlador y al Modelo sin convertir la Vista en responsable de lógica del juego.
 
 ---
 
-# 3. UML del dominio del Modelo
+## 3. UML del dominio del Modelo
 
 Este segundo diagrama muestra con más detalle la parte de POO del Modelo.
 
@@ -487,7 +500,7 @@ CentroUrbano "1" o-- "*" EntrenamientoPendiente
 
 ---
 
-# 4. Dependencias permitidas en MVC
+## 4. Dependencias permitidas en MVC
 
 La arquitectura del proyecto puede resumirse así:
 
@@ -533,7 +546,7 @@ Task / ThreadPool
 
 ---
 
-# 5. Correspondencia con carpetas reales
+## 5. Correspondencia con carpetas reales
 
 | Capa | Ubicación principal | Clases representativas | Responsabilidad |
 |---|---|---|---|
@@ -545,7 +558,7 @@ Task / ThreadPool
 
 ---
 
-# 6. Ejemplo MVC real: atacar
+## 6. Ejemplo MVC real: atacar
 
 ```text
 1. VISTA
@@ -574,18 +587,3 @@ Task / ThreadPool
 Este ejemplo deja visible que **Unity no decide el daño ni la victoria** y que **el Modelo no dibuja sprites ni manipula GameObjects**.
 
 ---
-
-# 7. Qué explicar en la sustentación
-
-Para demostrar MVC de forma clara:
-
-1. **Modelo:** mostrar `Partida`, `Jugador`, `Unidad` o `Mapa` y señalar que son C# de dominio sin lógica gráfica.
-2. **Vista:** mostrar `VistaPartida` o `VistaHud` y explicar que presentan el snapshot recibido.
-3. **Controlador:** mostrar `ControladorAcciones` / `ControladorConexionApi` y `EstadoPartidaService` como puente de coordinación.
-4. Explicar un flujo completo, por ejemplo:
-   `clic → Controlador → Modelo → resultado → Vista`.
-5. Señalar que los workers concurrentes modifican el Modelo y **nunca UnityEngine directamente**.
-
-La idea central que debe quedar evidente es:
-
-> **El Modelo sabe jugar, la Vista sabe mostrar y el Controlador sabe coordinar.**

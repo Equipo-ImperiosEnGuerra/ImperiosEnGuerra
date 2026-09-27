@@ -1,4 +1,8 @@
-# Diagrama de flujo final — Imperios en Guerra
+# Diagrama de Flujo — Imperios en Guerra
+
+## Criterio de selección de los flujos
+
+Los flujos incluidos corresponden a las partes fundamentales del programa exigidas por la guía: inicialización, acciones concurrentes, recolección, construcción, entrenamiento, combate, condición de victoria y comunicación en red. Se representan porque conectan directamente las capas MVC y muestran dónde intervienen los procesos concurrentes, la sincronización y la actualización de la Vista.
 
 ## 1. Flujo general de la partida
 
@@ -158,7 +162,30 @@ flowchart TD
     M -- No --> O[Continuar o derrota según facción]
 ```
 
-## 7. IA
+## 7. Comunicación en red
+
+```mermaid
+flowchart TD
+    A[Cliente WebSocket] --> B["/ws/partida"]
+    B --> C[ServicioRedPartida.AtenderClienteAsync]
+    C --> D[Recibir mensaje de texto]
+    D --> E[DespachadorMensajesRed]
+    E --> F{JSON y tipo válidos}
+    F -- No --> G[Resultado rechazado]
+    F -- Sí --> H[ServicioAccionesConcurrentes]
+    H --> I[Crear proceso concurrente]
+    I --> J[Resultado con ProcesoId]
+    G --> K[Difundir respuesta JSON]
+    J --> K
+    K --> L[Clientes conectados]
+
+    C --> M[ConcurrentDictionary de conexiones]
+    K --> N[SemaphoreSlim por conexión]
+```
+
+El listener es asíncrono y no bloquea Unity. Los mensajes válidos reutilizan las mismas operaciones concurrentes del gameplay; los mensajes inválidos se rechazan de forma controlada.
+
+## 8. IA
 
 ```mermaid
 flowchart TD
@@ -184,7 +211,7 @@ flowchart TD
     P -- No --> R[No abrir frente adicional]
 ```
 
-## 8. Pausa
+## 9. Pausa
 
 ```mermaid
 flowchart TD
@@ -199,7 +226,7 @@ flowchart TD
     F -- No --> I[Cancelar y salir]
 ```
 
-## 9. Relación MVC + concurrencia
+## 10. Relación MVC + concurrencia
 
 ```text
 Vista Unity

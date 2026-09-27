@@ -1,8 +1,8 @@
-# Pruebas de escritorio finales — Imperios en Guerra
+# Pruebas de Escritorio — Imperios en Guerra
 
 ## 1. Objetivo
 
-Este documento formaliza casos normales, inválidos, límite y concurrentes del proyecto final.
+Este documento formaliza pruebas de escritorio sobre las secciones críticas señaladas por la guía: **concurrencia, comunicación en red, ataques y condición de victoria**. Se incluyen además algunos casos de apoyo necesarios para comprobar el flujo completo.
 
 Evidencia automatizada validada:
 
@@ -36,7 +36,8 @@ Omitidas: 0
 | PE-17 | Regla de victoria AND | Límite | Solo elimina facción sin CU y sin militares | `VictoriaFinalTests` |
 | PE-18 | Finalización cancela workers | Concurrente | Se finaliza partida y se cancelan procesos pendientes | Tests de finalización |
 | PE-19 | Archivos obligatorios | IO | Se generan configuración, log y resultado final | `ServicioArchivosTests` |
-| PE-20 | WebSocket opcional | Integración | JSON válido se despacha; inválido se rechaza | `NetworkingTests` |
+| PE-20 | Mensaje WebSocket válido | Red / integración | JSON válido se transforma en una acción concurrente y devuelve `ProcesoId` | `NetworkingTests` |
+| PE-21 | Mensaje de red inválido | Red / inválido | JSON mal formado o tipo desconocido se rechaza sin lanzar excepción ni crear proceso | `NetworkingTests` |
 
 ## 3. Casos de escritorio detallados
 
@@ -116,6 +117,35 @@ No se unen unidades cercanas.
 No se duplican defensas de la misma facción.
 ```
 
+### PE-13 — Ataque concurrente
+
+Estado inicial:
+
+```text
+Unidad militar atacante disponible
+Objetivo enemigo existente y con vida
+```
+
+Secuencia:
+
+```text
+validar atacante y objetivo
+→ aproximar si está fuera de alcance
+→ iniciar worker de ataque
+→ esperar intervalo
+→ aplicar daño
+→ repetir mientras el objetivo siga vivo
+```
+
+Resultado esperado:
+
+```text
+La vida disminuye según las reglas del Modelo.
+La entidad solo se elimina al llegar a 0 de vida.
+La casilla se libera al destruirse el objetivo.
+La Vista se actualiza a partir del nuevo estado.
+```
+
 ### PE-17 — Regla AND
 
 ```text
@@ -135,28 +165,55 @@ militares = 0
 => facción eliminada
 ```
 
-## 4. Validaciones manuales
+### PE-20 / PE-21 — Comunicación WebSocket + JSON
 
-| ID | Prueba | Resultado esperado | Estado |
-|---|---|---|---|
-| PM-01 | Menú principal | Visible y funcional | VALIDADO EN BUILD |
-| PM-02 | Instrucciones | Legibles y retornan al menú | VALIDADO EN BUILD |
-| PM-03 | Inicio de partida | Humano + 3 IAs + mapa | VALIDADO EN BUILD |
-| PM-04 | Aldeano humano inactivo | Permanece quieto y HUD puede avisar | VALIDADO DURANTE DESARROLLO |
-| PM-05 | Aldeano IA idle | Paseo corto sin afectar economía | VALIDADO DURANTE DESARROLLO |
-| PM-06 | Recolección visual | Feedback visual y depósito | VALIDADO DURANTE DESARROLLO |
-| PM-07 | Construcción visual | Obra progresa hasta edificio | VALIDADO DURANTE DESARROLLO |
-| PM-08 | Entrenamiento visual | Unidad aparece tras progreso | VALIDADO DURANTE DESARROLLO |
-| PM-09 | Combate / vida crítica | Vida cambia y <=25% se tiñe rojo | VALIDADO DURANTE DESARROLLO |
-| PM-10 | Pausa | Detiene avance y puede reanudarse | VALIDADO DURANTE DESARROLLO |
-| PM-11 | Derrota | Pantalla final y bloqueo de interacción | VALIDADO EN BUILD/UNITY |
-| PM-12 | Build Windows | Ejecutable abre correctamente | VALIDADO |
-| PM-13 | Launcher | Inicia API + juego y cierra API al salir | VALIDADO |
-| PM-14 | Archivos | Los 3 txt se generan y contienen información | VALIDADO; log acumulativo debe limpiarse para evidencia final |
-| PM-15 | Victoria Humana | Pantalla VICTORIA y bloqueo final | Cubierta por tests automatizados de victoria/finalización |
+Mensaje válido de ejemplo:
+
+```json
+{
+  "tipo": "MOVER",
+  "emisorId": "instancia-prueba",
+  "mensajeId": "<guid>",
+  "datos": {
+    "unidadId": "<guid>",
+    "destino": { "x": 2, "y": 0 }
+  }
+}
+```
+
+Resultado esperado para un mensaje válido:
+
+```text
+ServicioRedPartida recibe texto
+→ DespachadorMensajesRed deserializa JSON
+→ se valida Tipo y Datos
+→ ServicioAccionesConcurrentes inicia la acción
+→ se devuelve ResultadoDespachoRed con Exito=true y ProcesoId
+```
+
+Caso inválido:
+
+```text
+JSON mal formado o Tipo desconocido
+→ Exito=false
+→ ProcesoId=null
+→ no se lanza una excepción al consumidor
+→ no se inicia ninguna acción de gameplay
+```
+
+La suite `NetworkingTests` cubre mensajes para MOVER, RECOLECTAR, CONSTRUIR, ENTRENAR, ATACAR y CURAR, además del rechazo de JSON/tipos inválidos.
+
+## 4. Correspondencia con las secciones críticas de la guía
+
+| Sección crítica | Casos de escritorio | Evidencia principal |
+|---|---|---|
+| Concurrencia y sincronización | PE-03, PE-05, PE-08, PE-11, PE-12, PE-18 | pruebas de cancelación, conflictos, gasto atómico y operaciones simultáneas |
+| Comunicación en red | PE-20, PE-21 | `NetworkingTests`, `ServicioRedPartida`, `DespachadorMensajesRed` |
+| Ataques | PE-13, PE-14, PE-15 | pruebas de ataque concurrente, cancelación y defensa reactiva |
+| Condición de victoria | PE-17, PE-18 | `VictoriaFinalTests` y pruebas de finalización/cancelación |
 
 ## 5. Conclusión
 
 La suite automatizada cubre casos normales, inválidos, límite y concurrentes. Los riesgos principales de concurrencia se abordan mediante `lock`, `ConcurrentDictionary`, `ConcurrentQueue`, `Interlocked`, `SemaphoreSlim` y `CancellationToken`.
 
-El cierre de evidencia manual incluye un `log_partida.txt` limpio generado sobre la versión final. La condición de victoria está respaldada por las pruebas automatizadas de victoria/finalización.
+La cobertura documental queda alineada con las cuatro áreas críticas exigidas: concurrencia, red, ataques y condición de victoria. Las pruebas automatizadas citadas sirven como evidencia adicional de que los escenarios descritos corresponden al comportamiento implementado.
