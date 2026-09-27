@@ -58,6 +58,95 @@ public class DefensaReactivaIaTests
     }
 
     [Test]
+    public async Task MovimientoIdle_AldeanoIa_AvanzaSinCrearOrdenReal()
+    {
+        Partida partida =
+            CrearPartidaConAldeanos(
+                out Aldeano ocupado,
+                out Aldeano libre);
+
+        DecisionMaquina paseo =
+            new PlanificadorDecisionMaquina()
+                .PrepararPaseoAldeano(
+                    partida,
+                    partida.JugadorMaquina,
+                    new[]
+                    {
+                        ocupado.Id
+                    });
+
+        Assert.That(
+            paseo.Tipo,
+            Is.EqualTo(
+                TipoDecisionMaquina.Pasear));
+
+        var estado =
+            new EstadoPartidaService();
+
+        estado.EstablecerPartida(
+            partida);
+
+        using var gestor =
+            new GestorProcesosConcurrentes();
+
+        var acciones =
+            new ServicioAccionesConcurrentes(
+                estado,
+                gestor,
+                TimeSpan.Zero);
+
+        Coordenada origen =
+            new Coordenada(
+                libre.Coordenada.X,
+                libre.Coordenada.Y);
+
+        ProcesoConcurrente proceso =
+            acciones.IniciarMovimientoIdle(
+                new MoverUnidadRequest
+                {
+                    UnidadId =
+                        libre.Id
+                            .ToString("D"),
+
+                    Destino =
+                        new CoordenadaRequest
+                        {
+                            X =
+                                paseo.Objetivo.X,
+
+                            Y =
+                                paseo.Objetivo.Y
+                        }
+                });
+
+        await proceso.Finalizacion;
+
+        Assert.That(
+            libre.Coordenada.X,
+            Is.EqualTo(
+                paseo.Objetivo.X));
+
+        Assert.That(
+            libre.Coordenada.Y,
+            Is.EqualTo(
+                paseo.Objetivo.Y));
+
+        Assert.That(
+            libre.OrdenActiva,
+            Is.Null,
+            "El paseo ambiental no debe convertirse en una orden real.");
+
+        Assert.That(
+            Math.Abs(
+                libre.Coordenada.X -
+                origen.X) +
+            Math.Abs(
+                libre.Coordenada.Y -
+                origen.Y),
+            Is.EqualTo(1));
+    }
+
+    [Test]
     public async Task ImpactoHumano_CreaFrenteDefensivoExtra_SoloConUnidadAtacada()
     {
         Partida partida =
