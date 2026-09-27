@@ -161,10 +161,10 @@ La IA no abandona su plan solo porque otra unidad sea más barata: puede ordenar
 
 La escena de prueba distribuye recursos dejando corredores y casillas de interacción. Actualmente utiliza:
 
-- 4 nodos de Oro;
-- 4 nodos de Madera;
-- 6 nodos de Comida;
-- 14 recursos físicos en total.
+- 8 nodos de Oro;
+- 8 nodos de Madera;
+- 10 nodos de Comida;
+- 26 recursos físicos en total.
 
 El selector de entrenamiento muestra costos compactos:
 
