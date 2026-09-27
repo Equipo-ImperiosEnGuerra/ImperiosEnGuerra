@@ -284,7 +284,7 @@ public static class Fase2VistaConfigurator
         {
             throw new InvalidOperationException(
                 "Faltan los gráficos locales de Tiny Swords. " +
-                "Ejecute scripts/instalar_tinyswords.ps1 antes de configurar la vista. Falta: " + ruta);
+                "Reabra Unity para usar la instalación automática o consulte docs/INSTALACION_TINY_SWORDS.md. Falta: " + ruta);
         }
         return ruta;
     }
