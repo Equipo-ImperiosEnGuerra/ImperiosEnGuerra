@@ -208,7 +208,7 @@ Resultado esperado:
 - las otras IAs siguen activas;
 - no aparece victoria prematura.
 
-### VF-15 — Victoria final
+### VF-15 — Victoria final — EVIDENCIA VISUAL OMITIDA
 
 Eliminar las tres IAs.
 
@@ -219,6 +219,8 @@ Resultado esperado:
 - pantalla **VICTORIA**;
 - botones de menú/salir;
 - no se ejecutan nuevas órdenes.
+
+**Decisión de cierre:** no se realizará una partida manual completa hasta victoria por el tiempo requerido. La condición de victoria permanece cubierta por las pruebas automatizadas de victoria/finalización y por la implementación visual ya existente.
 
 ### VF-16 — Derrota — VALIDADO
 
@@ -360,7 +362,7 @@ La entrega queda lista para congelarse cuando:
 [x] resultado_final.txt verificado
 [x] Build standalone generado
 [x] Launcher probado: inicia API + juego y cierra la API al salir
-[ ] Evidencias guardadas
+[~] Evidencias guardadas: se omite únicamente captura manual de VICTORIA
 [x] Documentación consistente con main
 [x] PR documental listo para merge
 ```
