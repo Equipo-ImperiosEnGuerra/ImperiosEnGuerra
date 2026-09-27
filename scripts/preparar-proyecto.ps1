@@ -175,6 +175,13 @@ Write-Host "Este asistente debe ejecutarse antes del primer arranque de Unity"
 Write-Host "en una copia nueva del repositorio."
 Write-Host ""
 
+$unityAbierto =
+    Get-Process Unity -ErrorAction SilentlyContinue
+
+if ($null -ne $unityAbierto) {
+    throw "Unity esta abierto. Cierre el Editor antes de preparar el proyecto."
+}
+
 Write-Step "1/4 - Verificando .NET"
 Assert-Dotnet10
 
@@ -183,16 +190,18 @@ Show-UnityVersion
 
 Write-Step "3/4 - Preparando Tiny Swords"
 
+# Los .meta contienen los GUID usados por la escena. En clones Git se restauran
+# antes de copiar PNG para que una prueba/importacion previa no deje GUID nuevos.
+Restore-TinySwordsMetasFromGit
+Assert-MetasVersionados
+
 if (Test-TinySwordsCompleto) {
-    Write-Host "OK: Tiny Swords ya esta instalado."
+    Write-Host "OK: Tiny Swords ya esta instalado y sus .meta estan listos."
 }
 else {
     if (-not (Test-Path $instaladorTinySwords)) {
         throw "No se encontro el instalador: $instaladorTinySwords"
     }
-
-    Restore-TinySwordsMetasFromGit
-    Assert-MetasVersionados
 
     Write-Host ""
     Write-Host "Faltan los graficos locales de Tiny Swords."
