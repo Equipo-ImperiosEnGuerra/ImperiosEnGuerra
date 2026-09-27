@@ -2,19 +2,19 @@
 
 Imperios en Guerra utiliza **Tiny Swords (Free Pack)** de Pixel Frog.
 
-Los sprites no están incluidos en el repositorio, por lo que cada integrante debe disponer de su propia copia del paquete.
+Los sprites no se incluyen en el repositorio. Los archivos `.meta` sí se versionan para conservar los GUID y referencias de Unity.
 
-## 1. Descargar Tiny Swords
+## 1. Regla para una copia nueva
 
-Descargar **Tiny Swords (Free Pack)** desde:
+En una PC nueva o después de descargar/clonar el repositorio:
 
-https://pixelfrog-assets.itch.io/tiny-swords
+> **Ejecute `PREPARAR_PROYECTO.bat` antes de abrir Unity por primera vez.**
 
-No utilizar una versión distinta del paquete.
+Esto permite copiar los PNG antes de que Unity procese sus `.meta` y reduce el riesgo de regenerar GUID.
 
-## 2. Extraer el ZIP
+## 2. Descargar y extraer Tiny Swords
 
-Extraerlo fuera del repositorio.
+Descargue **Tiny Swords (Free Pack)** y extráigalo fuera del repositorio.
 
 Ejemplo:
 
@@ -23,111 +23,126 @@ C:\Proyectos\AssetsExternos\TinySwords\
 └── Tiny Swords (Free Pack)\
 ```
 
-No es necesario copiar manualmente las carpetas a `Assets/`.
+La carpeta válida puede ser:
 
-## 3. Instalación automática desde Unity — RECOMENDADA
+- directamente `Tiny Swords (Free Pack)`; o
+- la carpeta padre que la contiene.
 
-Abrir el proyecto `ImperiosEnGuerra` en Unity.
+## 3. Preparación recomendada en Windows
 
-Si faltan los gráficos locales, el proyecto lo detecta automáticamente y muestra un diálogo:
-
-```text
-Imperios en Guerra — Tiny Swords
-
-Faltan los gráficos locales de Tiny Swords.
-[Seleccionar carpeta] [Ahora no]
-```
-
-Seleccionar:
-
-- directamente la carpeta `Tiny Swords (Free Pack)`; o
-- la carpeta padre que contiene `Tiny Swords (Free Pack)`.
-
-El bootstrap del Editor:
-
-1. valida que existan `Buildings`, `Terrain` y `Units`;
-2. copia únicamente los gráficos necesarios;
-3. refresca `AssetDatabase`;
-4. configura unidades, recursos y edificios;
-5. configura el tileset y el sub-sprite de suelo;
-6. guarda y refresca los assets;
-7. confirma que Tiny Swords quedó listo.
-
-No agrega los PNG al repositorio: siguen excluidos mediante `.gitignore`.
-
-## 4. Instalación por terminal — alternativa
-
-El instalador original se mantiene como respaldo.
-
-Desde la raíz del proyecto:
+Desde el Explorador o desde CMD, ejecute en la raíz del repositorio:
 
 ```bat
-powershell -ExecutionPolicy Bypass -File scripts\instalar_tinyswords.ps1 -Origen "C:\Proyectos\AssetsExternos\TinySwords"
+PREPARAR_PROYECTO.bat
 ```
 
-El parámetro `-Origen` puede apuntar a:
+El asistente realiza:
 
-- la carpeta que contiene `Tiny Swords (Free Pack)`; o
-- directamente a `Tiny Swords (Free Pack)`.
+```text
+comprobar .NET 10 SDK
+        ↓
+mostrar versión Unity requerida
+        ↓
+¿Tiny Swords ya está completo?
+   ├── Sí → continuar
+   └── No
+        ↓
+restaurar .meta versionados si existe Git
+        ↓
+solicitar carpeta Tiny Swords
+        ↓
+copiar solo gráficos necesarios
+        ↓
+verificar archivos
+        ↓
+dotnet restore de la API
+        ↓
+proyecto preparado
+```
 
-## 5. Verificación
+La instalación de Tiny Swords reutiliza:
 
-Después de instalar:
+```text
+scripts/instalar_tinyswords.ps1
+```
 
-1. esperar a que Unity termine de importar;
-2. revisar la Console;
-3. comprobar que no existan errores;
-4. abrir `Assets/Scenes/SampleScene.unity`;
-5. ejecutar Play.
+Los PNG continúan excluidos mediante `.gitignore`.
 
-La configuración manual desde menús antiguos del Editor ya no es necesaria.
+## 4. Después de preparar
 
-## 6. Funcionamiento técnico
+Abra el proyecto con:
 
-La instalación automática utiliza:
+```text
+Unity 6000.6.0f1
+```
+
+Espere a que termine la importación.
+
+Las herramientas internas del Editor configuran automáticamente sprites y tileset cuando corresponde.
+
+Para generar el juego:
+
+```text
+Imperios en Guerra > Build > Build Windows x64
+```
+
+Después:
+
+```bat
+scripts\ejecutar-juego.bat
+```
+
+## 5. Bootstrap de Unity como respaldo
+
+El proyecto conserva:
 
 ```text
 Assets/Editor/TinySwordsBootstrap.cs
 ```
 
-Al abrir Unity:
+Si durante el desarrollo detecta que falta algún asset, puede solicitar nuevamente la carpeta del paquete y reparar la instalación.
 
-```text
-¿Están los assets requeridos?
-        │
-        ├── Sí → no hace nada
-        │
-        └── No
-             ↓
-      solicita carpeta
-             ↓
-      valida paquete
-             ↓
-      copia gráficos
-             ↓
-      AssetDatabase.Refresh()
-             ↓
-      TinySwordsSpriteConfigurator
-             ↓
-      TinySwordsImporter
-             ↓
-      proyecto listo
+Este mecanismo es un **respaldo**. Para una clonación limpia se recomienda el preparador externo porque actúa antes del primer arranque de Unity.
+
+## 6. Instalación manual por terminal
+
+Si no se desea usar el preparador general:
+
+```bat
+powershell -ExecutionPolicy Bypass -File scripts\instalar_tinyswords.ps1 -Origen "C:\Proyectos\AssetsExternos\TinySwords"
 ```
 
-En modo batch la ventana automática se desactiva para no bloquear builds o pruebas automatizadas.
+Debe ejecutarse antes de abrir Unity en una copia nueva.
 
-## Resumen
+## 7. Verificación
+
+Antes de abrir Unity, puede comprobar por ejemplo:
+
+```bat
+dir "Assets\Art\TinySwords\Buildings\Blue Buildings\Castle*"
+```
+
+Debe existir el par:
 
 ```text
-Descargar Tiny Swords
+Castle.png
+Castle.png.meta
+```
+
+La misma idea aplica a unidades, recursos y tileset.
+
+## 8. Resumen
+
+```text
+Descargar/clonar repositorio
         ↓
-Extraer ZIP
+Descargar + extraer Tiny Swords
         ↓
-Abrir Unity
+PREPARAR_PROYECTO.bat
         ↓
-Seleccionar carpeta cuando se solicite
+Abrir Unity 6000.6.0f1
         ↓
-Instalación y configuración automáticas
+Build Windows x64
         ↓
-Ejecutar el proyecto
+scripts\ejecutar-juego.bat
 ```
