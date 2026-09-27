@@ -353,7 +353,7 @@ namespace ImperiosEnGuerra.Servicios
             }
         }
 
-        private static void AgregarJugadorFinal(
+        private void AgregarJugadorFinal(
             StringBuilder texto,
             Partida partida,
             Jugador jugador)
