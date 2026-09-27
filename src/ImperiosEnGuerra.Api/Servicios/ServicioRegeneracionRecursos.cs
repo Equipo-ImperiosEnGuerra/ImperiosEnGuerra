@@ -18,6 +18,7 @@ public sealed class ServicioRegeneracionRecursos : IDisposable
     private readonly EstadoPartidaService estadoPartida;
     private readonly TimeSpan retardoRegeneracion;
     private readonly TimeSpan intervaloRevision;
+    //Protege la lista de regeneraciones y el generador aleatorio usados por el worker.
     private readonly object sincronizacion = new();
     private readonly Dictionary<string, RegeneracionPendiente> pendientes =
         new Dictionary<string, RegeneracionPendiente>();
@@ -26,6 +27,7 @@ public sealed class ServicioRegeneracionRecursos : IDisposable
     private CancellationTokenSource? cancelacion;
     private bool dispuesto;
 
+    //Recuerda qué nodo agotado debe reaparecer y a partir de qué momento.
     private sealed class RegeneracionPendiente
     {
         public TipoRecurso Tipo { get; }
@@ -115,6 +117,7 @@ public sealed class ServicioRegeneracionRecursos : IDisposable
         }
     }
 
+    //Inicia la revisión periódica de recursos agotados en segundo plano.
     public bool Iniciar()
     {
         lock (sincronizacion)
@@ -161,6 +164,7 @@ public sealed class ServicioRegeneracionRecursos : IDisposable
         }
     }
 
+    //Registra nodos agotados, espera su retardo y solicita su regeneración al estado sincronizado.
     public int EjecutarPaso()
     {
         ThrowSiDispuesto();
@@ -192,6 +196,7 @@ public sealed class ServicioRegeneracionRecursos : IDisposable
                     clave);
             }
 
+            //Los nodos nuevos reciben una fecha futura antes de poder regenerarse.
             foreach (Recurso recurso
                      in agotados)
             {
@@ -224,6 +229,7 @@ public sealed class ServicioRegeneracionRecursos : IDisposable
 
         int regeneradas = 0;
 
+        //Solo intenta recrear los nodos cuyo tiempo de espera ya terminó.
         foreach (RegeneracionPendiente pendiente
                  in vencidas)
         {
@@ -263,6 +269,7 @@ public sealed class ServicioRegeneracionRecursos : IDisposable
         return regeneradas;
     }
 
+    //Mantiene la revisión activa con Task.Delay cancelable para no bloquear ningún hilo.
     private async Task EjecutarCicloAsync(
         CancellationTokenSource origen)
     {
@@ -325,6 +332,7 @@ public sealed class ServicioRegeneracionRecursos : IDisposable
         }
     }
 
+    //Cancela el worker, limpia pendientes y desconecta el evento de finalización.
     public void Dispose()
     {
         lock (sincronizacion)

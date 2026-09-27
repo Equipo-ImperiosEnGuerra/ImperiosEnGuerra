@@ -8,11 +8,15 @@ using ImperiosEnGuerra.Servicios.Concurrencia;
 
 namespace ImperiosEnGuerra.Api.Servicios;
 
+/// <summary>
+/// Ejecuta reacciones automáticas de unidades humanas sin reemplazar las órdenes manuales del jugador.
+/// </summary>
 public sealed class ServicioReaccionesAutomaticas : IDisposable
 {
     private readonly EstadoPartidaService estadoPartida;
     private readonly ServicioAccionesConcurrentes acciones;
     private readonly TimeSpan intervaloDeteccion;
+    //Protege asignaciones y suspensiones porque el detector y los workers trabajan en paralelo.
     private readonly object sincronizacion = new();
     private readonly HashSet<Guid> unidadesAsignadas = new();
     private readonly HashSet<Guid> unidadesSuspendidas =
@@ -90,6 +94,7 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
         }
     }
 
+    //Inicia el detector periódico en una Task independiente.
     public bool Iniciar()
     {
         lock (sincronizacion)
@@ -139,6 +144,7 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
         }
     }
 
+    //Cancela una reacción automática activa antes de entregar la unidad a una orden manual.
     public void PrepararOrdenManual(
         Guid unidadId)
     {
@@ -195,6 +201,7 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
         }
     }
 
+    //Consulta las reacciones posibles y evita asignar dos procesos automáticos a la misma unidad.
     public int EjecutarPaso()
     {
         ThrowSiDispuesto();
@@ -284,6 +291,7 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
         }
     }
 
+    //Convierte la reacción preparada en un ataque, curación o movimiento idle concurrente.
     private ProcesoConcurrente? EjecutarReaccion(
         ReaccionAutomatica reaccion)
     {
@@ -371,6 +379,7 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
                 }
             }
 
+            //Libera la unidad cuando termina el worker para que pueda recibir otra reacción.
             _ = proceso.Finalizacion
                 .ContinueWith(
                     _ =>
@@ -420,6 +429,7 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
         }
     }
 
+    //Revisa periódicamente el estado mientras el servicio no haya sido cancelado.
     private async Task EjecutarCicloAsync(
         CancellationTokenSource origen)
     {
@@ -467,6 +477,7 @@ public sealed class ServicioReaccionesAutomaticas : IDisposable
         }
     }
 
+    //Cancela el detector y deja de escuchar el evento de finalización de partida.
     public void Dispose()
     {
         lock (sincronizacion)

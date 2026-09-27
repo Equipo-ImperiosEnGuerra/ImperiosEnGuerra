@@ -6,6 +6,9 @@ using ImperiosEnGuerra.Servicios.Concurrencia;
 
 namespace ImperiosEnGuerra.Api.Servicios;
 
+/// <summary>
+/// Coordina las decisiones y workers de las facciones controladas por la máquina.
+/// </summary>
 public sealed class ServicioJugadorMaquina : IDisposable
 {
     private readonly EstadoPartidaService estadoPartida;
@@ -13,6 +16,7 @@ public sealed class ServicioJugadorMaquina : IDisposable
     private readonly TimeSpan intervaloDecision;
     private readonly TimeSpan graciaCombateInicial;
     private readonly TimeSpan escalonCombateEntreFacciones;
+    //Protege las asignaciones porque el ciclo de IA y las continuaciones terminan en hilos distintos.
     private readonly object sincronizacion = new();
     private readonly HashSet<Guid> unidadesAsignadas = new();
     private readonly HashSet<string> centrosAsignados =
@@ -132,6 +136,7 @@ public sealed class ServicioJugadorMaquina : IDisposable
         }
     }
 
+    //Inicia el ciclo de decisiones en segundo plano sin bloquear las peticiones de la API.
     public bool Iniciar()
     {
         lock (sincronizacion)
@@ -180,6 +185,7 @@ public sealed class ServicioJugadorMaquina : IDisposable
         }
     }
 
+    //Pide una decisión independiente para cada facción de Máquina.
     public ProcesoConcurrente? EjecutarPaso()
     {
         ThrowSiDispuesto();
@@ -291,6 +297,7 @@ public sealed class ServicioJugadorMaquina : IDisposable
                procesoPaseo;
     }
 
+    //Traduce la decisión lógica de la IA en una acción concurrente concreta.
     private ProcesoConcurrente? EjecutarDecisionMaquina(
         int indiceMaquina,
         DecisionMaquina decision)
@@ -555,6 +562,7 @@ public sealed class ServicioJugadorMaquina : IDisposable
         }
     }
 
+    //Cuando una IA recibe daño, prepara el contraataque de esa misma unidad si corresponde.
     private void ReaccionarAImpacto(
         Guid atacanteId,
         Guid objetivoId)
@@ -667,6 +675,7 @@ public sealed class ServicioJugadorMaquina : IDisposable
         }
     }
 
+    //Mantiene como máximo una recolección económica activa por facción.
     private ProcesoConcurrente? EjecutarConRecoleccionAsignada(
         int indiceMaquina,
         Guid unidadId,
@@ -731,6 +740,7 @@ public sealed class ServicioJugadorMaquina : IDisposable
         }
     }
 
+    //Mantiene un único frente militar normal por facción.
     private ProcesoConcurrente? EjecutarConCombateAsignado(
         int indiceMaquina,
         Guid unidadId,
@@ -903,6 +913,7 @@ public sealed class ServicioJugadorMaquina : IDisposable
         }
     }
 
+    //Repite la toma de decisiones hasta que el CancellationToken detiene el ciclo.
     private async Task EjecutarCicloAsync(
         CancellationTokenSource origen)
     {
@@ -938,6 +949,7 @@ public sealed class ServicioJugadorMaquina : IDisposable
         }
     }
 
+    //Aplica la gracia inicial y el escalonamiento para que las IAs no ataquen todas al mismo tiempo.
     private bool CombateHabilitado(
         int indiceMaquina)
     {
@@ -1014,6 +1026,7 @@ public sealed class ServicioJugadorMaquina : IDisposable
         }
     }
 
+    //Cancela el ciclo y desconecta eventos para no dejar procesos activos al cerrar el servicio.
     public void Dispose()
     {
         lock (sincronizacion)
