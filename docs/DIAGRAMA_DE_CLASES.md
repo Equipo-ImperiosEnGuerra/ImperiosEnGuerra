@@ -24,7 +24,7 @@ Controladores = puente
 
 # 2. UML principal — Arquitectura MVC
 
-Este es el diagrama principal para explicar a la profesora. Los bloques dejan visible qué clases pertenecen a cada responsabilidad.
+Este es el diagrama principal de la arquitectura MVC. Los bloques muestran qué clases pertenecen a cada responsabilidad.
 
 ```mermaid
 classDiagram
@@ -574,18 +574,3 @@ Task / ThreadPool
 Este ejemplo deja visible que **Unity no decide el daño ni la victoria** y que **el Modelo no dibuja sprites ni manipula GameObjects**.
 
 ---
-
-# 7. Qué explicar en la sustentación
-
-Para demostrar MVC de forma clara:
-
-1. **Modelo:** mostrar `Partida`, `Jugador`, `Unidad` o `Mapa` y señalar que son C# de dominio sin lógica gráfica.
-2. **Vista:** mostrar `VistaPartida` o `VistaHud` y explicar que presentan el snapshot recibido.
-3. **Controlador:** mostrar `ControladorAcciones` / `ControladorConexionApi` y `EstadoPartidaService` como puente de coordinación.
-4. Explicar un flujo completo, por ejemplo:
-   `clic → Controlador → Modelo → resultado → Vista`.
-5. Señalar que los workers concurrentes modifican el Modelo y **nunca UnityEngine directamente**.
-
-La idea central que debe quedar evidente es:
-
-> **El Modelo sabe jugar, la Vista sabe mostrar y el Controlador sabe coordinar.**
