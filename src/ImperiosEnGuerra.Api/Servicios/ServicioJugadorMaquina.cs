@@ -25,6 +25,21 @@ public sealed class ServicioJugadorMaquina : IDisposable
     private readonly HashSet<int> recoleccionesAsignadas =
         new HashSet<int>();
 
+    // Mantiene como máximo un frente defensivo extra por facción.
+    // Ese frente solo puede pertenecer a la unidad que recibió el impacto.
+    private readonly HashSet<int> defensasReactivasAsignadas =
+        new HashSet<int>();
+
+    // Paseo ambiental de baja prioridad para Aldeanos IA sin tarea.
+    private readonly HashSet<int> paseosIdleAsignados =
+        new HashSet<int>();
+
+    private readonly Dictionary<Guid, DateTime> proximoPaseoIdle =
+        new Dictionary<Guid, DateTime>();
+
+    private static readonly TimeSpan IntervaloPaseoIdle =
+        TimeSpan.FromSeconds(8);
+
     private CancellationTokenSource? cancelacion;
     private DateTime inicioCicloUtc = DateTime.MinValue;
     private bool dispuesto;
@@ -89,6 +104,9 @@ public sealed class ServicioJugadorMaquina : IDisposable
 
         this.estadoPartida.PartidaFinalizada +=
             DetenerPorFinalizacion;
+
+        this.acciones.ImpactoAplicado +=
+            ReaccionarAImpacto;
     }
 
     public bool Activo
@@ -264,8 +282,13 @@ public sealed class ServicioJugadorMaquina : IDisposable
                 indiceMaquina,
                 decisionEconomica);
 
+        ProcesoConcurrente? procesoPaseo =
+            IntentarPaseoAmbiental(
+                indiceMaquina);
+
         return procesoMilitar ??
-               procesoEconomico;
+               procesoEconomico ??
+               procesoPaseo;
     }
 
     private ProcesoConcurrente? EjecutarDecisionMaquina(
@@ -346,6 +369,29 @@ public sealed class ServicioJugadorMaquina : IDisposable
                                     decision.TipoUnidad
                             }));
 
+            case TipoDecisionMaquina.Pasear:
+                return EjecutarConPaseoIdleAsignado(
+                    indiceMaquina,
+                    decision.UnidadId,
+                    () =>
+                        acciones.IniciarMovimientoIdle(
+                            new MoverUnidadRequest
+                            {
+                                UnidadId =
+                                    decision.UnidadId
+                                        .ToString("D"),
+
+                                Destino =
+                                    new CoordenadaRequest
+                                    {
+                                        X =
+                                            decision.Objetivo.X,
+
+                                        Y =
+                                            decision.Objetivo.Y
+                                    }
+                            }));
+
             case TipoDecisionMaquina.Mover:
             case TipoDecisionMaquina.Patrullar:
                 return EjecutarConCombateAsignado(
@@ -389,6 +435,235 @@ public sealed class ServicioJugadorMaquina : IDisposable
 
             default:
                 return null;
+        }
+    }
+
+    private ProcesoConcurrente? IntentarPaseoAmbiental(
+        int indiceMaquina)
+    {
+        Guid[] excluidas;
+
+        lock (sincronizacion)
+        {
+            if (paseosIdleAsignados.Contains(
+                    indiceMaquina))
+            {
+                return null;
+            }
+
+            DateTime ahora =
+                DateTime.UtcNow;
+
+            Guid[] vencidos =
+                proximoPaseoIdle
+                    .Where(
+                        par =>
+                            par.Value <=
+                            ahora)
+                    .Select(
+                        par =>
+                            par.Key)
+                    .ToArray();
+
+            foreach (Guid unidadId
+                     in vencidos)
+            {
+                proximoPaseoIdle.Remove(
+                    unidadId);
+            }
+
+            excluidas =
+                unidadesAsignadas
+                    .Concat(
+                        proximoPaseoIdle.Keys)
+                    .Distinct()
+                    .ToArray();
+        }
+
+        DecisionMaquina paseo =
+            estadoPartida.PrepararPaseoAldeanoMaquina(
+                indiceMaquina,
+                excluidas);
+
+        return EjecutarDecisionMaquina(
+            indiceMaquina,
+            paseo);
+    }
+
+    private ProcesoConcurrente? EjecutarConPaseoIdleAsignado(
+        int indiceMaquina,
+        Guid unidadId,
+        Func<ProcesoConcurrente> iniciar)
+    {
+        if (unidadId == Guid.Empty ||
+            iniciar == null)
+        {
+            return null;
+        }
+
+        lock (sincronizacion)
+        {
+            // El paseo nunca bloquea una tarea real. Si la unidad recibió una
+            // orden entre la planificación y este punto, se cancela el paseo.
+            if (paseosIdleAsignados.Contains(
+                    indiceMaquina) ||
+                unidadesAsignadas.Contains(
+                    unidadId))
+            {
+                return null;
+            }
+
+            paseosIdleAsignados.Add(
+                indiceMaquina);
+        }
+
+        try
+        {
+            ProcesoConcurrente proceso =
+                iniciar();
+
+            _ = proceso.Finalizacion
+                .ContinueWith(
+                    _ =>
+                    {
+                        lock (sincronizacion)
+                        {
+                            paseosIdleAsignados.Remove(
+                                indiceMaquina);
+
+                            proximoPaseoIdle[
+                                unidadId] =
+                                DateTime.UtcNow.Add(
+                                    IntervaloPaseoIdle);
+                        }
+                    },
+                    CancellationToken.None,
+                    TaskContinuationOptions.ExecuteSynchronously,
+                    TaskScheduler.Default);
+
+            return proceso;
+        }
+        catch
+        {
+            lock (sincronizacion)
+            {
+                paseosIdleAsignados.Remove(
+                    indiceMaquina);
+            }
+
+            throw;
+        }
+    }
+
+    private void ReaccionarAImpacto(
+        Guid atacanteId,
+        Guid objetivoId)
+    {
+        if (dispuesto)
+            return;
+
+        DecisionMaquina defensa =
+            estadoPartida.PrepararContraataqueMaquina(
+                objetivoId,
+                atacanteId);
+
+        if (defensa.Tipo !=
+            TipoDecisionMaquina.Atacar)
+        {
+            return;
+        }
+
+        int indiceMaquina =
+            estadoPartida.ObtenerIndiceMaquinaPorUnidad(
+                objetivoId);
+
+        if (indiceMaquina < 0)
+            return;
+
+        EjecutarContraataqueDefensivo(
+            indiceMaquina,
+            defensa);
+    }
+
+    private ProcesoConcurrente? EjecutarContraataqueDefensivo(
+        int indiceMaquina,
+        DecisionMaquina decision)
+    {
+        if (decision == null ||
+            decision.Tipo !=
+                TipoDecisionMaquina.Atacar ||
+            decision.UnidadId ==
+                Guid.Empty ||
+            decision.ObjetivoUnidadId ==
+                Guid.Empty)
+        {
+            return null;
+        }
+
+        lock (sincronizacion)
+        {
+            // No se suman aliados. El único frente extra permitido es la
+            // propia unidad que está recibiendo el ataque.
+            if (defensasReactivasAsignadas.Contains(
+                    indiceMaquina) ||
+                unidadesAsignadas.Contains(
+                    decision.UnidadId) ||
+                !unidadesAsignadas.Add(
+                    decision.UnidadId))
+            {
+                return null;
+            }
+
+            defensasReactivasAsignadas.Add(
+                indiceMaquina);
+        }
+
+        try
+        {
+            ProcesoConcurrente proceso =
+                acciones.IniciarAtaque(
+                    new AtacarRequest
+                    {
+                        AtacanteId =
+                            decision.UnidadId
+                                .ToString("D"),
+
+                        ObjetivoId =
+                            decision.ObjetivoUnidadId
+                                .ToString("D")
+                    });
+
+            _ = proceso.Finalizacion
+                .ContinueWith(
+                    _ =>
+                    {
+                        lock (sincronizacion)
+                        {
+                            unidadesAsignadas.Remove(
+                                decision.UnidadId);
+
+                            defensasReactivasAsignadas.Remove(
+                                indiceMaquina);
+                        }
+                    },
+                    CancellationToken.None,
+                    TaskContinuationOptions.ExecuteSynchronously,
+                    TaskScheduler.Default);
+
+            return proceso;
+        }
+        catch
+        {
+            lock (sincronizacion)
+            {
+                unidadesAsignadas.Remove(
+                    decision.UnidadId);
+
+                defensasReactivasAsignadas.Remove(
+                    indiceMaquina);
+            }
+
+            throw;
         }
     }
 
@@ -761,5 +1036,8 @@ public sealed class ServicioJugadorMaquina : IDisposable
 
         estadoPartida.PartidaFinalizada -=
             DetenerPorFinalizacion;
+
+        acciones.ImpactoAplicado -=
+            ReaccionarAImpacto;
     }
 }

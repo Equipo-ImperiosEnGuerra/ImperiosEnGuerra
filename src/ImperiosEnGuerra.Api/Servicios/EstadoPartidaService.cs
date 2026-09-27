@@ -289,6 +289,27 @@ public sealed class EstadoPartidaService
         }
     }
 
+    public ResultadoAccion AvanzarMovimientoIdle(
+        Guid unidadId,
+        Coordenada siguiente)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+            {
+                return ResultadoAccion.Fallido(
+                    "No hay una partida activa.");
+            }
+
+            return new OperacionPasoMovimiento()
+                .Ejecutar(
+                    partidaActiva,
+                    unidadId,
+                    siguiente,
+                    permitirMovimientoIdle: true);
+        }
+    }
+
     public ResultadoAproximacionRecurso PrepararAproximacionRecurso(
         RecolectarRequest? request,
         bool permitirOrdenMovimientoActiva = false)
@@ -638,6 +659,123 @@ public sealed class EstadoPartidaService
                     maquina,
                     unidadesExcluidas,
                     permitirCombate);
+        }
+    }
+
+    public DecisionMaquina PrepararPaseoAldeanoMaquina(
+        int indiceMaquina,
+        IReadOnlyCollection<Guid>? unidadesExcluidas = null)
+    {
+        lock (sincronizacion)
+        {
+            Jugador? maquina =
+                partidaActiva?
+                    .JugadoresMaquina
+                    .ElementAtOrDefault(
+                        indiceMaquina);
+
+            return new PlanificadorDecisionMaquina()
+                .PrepararPaseoAldeano(
+                    partidaActiva,
+                    maquina,
+                    unidadesExcluidas);
+        }
+    }
+
+    public DecisionMaquina PrepararContraataqueMaquina(
+        Guid defensorId,
+        Guid atacanteId)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null ||
+                partidaActiva.Finalizada)
+            {
+                return DecisionMaquina.SinAccion(
+                    "No hay una partida activa para contraatacar.");
+            }
+
+            Jugador? propietarioDefensor =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    defensorId);
+
+            Jugador? propietarioAtacante =
+                partidaActiva.BuscarJugadorPorUnidad(
+                    atacanteId);
+
+            if (propietarioDefensor == null ||
+                propietarioDefensor.Tipo !=
+                    TipoJugador.Maquina ||
+                propietarioAtacante == null ||
+                !ReferenceEquals(
+                    propietarioAtacante,
+                    partidaActiva.JugadorHumano) ||
+                !partidaActiva.SonEnemigos(
+                    propietarioDefensor,
+                    propietarioAtacante))
+            {
+                return DecisionMaquina.SinAccion(
+                    "El impacto no corresponde a una defensa reactiva de la IA.");
+            }
+
+            Soldado? defensor =
+                propietarioDefensor.Unidades
+                    .OfType<Soldado>()
+                    .FirstOrDefault(
+                        unidad =>
+                            unidad.Id ==
+                            defensorId);
+
+            Unidad? atacante =
+                propietarioAtacante.Unidades
+                    .FirstOrDefault(
+                        unidad =>
+                            unidad.Id ==
+                            atacanteId);
+
+            if (defensor == null ||
+                defensor.Destruida ||
+                defensor.DanioAtaque <= 0 ||
+                defensor.AlcanceAtaque <= 0 ||
+                atacante == null ||
+                atacante.Destruida)
+            {
+                return DecisionMaquina.SinAccion(
+                    "La unidad atacada no puede ejecutar un contraataque.");
+            }
+
+            return DecisionMaquina.Atacar(
+                defensor.Id,
+                atacante.Id);
+        }
+    }
+
+    public int ObtenerIndiceMaquinaPorUnidad(
+        Guid unidadId)
+    {
+        lock (sincronizacion)
+        {
+            if (partidaActiva == null)
+                return -1;
+
+            for (int indice = 0;
+                 indice <
+                 partidaActiva.JugadoresMaquina.Count;
+                 indice++)
+            {
+                if (partidaActiva
+                    .JugadoresMaquina[
+                        indice]
+                    .Unidades.Any(
+                        unidad =>
+                            unidad.Id ==
+                            unidadId))
+                {
+                    return indice;
+                }
+            }
+
+            return -1;
         }
     }
 
