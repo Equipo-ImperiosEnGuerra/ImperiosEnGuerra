@@ -9,7 +9,10 @@ using ImperiosEnGuerra.Servicios;
 
 namespace ImperiosEnGuerra.Tests.Editor
 {
-    public class ServicioArchivosTests
+    /// <summary>
+/// Comprueba creación, reemplazo y contenido de configuracion.txt, log_partida.txt y resultado_final.txt.
+/// </summary>
+public class ServicioArchivosTests
     {
         private string directorioTemporal;
 

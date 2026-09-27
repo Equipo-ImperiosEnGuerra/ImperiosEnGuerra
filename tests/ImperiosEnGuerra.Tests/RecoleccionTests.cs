@@ -9,6 +9,9 @@ using ImperiosEnGuerra.Modelo.Unidades;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba las validaciones para iniciar recolección con Aldeanos, recursos y coordenadas válidas.
+/// </summary>
 public class RecoleccionTests
 {
     private Partida partida;

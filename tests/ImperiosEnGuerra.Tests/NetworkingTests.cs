@@ -9,6 +9,9 @@ using ImperiosEnGuerra.Servicios.Concurrencia;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba deserialización de mensajes JSON y despacho de mover, recolectar, construir, entrenar, atacar y curar.
+/// </summary>
 public class NetworkingTests
 {
     [Test]

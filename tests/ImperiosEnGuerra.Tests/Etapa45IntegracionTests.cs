@@ -10,6 +10,9 @@ using ImperiosEnGuerra.Servicios.Concurrencia;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba la integración entre economía, recolección, construcción, entrenamiento y reembolsos.
+/// </summary>
 public class Etapa45IntegracionTests
 {
     [Test]

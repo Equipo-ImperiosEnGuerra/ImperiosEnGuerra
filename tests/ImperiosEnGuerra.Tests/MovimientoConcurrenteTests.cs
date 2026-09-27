@@ -8,6 +8,9 @@ using ImperiosEnGuerra.Servicios.Concurrencia;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba movimiento en worker, cancelación y liberación correcta de la orden de la unidad.
+/// </summary>
 public class MovimientoConcurrenteTests
 {
     [Test]

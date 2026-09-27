@@ -9,6 +9,9 @@ using ImperiosEnGuerra.Modelo.Unidades;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba tipos permitidos, propietario, casilla de aparición y validaciones del entrenamiento.
+/// </summary>
 public class EntrenamientoTests
 {
     private Partida partida;

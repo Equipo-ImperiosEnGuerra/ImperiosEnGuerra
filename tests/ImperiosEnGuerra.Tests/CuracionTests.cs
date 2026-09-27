@@ -9,6 +9,9 @@ using ImperiosEnGuerra.Servicios.Concurrencia;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba el rol del Monje, el alcance de curación y su ejecución concurrente hasta completar la vida.
+/// </summary>
 public class CuracionTests
 {
     private Partida partida;

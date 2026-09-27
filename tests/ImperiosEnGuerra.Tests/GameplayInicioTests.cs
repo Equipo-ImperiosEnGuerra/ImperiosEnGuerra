@@ -10,6 +10,9 @@ using NUnit.Framework;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba que la distribución inicial deje recursos accesibles para comenzar la economía sin bloqueos.
+/// </summary>
 public class GameplayInicioTests
 {
     [Test]

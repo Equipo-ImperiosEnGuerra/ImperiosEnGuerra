@@ -6,6 +6,9 @@ using ImperiosEnGuerra.Modelo.Unidades;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba un ciclo de extracción, la capacidad del Aldeano y la distancia requerida al recurso.
+/// </summary>
 public class OperacionPasoRecoleccionTests
 {
     private Mapa mapa;

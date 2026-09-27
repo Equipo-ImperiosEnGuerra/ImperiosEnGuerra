@@ -9,6 +9,9 @@ using ImperiosEnGuerra.Servicios.Concurrencia;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba que movimiento, recolección, construcción, entrenamiento, ataque y curación puedan coexistir concurrentemente.
+/// </summary>
 public class TodasOperacionesConcurrentesTests
 {
     [Test]

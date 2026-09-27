@@ -3,7 +3,10 @@ using NUnit.Framework;
 
 namespace ImperiosEnGuerra.Tests
 {
-    public class AccionesTests
+    /// <summary>
+/// Comprueba los contratos básicos de solicitudes y resultados usados por las acciones del juego.
+/// </summary>
+public class AccionesTests
     {
         [TestCase("Acción aceptada")]
         [TestCase("")]

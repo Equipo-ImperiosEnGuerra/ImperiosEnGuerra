@@ -8,6 +8,9 @@ using ImperiosEnGuerra.Modelo.Unidades;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba la selección de casillas adyacentes accesibles y la distribución de varios Aldeanos alrededor de un recurso.
+/// </summary>
 public class PlanificadorAproximacionRecursoTests
 {
     private Mapa mapa;

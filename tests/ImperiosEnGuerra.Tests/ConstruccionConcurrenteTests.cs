@@ -9,6 +9,9 @@ using ImperiosEnGuerra.Servicios.Concurrencia;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba construcción en workers, cancelación y conflictos al intentar ocupar la misma casilla.
+/// </summary>
 public class ConstruccionConcurrenteTests
 {
     [Test]

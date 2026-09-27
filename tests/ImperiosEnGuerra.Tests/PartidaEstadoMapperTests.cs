@@ -7,7 +7,10 @@ using NUnit.Framework;
 
 namespace ImperiosEnGuerra.Tests.Editor
 {
-    public class PartidaEstadoMapperTests
+    /// <summary>
+/// Comprueba que el snapshot de la API conserve los datos necesarios para la Vista sin exponer el Modelo.
+/// </summary>
+public class PartidaEstadoMapperTests
     {
         [Test]
         public void Convertir_ExponeEstadoNecesarioParaLaVista()

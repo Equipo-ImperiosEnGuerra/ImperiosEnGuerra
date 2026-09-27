@@ -9,6 +9,9 @@ using ImperiosEnGuerra.Servicios.Concurrencia;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba activación, pausa, reanudación y control de sesión mediante latidos de Unity.
+/// </summary>
 public class SesionJuegoTests
 {
     [Test]

@@ -9,6 +9,9 @@ using ImperiosEnGuerra.Servicios.Concurrencia;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba orden de cola, cancelación, progreso y aparición segura de unidades entrenadas.
+/// </summary>
 public class ColaEntrenamientoTests
 {
     [Test]

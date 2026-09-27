@@ -9,6 +9,9 @@ using ImperiosEnGuerra.Servicios.Concurrencia;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba decisiones económicas, composición militar, frentes concurrentes y ciclo automático de las IAs.
+/// </summary>
 public class JugadorMaquinaTests
 {
     [Test]

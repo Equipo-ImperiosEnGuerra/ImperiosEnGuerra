@@ -10,6 +10,9 @@ using ImperiosEnGuerra.Modelo.Unidades;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba validaciones de destino y actualización de coordenadas e identidad al mover una unidad.
+/// </summary>
 public class MovimientoTests
 {
     private Partida partida;

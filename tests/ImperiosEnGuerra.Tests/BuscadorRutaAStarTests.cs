@@ -5,6 +5,9 @@ using ImperiosEnGuerra.Modelo.Recursos;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba que A* encuentre rutas válidas y respete obstáculos, ocupación y límites del mapa.
+/// </summary>
 public class BuscadorRutaAStarTests
 {
     private BuscadorRutaAStar buscador;

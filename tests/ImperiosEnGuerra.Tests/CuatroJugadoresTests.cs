@@ -11,6 +11,9 @@ using NUnit.Framework;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba la partida Humano vs tres IAs, sus eliminaciones, conquista y condición final de victoria.
+/// </summary>
 public class CuatroJugadoresTests
 {
     [Test]

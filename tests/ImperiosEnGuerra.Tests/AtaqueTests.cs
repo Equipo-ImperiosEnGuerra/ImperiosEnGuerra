@@ -10,6 +10,9 @@ using ImperiosEnGuerra.Modelo.Unidades;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba daño, alcance, destrucción y validaciones de las reglas de combate.
+/// </summary>
 public class AtaqueTests
 {
     private Partida partida;

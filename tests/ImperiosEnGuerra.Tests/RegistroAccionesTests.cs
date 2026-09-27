@@ -12,6 +12,9 @@ using ImperiosEnGuerra.Servicios;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba el registro de acciones y que un error de escritura no detenga la partida.
+/// </summary>
 public class RegistroAccionesTests
 {
     private string directorioTemporal;

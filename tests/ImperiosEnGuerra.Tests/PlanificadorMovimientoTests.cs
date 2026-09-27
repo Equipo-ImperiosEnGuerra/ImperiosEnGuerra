@@ -9,6 +9,9 @@ using ImperiosEnGuerra.Modelo.Unidades;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba cómo el planificador trata edificios, aliados, enemigos y rutas imposibles antes de mover.
+/// </summary>
 public class PlanificadorMovimientoTests
 {
     private Mapa mapa;

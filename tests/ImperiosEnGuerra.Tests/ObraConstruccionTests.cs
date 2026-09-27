@@ -8,6 +8,9 @@ using ImperiosEnGuerra.Modelo.Unidades;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba reserva de casilla, cancelación y conversión de una obra completa en edificio real.
+/// </summary>
 public class ObraConstruccionTests
 {
     [Test]

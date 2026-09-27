@@ -9,6 +9,9 @@ using ImperiosEnGuerra.Servicios.Concurrencia;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba el ciclo completo de extracción y depósito, incluido el acceso de varios Aldeanos al mismo nodo.
+/// </summary>
 public class CicloRecoleccionTests
 {
     [Test]

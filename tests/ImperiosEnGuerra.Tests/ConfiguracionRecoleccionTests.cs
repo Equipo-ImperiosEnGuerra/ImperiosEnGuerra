@@ -2,6 +2,9 @@ using ImperiosEnGuerra.Modelo.Recursos;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba las tasas configuradas por recurso y el rechazo de valores inválidos.
+/// </summary>
 public class ConfiguracionRecoleccionTests
 {
     [Test]

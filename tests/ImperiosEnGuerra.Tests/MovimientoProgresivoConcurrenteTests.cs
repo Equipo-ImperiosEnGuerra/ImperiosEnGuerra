@@ -9,6 +9,9 @@ using ImperiosEnGuerra.Servicios.Concurrencia;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba que el movimiento concurrente avance por pasos y pueda detenerse conservando un estado válido.
+/// </summary>
 public class MovimientoProgresivoConcurrenteTests
 {
     [Test]

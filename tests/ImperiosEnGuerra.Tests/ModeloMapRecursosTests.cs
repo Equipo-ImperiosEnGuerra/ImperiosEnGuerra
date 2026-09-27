@@ -6,7 +6,10 @@ using ImperiosEnGuerra.Modelo.Recursos;
 
 namespace ImperiosEnGuerra.Tests.Editor
 {
-    public class ModeloMapRecursosTests
+    /// <summary>
+/// Comprueba límites, ocupación del mapa y reglas básicas de los recursos compartidos.
+/// </summary>
+public class ModeloMapRecursosTests
     {
         [Test]
         public void Casilla_IniciaLibre_YControlaOcupacionYLiberacion()

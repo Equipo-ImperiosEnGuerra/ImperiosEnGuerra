@@ -10,6 +10,9 @@ using ImperiosEnGuerra.Modelo.Unidades;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba las validaciones y cambios de mapa producidos por una construcción válida o rechazada.
+/// </summary>
 public class ConstruccionTests
 {
     private Partida partida;

@@ -17,6 +17,9 @@ using NUnit.Framework;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba la regla AND de victoria, finalización, cancelación de workers y rechazo de nuevas órdenes.
+/// </summary>
 public class VictoriaFinalTests
 {
     [Test]

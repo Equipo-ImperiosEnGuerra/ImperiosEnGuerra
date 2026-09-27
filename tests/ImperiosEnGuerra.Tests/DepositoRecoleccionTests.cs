@@ -7,6 +7,9 @@ using ImperiosEnGuerra.Modelo.Unidades;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba que la carga solo pase al saldo del jugador al depositarse junto a un Centro Urbano.
+/// </summary>
 public class DepositoRecoleccionTests
 {
     [Test]

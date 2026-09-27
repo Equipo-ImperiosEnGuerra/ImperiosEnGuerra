@@ -6,6 +6,9 @@ using ImperiosEnGuerra.Modelo.Recursos;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba que un nodo agotado reaparezca como el mismo tipo y que el ciclo pueda ejecutarse en segundo plano.
+/// </summary>
 public class RegeneracionRecursosTests
 {
     [Test]

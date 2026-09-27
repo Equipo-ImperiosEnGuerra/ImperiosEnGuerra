@@ -9,6 +9,9 @@ using ImperiosEnGuerra.Servicios.Concurrencia;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba que acciones independientes puedan avanzar al mismo tiempo sin bloquearse entre sí.
+/// </summary>
 public class OperacionesSimultaneasTests
 {
     [Test]

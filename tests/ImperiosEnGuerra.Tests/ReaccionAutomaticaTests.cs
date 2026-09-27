@@ -9,6 +9,9 @@ using ImperiosEnGuerra.Servicios.Concurrencia;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba ataques y curaciones automáticas sin interferir con órdenes manuales ni mover Aldeanos humanos por su cuenta.
+/// </summary>
 public class ReaccionAutomaticaTests
 {
     private Mapa mapa;

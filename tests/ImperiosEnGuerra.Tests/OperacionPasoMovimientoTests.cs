@@ -6,6 +6,9 @@ using ImperiosEnGuerra.Modelo.Unidades;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba las validaciones de un único paso de movimiento sobre casillas y entidades vecinas.
+/// </summary>
 public class OperacionPasoMovimientoTests
 {
     private Mapa mapa;

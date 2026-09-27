@@ -10,6 +10,9 @@ using ImperiosEnGuerra.Servicios.Concurrencia;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba entrenamiento en workers, cancelación, cola y aparición segura de varias unidades.
+/// </summary>
 public class EntrenamientoConcurrenteTests
 {
     [Test]

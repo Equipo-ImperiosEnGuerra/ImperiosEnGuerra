@@ -9,6 +9,9 @@ using ImperiosEnGuerra.Servicios.Concurrencia;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba que el ataque concurrente avance, se aproxime al objetivo y pueda cancelarse sin aplicar daño indebido.
+/// </summary>
 public class AtaqueConcurrenteTests
 {
     [Test]

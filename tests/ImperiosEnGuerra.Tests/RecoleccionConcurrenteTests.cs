@@ -9,6 +9,9 @@ using ImperiosEnGuerra.Servicios.Concurrencia;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba recolección en worker, cancelación, carga parcial y continuidad de una orden posterior.
+/// </summary>
 public class RecoleccionConcurrenteTests
 {
     [Test]

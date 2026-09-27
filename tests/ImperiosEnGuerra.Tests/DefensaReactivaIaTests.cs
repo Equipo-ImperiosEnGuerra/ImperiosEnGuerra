@@ -13,6 +13,9 @@ using ImperiosEnGuerra.Servicios.Concurrencia;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba el movimiento idle de la IA y la creación del frente defensivo al recibir un ataque.
+/// </summary>
 public class DefensaReactivaIaTests
 {
     [Test]

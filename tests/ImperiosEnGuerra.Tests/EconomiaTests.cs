@@ -2,6 +2,9 @@ using ImperiosEnGuerra.Modelo.Recursos;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba gastos atómicos, saldos insuficientes y competencia concurrente por los mismos recursos.
+/// </summary>
 public class EconomiaTests
 {
     [Test]

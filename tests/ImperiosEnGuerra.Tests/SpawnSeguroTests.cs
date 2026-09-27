@@ -7,6 +7,9 @@ using NUnit.Framework;
 
 namespace ImperiosEnGuerra.Tests;
 
+/// <summary>
+/// Comprueba que el spawn prefiera una casilla interior segura cuando existe una alternativa al borde.
+/// </summary>
 public class SpawnSeguroTests
 {
     [Test]
