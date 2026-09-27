@@ -13,6 +13,11 @@ Errores: 0
 Omitidas: 0
 ```
 
+![Suite automatizada completa](evidencias/05-tests-390.png)
+
+**Figura 1.** Ejecución de la suite automatizada con 390 pruebas correctas, 0 errores y 0 omitidas.
+
+
 ## 2. Matriz de casos
 
 | ID | Caso | Tipo | Resultado esperado | Evidencia |
@@ -38,6 +43,7 @@ Omitidas: 0
 | PE-19 | Archivos obligatorios | IO | Se generan configuración, log y resultado final | `ServicioArchivosTests` |
 | PE-20 | Mensaje WebSocket válido | Red / integración | JSON válido se transforma en una acción concurrente y devuelve `ProcesoId` | `NetworkingTests` |
 | PE-21 | Mensaje de red inválido | Red / inválido | JSON mal formado o tipo desconocido se rechaza sin lanzar excepción ni crear proceso | `NetworkingTests` |
+
 
 ## 3. Casos de escritorio detallados
 
@@ -68,6 +74,16 @@ Solo una operación obtiene la reserva.
 La otra se rechaza.
 No se duplican edificios.
 ```
+
+![Construcción progresiva](evidencias/07-construccion.png)
+
+**Figura 2.** Evidencia visual de una construcción en progreso dentro de la partida.
+
+
+![Operaciones simultáneas](evidencias/06-operaciones-simultaneas.png)
+
+**Figura 3.** Ejecución simultánea de distintas operaciones de gameplay, correspondiente al caso PE-12.
+
 
 ### PE-11 — Gasto concurrente
 
@@ -117,6 +133,11 @@ No se unen unidades cercanas.
 No se duplican defensas de la misma facción.
 ```
 
+![Recolección de recursos](evidencias/08-recoleccion.png)
+
+**Figura 4.** Aldeano ejecutando una tarea de recolección de recursos, correspondiente al ciclo concurrente descrito en PE-04.
+
+
 ### PE-13 — Ataque concurrente
 
 Estado inicial:
@@ -146,6 +167,11 @@ La casilla se libera al destruirse el objetivo.
 La Vista se actualiza a partir del nuevo estado.
 ```
 
+![Ataque concurrente](evidencias/09-ataque.png)
+
+**Figura 5.** Combate en ejecución con actualización progresiva de vida y acciones concurrentes.
+
+
 ### PE-17 — Regla AND
 
 ```text
@@ -164,6 +190,11 @@ CU = 0
 militares = 0
 => facción eliminada
 ```
+
+![Resultado de victoria o derrota](evidencias/10-victoria-derrota.png)
+
+**Figura 6.** Pantalla de finalización de partida tras cumplirse la condición de victoria o derrota.
+
 
 ### PE-20 / PE-21 — Comunicación WebSocket + JSON
 
@@ -202,6 +233,19 @@ JSON mal formado o Tipo desconocido
 ```
 
 La suite `NetworkingTests` cubre mensajes para MOVER, RECOLECTAR, CONSTRUIR, ENTRENAR, ATACAR y CURAR, además del rechazo de JSON/tipos inválidos.
+
+![Validación WebSocket](evidencias/11-networking-websocket.png)
+
+**Figura 7.** Evidencia de la disponibilidad del endpoint WebSocket y de las pruebas de comunicación mediante JSON.
+
+### PE-19 — Archivos obligatorios
+
+Los archivos requeridos son generados mediante `ServicioArchivos` y almacenados durante la ejecución de la partida.
+
+![Archivos generados](evidencias/12-archivos-generados.png)
+
+**Figura 8.** Evidencia de `configuracion.txt`, `log_partida.txt` y `resultado_final.txt` generados por la aplicación.
+
 
 ## 4. Correspondencia con las secciones críticas de la guía
 
