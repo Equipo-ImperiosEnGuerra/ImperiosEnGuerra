@@ -244,9 +244,22 @@ Comprobar:
 
 Debe incluir estado inicial de jugadores, mapa, saldos, edificios, unidades y recursos.
 
-### log_partida.txt
+### log_partida.txt — FUNCIONALMENTE VALIDADO
 
-Debe contener eventos de la partida en orden.
+Se revisó una ejecución real y el archivo registra correctamente:
+
+- establecimiento de partidas;
+- entrenamiento;
+- construcción;
+- ataques exitosos y rechazados;
+- curación exitosa y rechazada;
+- regeneración de recursos;
+- conquista de facciones;
+- finalización y ganador.
+
+El archivo revisado es acumulativo y contiene sesiones históricas de versiones anteriores. Por ello, para la evidencia final de entrega debe generarse un log limpio ejecutando una partida nueva sobre la versión final de `main`.
+
+La visualización con `type` en CMD muestra caracteres como `da├▒o` o `curaci├│n`; esto debe verificarse con una lectura UTF-8 antes de atribuirlo al archivo, porque puede ser un problema de página de códigos de la consola.
 
 ### resultado_final.txt
 
@@ -324,7 +337,7 @@ La entrega queda lista para congelarse cuando:
 [ ] Unity sin errores bloqueantes
 [ ] Smoke test completo
 [ ] configuracion.txt verificado
-[ ] log_partida.txt verificado
+[ ] log_partida.txt verificado con evidencia limpia final
 [ ] resultado_final.txt verificado
 [ ] Build standalone generado
 [ ] Launcher probado
