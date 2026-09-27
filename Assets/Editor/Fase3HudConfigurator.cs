@@ -14,9 +14,9 @@ using UnityEngine.UI;
 /// <summary>Prepara únicamente los objetos de interfaz y sus referencias en el Editor.</summary>
 public static class Fase3HudConfigurator
 {
+    // Utilidad interna de mantenimiento del Editor. Ya no se expone en el menú final.
     private const string RutaEscena = "Assets/Scenes/SampleScene.unity";
 
-    [MenuItem("Tools/Imperios en Guerra/Fase 3/Configurar HUD y acciones")]
     public static void ConfigurarHudYAcciones()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
