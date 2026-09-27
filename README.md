@@ -269,3 +269,5 @@ Documentación relevante:
 - `docs/AUDITORIA_FINAL_GUIA.md`
 - `docs/INFORME_TECNICO_FINAL.md`
 - `docs/UML_FINAL.md`
+- `docs/DIAGRAMA_FLUJO_FINAL.md`
+- `docs/PRUEBAS_ESCRITORIO_FINAL.md`
