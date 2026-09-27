@@ -22,6 +22,16 @@ http://localhost:5086
 
 ## 1. Requisitos
 
+En una copia nueva del repositorio en Windows, ejecute **antes de abrir Unity**:
+
+```bat
+PREPARAR_PROYECTO.bat
+```
+
+El asistente valida .NET, prepara Tiny Swords preservando sus `.meta` y restaura las dependencias de la API.
+
+Después se requiere:
+
 - Unity **6000.6.0f1**.
 - .NET SDK compatible con `net10.0`.
 - Módulo de build de Unity correspondiente a la plataforma de destino.
