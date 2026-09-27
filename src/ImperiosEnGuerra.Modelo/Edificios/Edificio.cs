@@ -4,8 +4,12 @@ using ImperiosEnGuerra.Modelo.Map;
 
 namespace ImperiosEnGuerra.Modelo.Edificios
 {
+    /// <summary>
+    /// Base común de los edificios con identidad, posición y vida de combate.
+    /// </summary>
     public abstract class Edificio
     {
+        //Protege la vida cuando varios ataques intentan modificarla al mismo tiempo.
         private readonly object sincronizacionVida =
             new object();
 
@@ -32,6 +36,7 @@ namespace ImperiosEnGuerra.Modelo.Edificios
             if (coordenada == null)
                 throw new ArgumentNullException(nameof(coordenada));
 
+            //Obtiene la vida inicial desde la configuración central de combate.
             EstadisticasCombate estadisticas =
                 new ConfiguracionCombate()
                     .ObtenerParaEdificio(
@@ -43,6 +48,7 @@ namespace ImperiosEnGuerra.Modelo.Edificios
             vidaActual = VidaMaxima;
         }
 
+        //Aplica daño sin permitir que la vida quede por debajo de cero.
         public int RecibirDanio(
             int cantidad)
         {

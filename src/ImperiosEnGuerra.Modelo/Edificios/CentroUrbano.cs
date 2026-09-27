@@ -5,8 +5,12 @@ using ImperiosEnGuerra.Modelo.Map;
 
 namespace ImperiosEnGuerra.Modelo.Edificios
 {
+    /// <summary>
+    /// Edificio principal que mantiene la cola de unidades pendientes de entrenamiento.
+    /// </summary>
     public class CentroUrbano : Edificio
     {
+        //Protege la cola porque varias solicitudes de entrenamiento pueden ejecutarse en paralelo.
         private readonly object sincronizacion =
             new object();
 
@@ -56,6 +60,7 @@ namespace ImperiosEnGuerra.Modelo.Edificios
         {
         }
 
+        //Agrega una nueva orden al final de la cola de entrenamiento.
         public EntrenamientoPendiente EncolarEntrenamiento(
             string tipoUnidad,
             Coordenada puntoReunion = null)
@@ -74,6 +79,7 @@ namespace ImperiosEnGuerra.Modelo.Edificios
             return pendiente;
         }
 
+        //Comprueba si una orden puede avanzar por estar al frente de la cola.
         public bool EsPrimero(
             Guid entrenamientoId)
         {
@@ -85,6 +91,7 @@ namespace ImperiosEnGuerra.Modelo.Edificios
             }
         }
 
+        //Avanza únicamente la primera orden para respetar el orden de entrenamiento.
         public ResultadoProgresoEntrenamiento AvanzarEntrenamiento(
             Guid entrenamientoId,
             int incremento)
@@ -108,6 +115,7 @@ namespace ImperiosEnGuerra.Modelo.Edificios
             }
         }
 
+        //Retira la primera orden cuando ya alcanzó el progreso completo.
         public bool CompletarEntrenamiento(
             Guid entrenamientoId)
         {
@@ -125,6 +133,7 @@ namespace ImperiosEnGuerra.Modelo.Edificios
             }
         }
 
+        //Busca y retira una orden concreta sin afectar las demás de la cola.
         public bool CancelarEntrenamiento(
             Guid entrenamientoId)
         {

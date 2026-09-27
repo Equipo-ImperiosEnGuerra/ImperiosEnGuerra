@@ -1,5 +1,8 @@
 namespace ImperiosEnGuerra.Modelo.Edificios
 {
+    /// <summary>
+    /// Informa el avance de una orden de entrenamiento y si ya está lista para aparecer.
+    /// </summary>
     public sealed class ResultadoProgresoEntrenamiento
     {
         public bool Exito { get; }

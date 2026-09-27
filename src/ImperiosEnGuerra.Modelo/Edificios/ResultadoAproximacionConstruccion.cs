@@ -4,6 +4,9 @@ using ImperiosEnGuerra.Modelo.Map;
 
 namespace ImperiosEnGuerra.Modelo.Edificios
 {
+    /// <summary>
+    /// Devuelve la ruta y la casilla desde la que un Aldeano puede trabajar en una obra.
+    /// </summary>
     public sealed class ResultadoAproximacionConstruccion
     {
         private readonly List<Coordenada> pasos;
@@ -32,6 +35,7 @@ namespace ImperiosEnGuerra.Modelo.Edificios
             Reintentable = reintentable;
         }
 
+        //Crea un resultado con la ruta válida hacia el punto de interacción.
         public static ResultadoAproximacionConstruccion Exitoso(
             Coordenada puntoInteraccion,
             IEnumerable<Coordenada> pasos)
@@ -49,6 +53,7 @@ namespace ImperiosEnGuerra.Modelo.Edificios
                 false);
         }
 
+        //Indica si el fallo puede intentarse de nuevo cuando cambie la ocupación del mapa.
         public static ResultadoAproximacionConstruccion Fallido(
             string mensaje,
             bool reintentable = false)

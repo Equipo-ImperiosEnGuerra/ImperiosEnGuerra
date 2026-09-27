@@ -3,6 +3,9 @@ using ImperiosEnGuerra.Modelo.Map;
 
 namespace ImperiosEnGuerra.Modelo.Edificios
 {
+    /// <summary>
+    /// Guarda el estado de una unidad que todavía está en la cola de entrenamiento.
+    /// </summary>
     public sealed class EntrenamientoPendiente
     {
         public Guid Id { get; }
@@ -27,6 +30,7 @@ namespace ImperiosEnGuerra.Modelo.Edificios
             Progreso = 0;
         }
 
+        //Suma progreso sin permitir que la orden supere el 100%.
         public int Avanzar(
             int incremento)
         {

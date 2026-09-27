@@ -42,6 +42,7 @@ namespace ImperiosEnGuerra.Modelo.Edificios
             Progreso = 0;
         }
 
+        //Suma avance a la obra sin permitir un progreso mayor al 100%.
         public int Avanzar(
             int incremento)
         {

@@ -83,6 +83,7 @@ namespace ImperiosEnGuerra.Modelo.Edificios
                     "La posición de obra es obligatoria.");
             }
 
+            //Si ya está junto a la obra no necesita planificar movimiento.
             if (Distancia(
                     aldeano.Coordenada,
                     obra) == 1)
@@ -98,6 +99,7 @@ namespace ImperiosEnGuerra.Modelo.Edificios
             var candidatos =
                 new List<(int Indice, Coordenada Punto, ResultadoPlanMovimiento Plan)>();
 
+            //Prueba las cuatro casillas adyacentes y conserva solo las que tienen ruta válida.
             for (int i = 0;
                  i < Direcciones.Length;
                  i++)
@@ -138,6 +140,7 @@ namespace ImperiosEnGuerra.Modelo.Edificios
                     true);
             }
 
+            //Distribuye las preferencias entre unidades para reducir choques alrededor de la obra.
             int inicio =
                 PreferenciaCasillaInteraccion
                     .ObtenerIndiceInicial(
@@ -170,6 +173,7 @@ namespace ImperiosEnGuerra.Modelo.Edificios
                 }
             }
 
+            //Si la preferencia no decide, usa la ruta válida con menos pasos.
             var masCorto =
                 candidatos
                     .OrderBy(

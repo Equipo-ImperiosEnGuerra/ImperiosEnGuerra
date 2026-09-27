@@ -25,6 +25,7 @@ namespace ImperiosEnGuerra.Modelo.Edificios
                 };
         }
 
+        //Busca el multiplicador de tiempo configurado para cada tipo de unidad.
         public bool IntentarObtenerFactor(
             string tipoUnidad,
             out double factor)

@@ -89,6 +89,7 @@ namespace ImperiosEnGuerra.Modelo.Edificios
             Mapa mapa =
                 propietario.Mapa;
 
+            //Busca desde las casillas más cercanas al edificio hacia afuera.
             for (int distancia = 1;
                  distancia <= mapa.Ancho + mapa.Alto;
                  distancia++)
@@ -144,6 +145,7 @@ namespace ImperiosEnGuerra.Modelo.Edificios
                 if (candidatas.Count == 0)
                     continue;
 
+                //Prefiere zonas interiores y con más caminos libres para evitar unidades atrapadas.
                 return candidatas
                     .OrderBy(c => c.Borde)
                     .ThenByDescending(c => c.Salidas)
@@ -183,6 +185,7 @@ namespace ImperiosEnGuerra.Modelo.Edificios
             return salidas;
         }
 
+        //Comprueba terreno, ocupación lógica y entidades de todos los jugadores.
         private static bool EsLibre(
             Partida partida,
             Mapa mapa,

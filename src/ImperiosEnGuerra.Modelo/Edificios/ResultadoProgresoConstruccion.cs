@@ -1,5 +1,8 @@
 namespace ImperiosEnGuerra.Modelo.Edificios
 {
+    /// <summary>
+    /// Informa si una obra pudo avanzar, su porcentaje y si ya terminó.
+    /// </summary>
     public sealed class ResultadoProgresoConstruccion
     {
         public bool Exito { get; }

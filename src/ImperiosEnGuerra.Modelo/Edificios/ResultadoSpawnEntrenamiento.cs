@@ -3,6 +3,9 @@ using ImperiosEnGuerra.Modelo.Map;
 
 namespace ImperiosEnGuerra.Modelo.Edificios
 {
+    /// <summary>
+    /// Informa si la unidad entrenada pudo aparecer y en qué casilla fue colocada.
+    /// </summary>
     public sealed class ResultadoSpawnEntrenamiento
     {
         public bool Exito { get; }

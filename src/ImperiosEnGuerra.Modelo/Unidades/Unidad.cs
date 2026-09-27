@@ -5,8 +5,12 @@ using ImperiosEnGuerra.Modelo.Map;
 
 namespace ImperiosEnGuerra.Modelo.Unidades
 {
+    /// <summary>
+    /// Base común de las unidades: identidad, posición, vida y estado de la orden actual.
+    /// </summary>
     public abstract class Unidad
     {
+        //Evita que ataques y curaciones cambien la vida al mismo tiempo sin sincronización.
         private readonly object sincronizacionVida =
             new object();
 
@@ -49,6 +53,7 @@ namespace ImperiosEnGuerra.Modelo.Unidades
                     "La velocidad de movimiento debe ser un valor positivo y finito.");
             }
 
+            //Cada tipo de unidad toma sus estadísticas de la configuración central de combate.
             EstadisticasCombate estadisticas =
                 new ConfiguracionCombate()
                     .ObtenerParaUnidad(
@@ -69,6 +74,7 @@ namespace ImperiosEnGuerra.Modelo.Unidades
                 estadisticas.IntervaloAtaqueSegundos;
         }
 
+        //Aplica daño sin permitir que la vida quede por debajo de cero.
         public int RecibirDanio(
             int cantidad)
         {
@@ -87,6 +93,7 @@ namespace ImperiosEnGuerra.Modelo.Unidades
             }
         }
 
+        //Recupera vida sin superar el máximo configurado para la unidad.
         public int RecuperarVida(
             int cantidad)
         {
@@ -105,6 +112,7 @@ namespace ImperiosEnGuerra.Modelo.Unidades
             }
         }
 
+        //Inicia una orden solo si la unidad no tiene otra acción activa.
         public bool IntentarIniciarOrden(TipoAccionJuego tipo)
         {
             if (OrdenActiva.HasValue)
@@ -120,6 +128,7 @@ namespace ImperiosEnGuerra.Modelo.Unidades
             return true;
         }
 
+        //Reemplaza la orden actual cuando el controlador ya autorizó el cambio.
         public bool IntentarReemplazarOrden(TipoAccionJuego tipo)
         {
             EstadoUnidad? nuevoEstado = EstadoPara(tipo);
@@ -146,11 +155,13 @@ namespace ImperiosEnGuerra.Modelo.Unidades
             Disponible = false;
         }
 
+        //Actualiza la posición lógica después de completar un paso de movimiento.
         internal void EstablecerDestino(Coordenada destino)
         {
             Coordenada = destino;
         }
 
+        //Devuelve la unidad a estado libre cuando una acción termina o se cancela.
         private void RestablecerOrden()
         {
             OrdenActiva = null;
@@ -158,6 +169,7 @@ namespace ImperiosEnGuerra.Modelo.Unidades
             Disponible = true;
         }
 
+        //Relaciona cada orden de gameplay con el estado lógico que debe mostrar la unidad.
         private static EstadoUnidad? EstadoPara(TipoAccionJuego tipo)
         {
             switch (tipo)

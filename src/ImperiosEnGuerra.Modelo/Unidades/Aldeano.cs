@@ -12,6 +12,7 @@ namespace ImperiosEnGuerra.Modelo.Unidades
     {
         public const int CapacidadCargaPredeterminada = 10;
 
+        //Protege la carga cuando la recolección y el depósito se ejecutan desde tareas distintas.
         private readonly object sincronizacionCarga =
             new object();
 
@@ -108,6 +109,7 @@ namespace ImperiosEnGuerra.Modelo.Unidades
 
             lock (sincronizacionCarga)
             {
+                //Un aldeano termina de depositar un recurso antes de empezar a cargar otro tipo.
                 if (cargaActual > 0 &&
                     tipoCarga.HasValue &&
                     tipoCarga.Value != recurso.Tipo)
@@ -123,6 +125,7 @@ namespace ImperiosEnGuerra.Modelo.Unidades
                     return 0;
                 }
 
+                //Nunca solicita al nodo más de lo que todavía cabe en la carga.
                 int cantidadAExtraer =
                     Math.Min(
                         cantidadSolicitada,
