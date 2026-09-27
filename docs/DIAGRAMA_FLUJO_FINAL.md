@@ -42,7 +42,7 @@ flowchart TD
     S --> U
     T --> U
 
-    U --> V[Registrar log_partida.txt]
+    U --> V[Registrar evento relevante cuando corresponda]
     V --> W{Condición terminal}
     W -- No --> L
     W -- Sí --> X[Finalizar Partida]
@@ -111,11 +111,12 @@ flowchart TD
     C -- No --> D[Rechazar]
     C -- Sí --> E[Reservar costo y casilla]
     E --> F[Crear obra]
-    F --> G[Avanzar progreso]
-    G --> H{100 por ciento}
-    H -- No --> G
-    H -- Sí --> I[Crear edificio]
-    I --> J[Retirar obra]
+    F --> G[Aproximar Aldeano a la obra]
+    G --> H[Avanzar progreso]
+    H --> I{100 por ciento}
+    I -- No --> H
+    I -- Sí --> J[Crear edificio]
+    J --> K[Retirar obra]
 ```
 
 ## 5. Entrenamiento
@@ -150,12 +151,15 @@ flowchart TD
     G --> H{Objetivo destruido}
     H -- No --> F
     H -- Sí --> I[Eliminar entidad]
-    I --> J[Evaluar victoria]
+    I --> J[Evaluar facción afectada]
     J --> K{Sin Centros Urbanos Y sin militares}
     K -- No --> L[Continuar]
-    K -- Sí --> M{Las 3 IAs eliminadas}
-    M -- Sí --> N[Victoria Humana]
-    M -- No --> O[Continuar o derrota según facción]
+    K -- Sí --> M{¿Facción eliminada es Humano?}
+    M -- Sí --> N[Derrota Humana]
+    M -- No --> O[Marcar IA eliminada]
+    O --> P{¿Las 3 IAs eliminadas?}
+    P -- Sí --> Q[Victoria Humana]
+    P -- No --> R[Continuar con las IAs restantes]
 ```
 
 ## 7. IA

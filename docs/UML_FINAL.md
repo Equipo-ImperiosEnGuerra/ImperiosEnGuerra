@@ -122,7 +122,7 @@ namespace CONTROLADOR_Y_APLICACION {
 
     class ControladorAcciones {
         <<Controlador Unity>>
-        +PrepararAccion(string)
+        -PrepararAccion(string)
     }
 
     class ControladorConexionApi {
@@ -226,7 +226,7 @@ namespace SERVICIOS_TRANSVERSALES {
 
     class DespachadorMensajesRed {
         <<Networking opcional>>
-        +DespacharAsync(...)
+        +Procesar(string json) ResultadoDespachoRed
     }
 }
 
@@ -249,7 +249,7 @@ ControladorAcciones --> VistaHud : informa al usuario
 
 ControladorConexionApi --> VistaPartida : actualiza snapshot
 ControladorConexionApi --> VistaHud : actualiza HUD
-ControladorConexionApi ..> EstadoPartidaService : REST / JSON
+ControladorConexionApi ..> EstadoPartidaService : REST / JSON mediante endpoints
 
 EstadoPartidaService --> Partida : consulta/modifica
 ServicioAccionesConcurrentes --> EstadoPartidaService : ejecuta pasos
@@ -312,6 +312,8 @@ clic del jugador
 ```
 
 Por eso el Controlador está entre Vista y Modelo y no reemplaza a ninguno de los dos.
+
+La relación entre `ControladorConexionApi` y `EstadoPartidaService` es **arquitectónica, no una referencia directa entre clases**: Unity envía HTTP/JSON a los endpoints definidos en `Program.cs`, y esos endpoints invocan los servicios de aplicación.
 
 ### SERVICIOS TRANSVERSALES
 

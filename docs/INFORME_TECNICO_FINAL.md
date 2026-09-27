@@ -191,6 +191,19 @@ Además existen tareas independientes para:
 - monitor de sesión;
 - listener WebSocket opcional.
 
+### 4.1 Inventario de procesos concurrentes
+
+| Proceso | Mecanismo | Datos compartidos principales | Sincronización / protección | Finalización |
+|---|---|---|---|---|
+| Movimiento, recolección, construcción, entrenamiento, ataque y curación | `Task.Run` mediante `GestorProcesosConcurrentes` | `Partida`, unidades, mapa, recursos, edificios | `EstadoPartidaService` con `lock`, bloqueos internos del Modelo y colecciones concurrentes | `CancellationToken`, resultado publicado y liberación de la orden |
+| Ciclo de IA | `Task` en segundo plano | estado de las tres facciones y asignaciones activas | `lock` del servicio + `HashSet` protegido + servicios sincronizados | `CancellationToken` y `Dispose` |
+| Reacciones automáticas | `Task` periódica | unidades humanas libres y procesos asignados | `lock` del servicio + coordinación con órdenes manuales | cancelación del servicio o fin de partida |
+| Regeneración de recursos | `Task` periódica | nodos agotados, mapa y lista de pendientes | `lock` de pendientes + modificación mediante `EstadoPartidaService` | `CancellationToken` y fin de partida |
+| Monitor de sesión | `Task.Run` | estado de sesión y último latido de Unity | `lock` del servicio | cancelación al cerrar o pausar sesión |
+| WebSocket opcional | `Task` asíncrona por conexión | colección de clientes y socket de cada cliente | `ConcurrentDictionary` + `SemaphoreSlim` por conexión | cierre del socket o cancelación de la petición |
+
+El flujo de comunicación evita que un worker toque `UnityEngine`: el proceso modifica el Modelo sincronizado, publica un resultado o deja un nuevo snapshot disponible y Unity actualiza la Vista desde su Main Thread.
+
 ## 5. Sincronización y race conditions
 
 ### 5.1 Dos procesos gastando los mismos recursos
@@ -373,6 +386,8 @@ Se utilizan validaciones y excepciones como:
 
 ## 17. Networking opcional
 
+La guía original exige dos jugadores conectados. La consideración de networking como **opcional para la entrega final** proviene de una aclaración posterior comunicada al equipo y no está contenida en el PDF original. Por trazabilidad, conviene conservar la evidencia de esa aclaración para la sustentación.
+
 El proyecto conserva un endpoint WebSocket:
 
 ```text
@@ -394,7 +409,7 @@ Unity utiliza REST en la modalidad final; WebSocket permanece como demostración
 
 La suite .NET cubre Modelo, economía, recolección, movimiento, A*, construcción, entrenamiento, sincronización, ataque, victoria, IA, networking, archivos, cancelación y regeneración.
 
-Última ejecución validada:
+Última ejecución funcional validada antes de la auditoría de comentarios:
 
 ```text
 Total: 390
@@ -403,9 +418,11 @@ Errores: 0
 Omitidas: 0
 ```
 
+Esta cifra es la referencia funcional conocida. La rama documental posterior añadió comentarios C# y correcciones de documentación, por lo que la suite debe reejecutarse sobre el candidato final antes de congelar la entrega.
+
 Las advertencias de acceso denegado a `log_partida.txt` corresponden a una prueba intencional de manejo de IO.
 
-El build Windows standalone fue generado y ejecutado correctamente. El launcher inicia la API, abre el juego y detiene la API cuando el juego se cierra.
+El build Windows standalone fue generado y ejecutado correctamente en la validación previa. El launcher inicia la API, abre el juego y detiene la API cuando el juego se cierra; debe repetirse un smoke test sobre el candidato final.
 
 ## 19. Git
 

@@ -274,7 +274,7 @@ Suite .NET:
 dotnet test tests/ImperiosEnGuerra.Tests/ImperiosEnGuerra.Tests.csproj
 ```
 
-La suite se utiliza como validación principal del Modelo, servicios, concurrencia, networking opcional, ataques, IA y condición de victoria. La última ejecución validada terminó con **390 pruebas correctas, 0 con errores y 0 omitidas**. El build Windows standalone también fue generado y ejecutado correctamente. El launcher inicia la API, abre el juego y detiene la API al cerrar. Las evidencias manuales restantes están consolidadas en `docs/VALIDACION_FINAL_ENTREGA.md`.
+La suite se utiliza como validación principal del Modelo, servicios, concurrencia, networking opcional, ataques, IA y condición de victoria. La última ejecución funcional validada antes de la auditoría de comentarios terminó con **390 pruebas correctas, 0 con errores y 0 omitidas**. Esa cifra se conserva como referencia histórica y debe reejecutarse sobre el candidato final para confirmar que los comentarios y ajustes documentales no introdujeron errores de compilación. El build Windows standalone también fue generado y ejecutado correctamente. El launcher inicia la API, abre el juego y detiene la API al cerrar. El cierre de evidencias y smoke test está centralizado en `docs/VALIDACION_FINAL_ENTREGA.md`.
 
 Las advertencias de acceso denegado a `log_partida.txt` que aparecen en una prueba son intencionales: esa prueba verifica el manejo controlado de errores de IO.
 
@@ -301,9 +301,9 @@ Issue → Branch → Desarrollo → Pruebas → Commit → Pull Request → Deve
 - Fase 5: **TERMINADA**
 - Fase 6: **TERMINADA**
 - Fase 7: **TERMINADA E INTEGRADA EN MAIN**
-- Auditoría y documentación final: **TERMINADA**
+- Auditoría y documentación final: **EN CIERRE — contenido auditado; faltan revalidación del candidato final y empaquetado de evidencias**
 
-La versión estable actual incluye el cierre de Fase 7, optimización de snapshots para reducir micro-freezes, menú e instrucciones actualizados y estrategia militar diferenciada para las tres IAs.
+La versión funcional estable en `main` incluye el cierre de Fase 7, optimización de snapshots para reducir micro-freezes, menú e instrucciones actualizados y estrategia militar diferenciada para las tres IAs. La rama documental actual añade únicamente comentarios y correcciones de documentación hasta que se complete su PR.
 
 Documentación final relevante:
 - `docs/BUILD_Y_EJECUCION.md`

@@ -1,38 +1,33 @@
 # Validación final de entrega — Imperios en Guerra
 
-Este documento define la última validación manual que debe realizarse sobre la versión estable de `main` antes de cerrar el PR documental y congelar la entrega.
+Este documento define la última validación manual que debe realizarse sobre el **commit candidato final que se vaya a entregar**. Si la auditoría todavía está en una rama, valide esa rama; después del merge, repita el smoke test esencial sobre `main` antes de congelar la entrega.
 
 ## 1. Preparación
 
-Desde la raíz del proyecto:
+Desde la raíz del proyecto, sitúese en la rama o commit candidato y compruebe su estado:
 
 ```bat
-git switch main
-git pull origin main
 git status
+git rev-parse --short HEAD
 ```
 
-Resultado esperado:
+La copia de validación debe estar limpia: no debe haber archivos de código o documentación sin confirmar que formen parte accidentalmente de la entrega.
 
-```text
-On branch main
-Your branch is up to date with 'origin/main'.
-nothing to commit, working tree clean
-```
-
-Ejecutar nuevamente la suite si hubo cualquier cambio de código posterior:
+Ejecutar nuevamente la suite sobre ese candidato:
 
 ```bat
 dotnet test tests\ImperiosEnGuerra.Tests\ImperiosEnGuerra.Tests.csproj
 ```
 
-Referencia de la última ejecución validada:
+Referencia de la última ejecución funcional validada antes de la auditoría de comentarios:
 
 ```text
 390 correctas
 0 errores
 0 omitidas
 ```
+
+Esta referencia **no sustituye** la ejecución final: aunque la rama posterior esté pensada para añadir comentarios y documentación, debe compilarse y probarse nuevamente antes de la entrega.
 
 ## 2. Iniciar la API
 
@@ -333,7 +328,7 @@ Validar:
 
 **Evidencia obtenida:** el build Windows fue generado y ejecutado correctamente mediante el launcher; abrió el juego y permitió iniciar/interactuar con una partida. También se corrigió y verificó visualmente el HUD standalone. Al cerrar el juego, se comprobó que el puerto 5086 queda libre, confirmando que el launcher detiene correctamente la API iniciada por él.
 
-## 6. Evidencias recomendadas
+## 6. Evidencias de entrega
 
 Guardar capturas de:
 
@@ -348,20 +343,31 @@ Guardar capturas de:
 9. victoria;
 10. contenido de `resultado_final.txt`.
 
+Además, conservar una copia de:
+
+- `configuracion.txt`;
+- `log_partida.txt`;
+- `resultado_final.txt`;
+- evidencia de la aclaración del docente que cambió el alcance original de dos jugadores.
+
+Actualmente `src/ImperiosEnGuerra.Api/DatosPartida/` está excluido por `.gitignore`, y no se encontraron capturas versionadas dentro de `docs/`. Por eso una validación manual previa no debe confundirse con una **evidencia empaquetada**. Copie estos elementos a la carpeta o archivo comprimido de entrega, o a una ubicación versionada creada expresamente para evidencias.
+
 ## 7. Criterio de cierre
 
 La entrega queda lista para congelarse cuando:
 
 ```text
-[x] Suite .NET final sin errores: 390/390
-[x] Unity/build sin errores bloqueantes durante la validación realizada
-[ ] Smoke test completo
-[x] configuracion.txt verificado
-[x] log_partida.txt verificado con evidencia limpia final
-[x] resultado_final.txt verificado
-[x] Build standalone generado
-[x] Launcher probado: inicia API + juego y cierra la API al salir
-[x] Evidencias principales guardadas
-[x] Documentación consistente con main
-[x] PR documental listo para merge
+[ ] Suite .NET reejecutada sobre el candidato final (referencia previa: 390/390)
+[ ] Proyecto Unity del candidato final compila sin errores
+[ ] Smoke test completo sobre el candidato final
+[x] configuracion.txt verificado funcionalmente
+[x] log_partida.txt verificado funcionalmente
+[x] resultado_final.txt verificado funcionalmente
+[x] Build standalone generado y launcher validado en una versión funcional previa
+[ ] Copias de los tres .txt incluidas en el paquete de evidencia
+[ ] Capturas principales incluidas en el paquete de evidencia
+[ ] Victoria Humana validada visualmente sobre el candidato final
+[x] Documentación auditada contra el código actual de la rama
+[ ] Rama documental integrada en main
+[ ] PR final revisado y listo para congelar entrega
 ```
