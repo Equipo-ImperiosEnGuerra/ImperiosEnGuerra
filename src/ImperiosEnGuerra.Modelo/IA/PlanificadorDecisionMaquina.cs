@@ -363,6 +363,152 @@ namespace ImperiosEnGuerra.Modelo.IA
                     mejorRecurso.Coordenada);
         }
 
+        public DecisionMaquina PrepararPaseoAldeano(
+            Partida partida,
+            Jugador maquina,
+            IReadOnlyCollection<Guid> unidadesExcluidas = null)
+        {
+            if (partida == null ||
+                partida.Finalizada)
+            {
+                return DecisionMaquina.SinAccion(
+                    "No hay una partida activa para paseo idle.");
+            }
+
+            if (maquina == null ||
+                maquina.Tipo != TipoJugador.Maquina ||
+                !partida.Jugadores.Contains(
+                    maquina))
+            {
+                return DecisionMaquina.SinAccion(
+                    "La facción de Máquina indicada no pertenece a la partida.");
+            }
+
+            if (new EvaluadorVictoria()
+                .Evaluar(
+                    maquina)
+                .HayVictoria)
+            {
+                return DecisionMaquina.SinAccion(
+                    "La facción de Máquina ya fue eliminada.");
+            }
+
+            var excluidas =
+                unidadesExcluidas == null
+                    ? new HashSet<Guid>()
+                    : new HashSet<Guid>(
+                        unidadesExcluidas);
+
+            Aldeano[] aldeanos =
+                maquina.Unidades
+                    .OfType<Aldeano>()
+                    .Where(
+                        aldeano =>
+                            aldeano.Disponible &&
+                            !aldeano.OrdenActiva.HasValue &&
+                            !excluidas.Contains(
+                                aldeano.Id))
+                    .OrderBy(
+                        aldeano =>
+                            aldeano.Coordenada.X)
+                    .ThenBy(
+                        aldeano =>
+                            aldeano.Coordenada.Y)
+                    .ThenBy(
+                        aldeano =>
+                            aldeano.Id)
+                    .ToArray();
+
+            foreach (Aldeano aldeano in aldeanos)
+            {
+                Coordenada destino =
+                    BuscarDestinoPaseoAldeano(
+                        partida,
+                        maquina,
+                        aldeano);
+
+                if (destino != null)
+                {
+                    return DecisionMaquina.Pasear(
+                        aldeano.Id,
+                        destino);
+                }
+            }
+
+            return DecisionMaquina.SinAccion(
+                "No hay un Aldeano libre con una casilla cercana disponible para paseo.");
+        }
+
+        private static Coordenada BuscarDestinoPaseoAldeano(
+            Partida partida,
+            Jugador maquina,
+            Aldeano aldeano)
+        {
+            Mapa mapa =
+                maquina.Mapa;
+
+            // Paseo corto y ortogonal: solo aporta vida visual.
+            // No recolecta recursos, no reserva una orden real y no altera
+            // el límite de una recolección concurrente por facción.
+            (int X, int Y)[] desplazamientos =
+            {
+                (1, 0),
+                (0, 1),
+                (-1, 0),
+                (0, -1)
+            };
+
+            int semilla =
+                (aldeano.Id.GetHashCode() ^
+                 aldeano.Coordenada.X * 17 ^
+                 aldeano.Coordenada.Y * 31)
+                & int.MaxValue;
+
+            int inicio =
+                semilla %
+                desplazamientos.Length;
+
+            for (int i = 0;
+                 i < desplazamientos.Length;
+                 i++)
+            {
+                (int X, int Y) desplazamiento =
+                    desplazamientos[
+                        (inicio + i) %
+                        desplazamientos.Length];
+
+                Coordenada candidata =
+                    new Coordenada(
+                        aldeano.Coordenada.X +
+                            desplazamiento.X,
+                        aldeano.Coordenada.Y +
+                            desplazamiento.Y);
+
+                Casilla casilla =
+                    mapa.ObtenerCasilla(
+                        candidata.X,
+                        candidata.Y);
+
+                if (casilla == null ||
+                    !casilla.EsTransitable ||
+                    !mapa.PuedeColocar(
+                        candidata) ||
+                    partida.Jugadores.Any(
+                        jugador =>
+                            HayEntidadEn(
+                                jugador,
+                                mapa,
+                                candidata)))
+                {
+                    continue;
+                }
+
+                return candidata;
+            }
+
+            return null;
+        }
+
         public DecisionMaquina PrepararMilitar(
             Partida partida,
             Jugador maquina,
