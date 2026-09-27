@@ -55,8 +55,8 @@
 | Pruebas de victoria | CUMPLE | `VictoriaFinalTests.cs` y pruebas visuales | Consolidar resultados |
 | Informe breve MVC/concurrencia/red | CUMPLE | `docs/INFORME_TECNICO_FINAL.md` documenta MVC, POO, concurrencia, sincronización, archivos, excepciones y networking opcional | Revisión final de consistencia |
 | Diagrama de clases UML | CUMPLE | `docs/UML_FINAL.md` contiene diagrama Mermaid basado en las clases y relaciones reales | Revisión final de consistencia |
-| Diagrama de flujo | PENDIENTE DOCUMENTAR | No existe diagrama final en el árbol actual | Crear flujo general y/o de acciones concurrentes |
-| Pruebas de escritorio formales | PENDIENTE DOCUMENTAR | Existen tests automatizados, pero falta documento formal de evidencia | Crear matriz/casos/resultados |
+| Diagrama de flujo | CUMPLE | `docs/DIAGRAMA_FLUJO_FINAL.md` documenta flujo general, acciones concurrentes, recolección, construcción, entrenamiento, combate, IA y pausa | Revisión final de consistencia |
+| Pruebas de escritorio formales | CUMPLE / VALIDAR | `docs/PRUEBAS_ESCRITORIO_FINAL.md` formaliza casos normales, inválidos, límite y concurrentes; las pruebas manuales finales siguen pendientes | Completar evidencia manual y build |
 | Documentación formal | PENDIENTE DOCUMENTAR | Existen README y documentos por fase | Consolidar entrega final |
 
 ## Hallazgos importantes
@@ -138,6 +138,6 @@ El README fue actualizado durante esta auditoría para:
 5. Guardar ejemplos reales de los tres archivos obligatorios después de una partida final.
 6. ~~Crear informe final MVC + concurrencia + networking opcional.~~ **COMPLETADO**
 7. ~~Crear UML basado en el código final.~~ **COMPLETADO**
-8. Crear diagrama de flujo.
-9. Crear documento de pruebas de escritorio.
+8. ~~Crear diagrama de flujo.~~ **COMPLETADO**
+9. ~~Crear documento de pruebas de escritorio.~~ **COMPLETADO; faltan evidencias manuales indicadas dentro del documento.**
 10. Hacer revisión final de consistencia entre documentación y código.
