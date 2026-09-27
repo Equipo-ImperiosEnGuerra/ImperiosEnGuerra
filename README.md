@@ -1,6 +1,6 @@
 # Imperios en Guerra
 
-Proyecto académico de Programación Orientada a Objetos desarrollado en C# y Unity.
+Proyecto académico de Programación Avanzada desarrollado en C# y Unity.
 
 **Imperios en Guerra** es un videojuego de estrategia en tiempo real (RTS) inspirado en Age of Empires. La modalidad final del proyecto es **1 jugador Humano vs 3 facciones controladas por Máquina**: Morada, Verde y Amarilla.
 
