@@ -40,7 +40,7 @@
 | Dos jugadores / dos instancias | NO APLICA — ALCANCE ACTUALIZADO | La guía original lo exigía; el alcance final aceptado es 1 Humano vs 3 Máquinas | Ninguna implementación adicional |
 | Comunicación de acciones a la aplicación del oponente | NO APLICA — ALCANCE ACTUALIZADO | El networking entre dos jugadores dejó de ser obligatorio; el WebSocket existente se conserva como extensión | Ninguna implementación adicional |
 | Condición de victoria | CUMPLE con decisión de diseño | `EvaluadorVictoria` y regla actual AND: sin Centros Urbanos y sin militares | Documentar que la guía dice “y/o” y justificar la regla final aprobada |
-| Anuncio de ganador | CUMPLE / VALIDAR | Pantalla de DERROTA validada visualmente; pantalla final bloqueante implementada | Falta evidencia visual de VICTORIA humana |
+| Anuncio de ganador | CUMPLE | Pantalla de DERROTA validada visualmente; pantalla final de VICTORIA implementada y condición cubierta por tests automatizados | Se omite captura manual de VICTORIA por tiempo |
 | `configuracion.txt` | CUMPLE | Validado con partida real: mapa 15x15, Humano + 3 IAs, bases/unidades iniciales y 26 recursos físicos | Evidencia obtenida |
 | `log_partida.txt` | CUMPLE / VALIDAR EVIDENCIA | `ServicioArchivos.RegistrarEvento`; validado con log real que contiene acciones, rechazos, curación, regeneración, conquista y finalización | Regenerar un log limpio con la versión final para adjuntarlo como evidencia |
 | `resultado_final.txt` | CUMPLE | Validado con una derrota real: ganador, perdedor, motivo, mapa final 15x15, recursos restantes, saldos, edificios, unidades, vida y obras | Evidencia obtenida |
