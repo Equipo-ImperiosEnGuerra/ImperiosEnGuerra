@@ -1,5 +1,8 @@
 namespace ImperiosEnGuerra.Api.Configuracion;
 
+/// <summary>
+/// Guarda los tiempos usados por las acciones que se ejecutan de forma concurrente.
+/// </summary>
 public class AccionesConcurrentesOptions
 {
     public int MovimientoSegundos { get; set; }

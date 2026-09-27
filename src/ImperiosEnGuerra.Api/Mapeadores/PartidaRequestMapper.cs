@@ -4,6 +4,9 @@ using ImperiosEnGuerra.Modelo.Recursos;
 
 namespace ImperiosEnGuerra.Api.Mapeadores;
 
+/// <summary>
+/// Convierte los datos recibidos por HTTP en objetos propios del Modelo.
+/// </summary>
 public static class PartidaRequestMapper
 {
     public static Coordenada ConvertirCoordenada(CoordenadaRequest? request)
@@ -26,6 +29,7 @@ public static class PartidaRequestMapper
 
         var resultado = new List<Recurso>();
 
+        //Valida cada tipo antes de crear el recurso físico del Modelo.
         foreach (RecursoInicialRequest recurso in recursos)
         {
             if (recurso == null)

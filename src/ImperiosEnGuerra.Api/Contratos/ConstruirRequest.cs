@@ -1,5 +1,8 @@
 namespace ImperiosEnGuerra.Api.Contratos;
 
+/// <summary>
+/// Datos recibidos para indicar qué Aldeano construye, qué edificio y en qué posición.
+/// </summary>
 public sealed class ConstruirRequest
 {
     public string? AldeanoId { get; set; }

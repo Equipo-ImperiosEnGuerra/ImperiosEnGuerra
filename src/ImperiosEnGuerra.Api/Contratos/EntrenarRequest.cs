@@ -1,5 +1,8 @@
 namespace ImperiosEnGuerra.Api.Contratos;
 
+/// <summary>
+/// Datos recibidos para entrenar una unidad y definir su punto de aparición.
+/// </summary>
 public sealed class EntrenarRequest
 {
     public CoordenadaRequest? EdificioOrigen { get; set; }

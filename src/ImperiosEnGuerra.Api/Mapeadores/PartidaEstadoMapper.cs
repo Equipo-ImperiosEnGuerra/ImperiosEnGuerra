@@ -7,6 +7,9 @@ using ImperiosEnGuerra.Modelo.Unidades;
 
 namespace ImperiosEnGuerra.Api.Mapeadores;
 
+/// <summary>
+/// Convierte el Modelo de la partida en contratos simples que pueden serializarse a JSON.
+/// </summary>
 public static class PartidaEstadoMapper
 {
     public static EstadoPartidaResponse Convertir(Partida partida)
@@ -15,6 +18,7 @@ public static class PartidaEstadoMapper
 
         Mapa mapa = partida.JugadorHumano.Mapa;
 
+        //Construye una copia de lectura para que la API no exponga directamente objetos del Modelo.
         return new EstadoPartidaResponse
         {
             Estado = partida.Finalizada
@@ -62,6 +66,7 @@ public static class PartidaEstadoMapper
         };
     }
 
+    //Expone los costos actuales para que el HUD pueda mostrar las mismas reglas del Modelo.
     private static EconomiaEstadoResponse ConvertirEconomia()
     {
         var configuracion =
@@ -113,6 +118,7 @@ public static class PartidaEstadoMapper
         };
     }
 
+    //Transforma las colecciones del jugador en DTO sin entregar referencias internas.
     private static JugadorEstadoResponse ConvertirJugador(
         Jugador jugador,
         string faccion)
@@ -178,6 +184,7 @@ public static class PartidaEstadoMapper
         };
     }
 
+    //Asigna el nombre visual estable usado por Unity para cada IA.
     private static string ObtenerFaccionMaquina(
         int indice)
     {

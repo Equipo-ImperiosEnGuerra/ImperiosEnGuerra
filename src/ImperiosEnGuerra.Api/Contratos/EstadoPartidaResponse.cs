@@ -1,5 +1,8 @@
 namespace ImperiosEnGuerra.Api.Contratos;
 
+/// <summary>
+/// Estado completo que la API envía a Unity para representar la partida actual.
+/// </summary>
 public sealed class EstadoPartidaResponse
 {
     public required string Estado { get; init; }
@@ -13,6 +16,9 @@ public sealed class EstadoPartidaResponse
     public required EconomiaEstadoResponse Economia { get; init; }
 }
 
+/// <summary>
+/// Costos que Unity necesita para mostrar y validar opciones económicas.
+/// </summary>
 public sealed class EconomiaEstadoResponse
 {
     public required CostoEstadoResponse CentroUrbano { get; init; }
@@ -30,6 +36,9 @@ public sealed class CostoEstadoResponse
     public int Comida { get; init; }
 }
 
+/// <summary>
+/// Dimensiones y recursos físicos visibles del mapa compartido.
+/// </summary>
 public sealed class MapaEstadoResponse
 {
     public int Ancho { get; init; }
@@ -37,6 +46,9 @@ public sealed class MapaEstadoResponse
     public required IReadOnlyList<RecursoEstadoResponse> Recursos { get; init; }
 }
 
+/// <summary>
+/// Datos necesarios para mostrar una facción, sus recursos y sus entidades.
+/// </summary>
 public sealed class JugadorEstadoResponse
 {
     public required string Nombre { get; init; }
@@ -87,6 +99,9 @@ public sealed class ObraConstruccionEstadoResponse
     public int Progreso { get; init; }
 }
 
+/// <summary>
+/// Estado visible de una unidad, incluida su orden actual y carga si es Aldeano.
+/// </summary>
 public sealed class UnidadEstadoResponse
 {
     public required string Id { get; init; }

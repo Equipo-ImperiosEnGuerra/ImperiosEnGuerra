@@ -11,6 +11,7 @@ using ImperiosEnGuerra.Servicios.Concurrencia;
 
 var builder = WebApplication.CreateBuilder(args);
 
+//Registra los servicios que comparten el estado de la partida durante toda la ejecución de la API.
 builder.Services.AddOpenApi();
 builder.Services.AddSingleton(
     new ServicioArchivos(
@@ -31,6 +32,7 @@ builder.Services.AddSingleton<ServicioRedPartida>();
 
 var app = builder.Build();
 
+//Habilita el canal WebSocket opcional sin reemplazar los endpoints REST usados por Unity.
 app.UseWebSockets();
 
 if (app.Environment.IsDevelopment())
@@ -62,6 +64,7 @@ app.MapGet("/api/modelo/prueba", () =>
 })
 .WithName("ProbarModelo");
 
+//Crea el mapa compartido, los cuatro jugadores y deja la sesión lista para comenzar.
 app.MapPost(
     "/api/partida/iniciar",
     (
@@ -310,6 +313,7 @@ app.MapPost(
 })
 .WithName("MoverUnidad");
 
+//Las variantes concurrentes devuelven un proceso y dejan el trabajo ejecutándose en segundo plano.
 app.MapPost(
     "/api/partida/mover-concurrente",
     (
@@ -339,6 +343,7 @@ app.MapPost(
 })
 .WithName("IniciarMovimientoConcurrente");
 
+//Permite consultar el resultado publicado por un worker sin bloquear la petición HTTP.
 app.MapGet(
     "/api/procesos/{procesoId:guid}/resultado",
     (
@@ -611,6 +616,7 @@ app.MapPost(
 .WithName("IniciarCuracionConcurrente");
 
 
+//Endpoints de apoyo para observar y controlar los procesos automáticos del juego.
 app.MapGet(
     "/api/reacciones/estado",
     (ServicioReaccionesAutomaticas reacciones) =>
@@ -701,6 +707,7 @@ app.MapGet(
 })
 .WithName("ObtenerEstadoRed");
 
+//Acepta clientes WebSocket y delega toda la escucha concurrente al servicio de red.
 app.Map(
     "/ws/partida",
     async context =>
