@@ -220,7 +220,7 @@ Resultado esperado:
 - botones de menú/salir;
 - no se ejecutan nuevas órdenes.
 
-### VF-16 — Derrota
+### VF-16 — Derrota — VALIDADO
 
 En otra partida de prueba, permitir que el Humano quede sin Centros Urbanos y sin unidades militares.
 
@@ -229,6 +229,8 @@ Resultado esperado:
 - pantalla **DERROTA**;
 - interacción bloqueada;
 - no se ejecutan nuevas órdenes.
+
+**Evidencia obtenida:** se validó visualmente la pantalla de DERROTA en una partida real, con el motivo coherente con la regla AND y botones VOLVER AL MENÚ / SALIR visibles.
 
 ## 4. Verificar archivos generados
 
@@ -240,9 +242,19 @@ src/ImperiosEnGuerra.Api/DatosPartida/
 
 Comprobar:
 
-### configuracion.txt
+### configuracion.txt — VALIDADO
 
-Debe incluir estado inicial de jugadores, mapa, saldos, edificios, unidades y recursos.
+Validado manualmente sobre una partida real:
+
+- mapa 15x15;
+- 1 jugador Humano y 3 IAs;
+- 1 Centro Urbano inicial por facción;
+- 2 Aldeanos iniciales por facción;
+- saldos iniciales;
+- 8 nodos de Oro;
+- 8 nodos de Madera;
+- 10 nodos de Comida;
+- 26 recursos físicos compartidos.
 
 ### log_partida.txt — FUNCIONALMENTE VALIDADO
 
@@ -286,7 +298,7 @@ La derrota observada es coherente con la regla AND: el Humano conserva Aldeanos,
 
 Conservar una copia de los tres archivos como evidencia de entrega.
 
-## 5. Validar build standalone
+## 5. Validar build standalone — BUILD WINDOWS VALIDADO
 
 ### Windows
 
@@ -318,6 +330,8 @@ Validar:
 4. el juego puede iniciar una partida;
 5. al cerrar el juego, la API iniciada por el launcher termina.
 
+**Evidencia obtenida:** el build Windows fue generado y ejecutado correctamente mediante el launcher; abrió el juego y permitió iniciar/interactuar con una partida. También se corrigió y verificó visualmente el HUD standalone. Queda pendiente confirmar explícitamente el cierre automático del proceso de API al salir del juego.
+
 ## 6. Evidencias recomendadas
 
 Guardar capturas de:
@@ -339,13 +353,13 @@ La entrega queda lista para congelarse cuando:
 
 ```text
 [ ] Suite .NET final sin errores
-[ ] Unity sin errores bloqueantes
+[x] Unity/build sin errores bloqueantes durante la validación realizada
 [ ] Smoke test completo
-[ ] configuracion.txt verificado
+[x] configuracion.txt verificado
 [ ] log_partida.txt verificado con evidencia limpia final
 [x] resultado_final.txt verificado
-[ ] Build standalone generado
-[ ] Launcher probado
+[x] Build standalone generado
+[~] Launcher probado: inicio OK; falta confirmar cierre automático de API
 [ ] Evidencias guardadas
 [ ] Documentación consistente con main
 [ ] PR documental listo para merge
