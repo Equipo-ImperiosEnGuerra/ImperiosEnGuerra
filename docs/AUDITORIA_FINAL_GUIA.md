@@ -42,7 +42,7 @@
 | Condición de victoria | CUMPLE con decisión de diseño | `EvaluadorVictoria` y regla actual AND: sin Centros Urbanos y sin militares | Documentar que la guía dice “y/o” y justificar la regla final aprobada |
 | Anuncio de ganador | CUMPLE | HUD/pantalla final bloqueante | Evidencia visual |
 | `configuracion.txt` | CUMPLE | `ServicioArchivos.GuardarConfiguracionInicial` | Adjuntar ejemplo generado |
-| `log_partida.txt` | CUMPLE | `ServicioArchivos.RegistrarEvento` | Adjuntar ejemplo generado |
+| `log_partida.txt` | CUMPLE / VALIDAR EVIDENCIA | `ServicioArchivos.RegistrarEvento`; validado con log real que contiene acciones, rechazos, curación, regeneración, conquista y finalización | Regenerar un log limpio con la versión final para adjuntarlo como evidencia |
 | `resultado_final.txt` | CUMPLE | `GuardarResultadoPartidaFinalizada` conserva ganador/motivo y añade estado final del mapa, recursos, saldos, edificios, unidades y obras | Adjuntar ejemplo generado |
 | System.IO | CUMPLE | `ServicioArchivos` centralizado | Ninguna |
 | Manejo de excepciones | CUMPLE / VALIDAR | Validaciones, try/catch y pruebas de errores de IO/red | Consolidar evidencia |
