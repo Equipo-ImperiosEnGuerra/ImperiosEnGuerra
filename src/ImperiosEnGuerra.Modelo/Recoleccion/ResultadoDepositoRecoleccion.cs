@@ -2,6 +2,9 @@ using ImperiosEnGuerra.Modelo.Recursos;
 
 namespace ImperiosEnGuerra.Modelo.Recoleccion
 {
+    /// <summary>
+    /// Resume el recurso y la cantidad transferida de la carga del Aldeano al jugador.
+    /// </summary>
     public sealed class ResultadoDepositoRecoleccion
     {
         public bool Exito { get; }

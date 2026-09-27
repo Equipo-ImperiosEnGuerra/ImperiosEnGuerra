@@ -123,6 +123,7 @@ namespace ImperiosEnGuerra.Modelo.Recoleccion
                     "El recurso objetivo está agotado.");
             }
 
+            //Si el Aldeano ya está junto al recurso puede empezar a recolectar de inmediato.
             if (Distancia(
                     aldeano.Coordenada,
                     recurso.Coordenada) == 1)
@@ -136,6 +137,7 @@ namespace ImperiosEnGuerra.Modelo.Recoleccion
             var candidatos =
                 new List<(int Indice, Coordenada Punto, ResultadoPlanMovimiento Plan)>();
 
+            //Prueba las cuatro casillas alrededor del recurso y conserva las accesibles.
             for (int i = 0;
                  i < Direcciones.Length;
                  i++)
@@ -176,6 +178,7 @@ namespace ImperiosEnGuerra.Modelo.Recoleccion
                     true);
             }
 
+            //Distribuye aldeanos en lados distintos del mismo recurso para reducir colisiones.
             int inicio =
                 PreferenciaCasillaInteraccion
                     .ObtenerIndiceInicial(
@@ -209,6 +212,7 @@ namespace ImperiosEnGuerra.Modelo.Recoleccion
                 }
             }
 
+            //Si ninguna preferencia decide, usa la ruta válida más corta.
             var masCorto =
                 candidatos
                     .OrderBy(

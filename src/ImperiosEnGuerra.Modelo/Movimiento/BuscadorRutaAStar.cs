@@ -5,6 +5,9 @@ using ImperiosEnGuerra.Modelo.Map;
 
 namespace ImperiosEnGuerra.Modelo.Movimiento
 {
+    /// <summary>
+    /// Busca una ruta ortogonal evitando casillas bloqueadas, ocupadas o con recursos.
+    /// </summary>
     public sealed class BuscadorRutaAStar
     {
         private static readonly (int X, int Y)[] Direcciones =
@@ -117,6 +120,7 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
                 return ResultadoRuta.Imposible();
             }
 
+            //Las posiciones abiertas todavía pueden explorarse; las cerradas ya fueron evaluadas.
             var abiertos =
                 new List<(int X, int Y)>
                 {
@@ -139,6 +143,7 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
 
             while (abiertos.Count > 0)
             {
+                //Elige la posición con menor costo acumulado más distancia estimada al destino.
                 (int X, int Y) actual =
                     abiertos
                         .OrderBy(posicion =>
@@ -170,6 +175,7 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
 
                 cerrados.Add(actual);
 
+                //Evalúa los vecinos ortogonales y conserva el camino más barato conocido.
                 foreach ((int X, int Y) direccion
                     in Direcciones)
                 {
@@ -231,6 +237,7 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
             return ResultadoRuta.Imposible();
         }
 
+        //Comprueba obstáculos del mapa y bloqueos temporales usados por la planificación.
         private static bool EsTransitable(
             Mapa mapa,
             Coordenada coordenada,
@@ -274,6 +281,7 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
             return true;
         }
 
+        //Usa distancia Manhattan porque el movimiento lógico solo permite pasos ortogonales.
         private static int Heuristica(
             int x,
             int y,
@@ -284,6 +292,7 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
                    Math.Abs(destinoY - y);
         }
 
+        //Reconstruye el recorrido desde el destino hasta el origen y luego invierte el orden.
         private static IReadOnlyList<Coordenada>
             ReconstruirRuta(
                 Dictionary<

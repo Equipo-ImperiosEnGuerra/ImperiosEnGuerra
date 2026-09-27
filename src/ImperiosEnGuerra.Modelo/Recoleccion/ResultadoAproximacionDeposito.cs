@@ -4,6 +4,9 @@ using ImperiosEnGuerra.Modelo.Map;
 
 namespace ImperiosEnGuerra.Modelo.Recoleccion
 {
+    /// <summary>
+    /// Indica a qué Centro Urbano debe ir el Aldeano y qué ruta debe seguir para depositar.
+    /// </summary>
     public sealed class ResultadoAproximacionDeposito
     {
         private readonly List<Coordenada> pasos;
@@ -58,6 +61,7 @@ namespace ImperiosEnGuerra.Modelo.Recoleccion
                 false);
         }
 
+        //Marca como reintentable un bloqueo temporal que puede desaparecer después.
         public static ResultadoAproximacionDeposito Fallido(
             string mensaje,
             bool reintentable = false)

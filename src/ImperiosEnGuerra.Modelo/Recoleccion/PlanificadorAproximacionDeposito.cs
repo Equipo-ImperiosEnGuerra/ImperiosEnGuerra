@@ -88,6 +88,7 @@ namespace ImperiosEnGuerra.Modelo.Recoleccion
                     "No existe un Centro Urbano propio para depositar.");
             }
 
+            //Si ya está junto a un Centro Urbano puede depositar sin desplazarse.
             foreach (CentroUrbano centro in centros)
             {
                 if (Distancia(
@@ -107,6 +108,7 @@ namespace ImperiosEnGuerra.Modelo.Recoleccion
             var candidatos =
                 new List<(int Indice, Coordenada Centro, Coordenada Punto, ResultadoPlanMovimiento Plan)>();
 
+            //Prueba las casillas alrededor de cada Centro Urbano y conserva las que tienen una ruta válida.
             foreach (CentroUrbano centro in centros)
             {
                 for (int i = 0;
@@ -150,6 +152,7 @@ namespace ImperiosEnGuerra.Modelo.Recoleccion
                     true);
             }
 
+            //Reparte los puntos de llegada entre aldeanos para reducir bloqueos al depositar.
             int inicio =
                 PreferenciaCasillaInteraccion
                     .ObtenerIndiceInicial(
@@ -183,6 +186,7 @@ namespace ImperiosEnGuerra.Modelo.Recoleccion
                 }
             }
 
+            //Si no se aplica una preferencia, elige la ruta disponible con menos pasos.
             var masCorto =
                 candidatos
                     .OrderBy(

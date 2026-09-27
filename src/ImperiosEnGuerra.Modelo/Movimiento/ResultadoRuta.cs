@@ -4,6 +4,9 @@ using ImperiosEnGuerra.Modelo.Map;
 
 namespace ImperiosEnGuerra.Modelo.Movimiento
 {
+    /// <summary>
+    /// Guarda si se encontró una ruta y los pasos que debe recorrer la unidad.
+    /// </summary>
     public sealed class ResultadoRuta
     {
         private readonly List<Coordenada> pasos;

@@ -31,6 +31,7 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
                 indice++;
             }
 
+            //Si no pertenece al humano, usa el ID para repartir la preferencia de forma estable.
             byte[] bytes = unidadId.ToByteArray();
 
             return

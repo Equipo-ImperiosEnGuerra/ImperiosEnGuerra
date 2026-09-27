@@ -104,6 +104,7 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
                     "La posición destino contiene una unidad o un edificio.");
             }
 
+            //Los enemigos y edificios bloquean la ruta; las unidades aliadas se tratan como ocupación dinámica.
             List<Coordenada> bloqueos =
                 ObtenerBloqueos(
                     partida,
@@ -133,6 +134,7 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
                             coordenada != null)
                     .ToList();
 
+            //A* calcula la ruta sin mover todavía la unidad.
             ResultadoRuta ruta =
                 buscador.Buscar(
                     mapa,
@@ -151,6 +153,7 @@ namespace ImperiosEnGuerra.Modelo.Movimiento
                 ruta.Pasos);
         }
 
+        //Reúne las posiciones que no deben atravesarse durante esta planificación.
         private static List<Coordenada> ObtenerBloqueos(
             Partida partida,
             Mapa mapa,
