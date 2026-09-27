@@ -23,11 +23,40 @@ El proyecto utiliza **Unity 6000.6.0f1**.
 
 Los integrantes del equipo deben utilizar la misma versión para reducir problemas de compatibilidad.
 
+## Inicio rápido en una PC nueva
+
+Para una copia recién descargada/clonada, **no abra Unity primero**. En Windows:
+
+1. descargue y extraiga **Tiny Swords (Free Pack)** fuera del repositorio;
+2. ejecute desde la raíz:
+
+```bat
+PREPARAR_PROYECTO.bat
+```
+
+3. el asistente comprueba **.NET 10 SDK**, muestra la versión de Unity requerida, protege los `.meta` versionados y solicita la carpeta local de Tiny Swords si hace falta;
+4. abra el proyecto con **Unity 6000.6.0f1**;
+5. genere una vez:
+
+```text
+Imperios en Guerra > Build > Build Windows x64
+```
+
+6. ejecute el juego con:
+
+```bat
+scripts\ejecutar-juego.bat
+```
+
+`Builds/` no se versiona, por lo que una descarga del código fuente necesita generar el ejecutable una vez antes de usar el launcher.
+
 ## Tiny Swords
 
 Los gráficos de **Tiny Swords (Free Pack)** no se redistribuyen dentro del repositorio.
 
-Al abrir Unity, el proyecto detecta si faltan los assets y ofrece una **instalación automática**: basta con seleccionar la carpeta local `Tiny Swords (Free Pack)`. Unity copia únicamente los recursos requeridos y configura sprites/tileset automáticamente.
+La instalación principal recomendada en una copia nueva se realiza **antes de abrir Unity** mediante `PREPARAR_PROYECTO.bat`. Así los PNG se copian antes de la primera importación y se conservan los GUID de los `.meta` incluidos en Git.
+
+El bootstrap de Unity se mantiene como mecanismo de respaldo/reparación: si detecta assets faltantes durante el trabajo normal, también puede solicitar la carpeta local y reconfigurarlos.
 
 Como alternativa se conserva:
 
