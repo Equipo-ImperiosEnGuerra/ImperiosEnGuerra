@@ -53,8 +53,8 @@
 | Pruebas de networking | CUMPLE a nivel unitario/integración | `NetworkingTests.cs` | Añadir evidencia de prueba manual si aplica |
 | Pruebas de ataques | CUMPLE | múltiples suites de ataque y concurrencia | Consolidar resultados |
 | Pruebas de victoria | CUMPLE | `VictoriaFinalTests.cs` y pruebas visuales | Consolidar resultados |
-| Informe breve MVC/concurrencia/red | PENDIENTE DOCUMENTAR | README y docs por fase contienen material parcial | Crear informe formal final |
-| Diagrama de clases UML | PENDIENTE DOCUMENTAR | No existe un UML final en el árbol actual | Crear UML basado en código real |
+| Informe breve MVC/concurrencia/red | CUMPLE | `docs/INFORME_TECNICO_FINAL.md` documenta MVC, POO, concurrencia, sincronización, archivos, excepciones y networking opcional | Revisión final de consistencia |
+| Diagrama de clases UML | CUMPLE | `docs/UML_FINAL.md` contiene diagrama Mermaid basado en las clases y relaciones reales | Revisión final de consistencia |
 | Diagrama de flujo | PENDIENTE DOCUMENTAR | No existe diagrama final en el árbol actual | Crear flujo general y/o de acciones concurrentes |
 | Pruebas de escritorio formales | PENDIENTE DOCUMENTAR | Existen tests automatizados, pero falta documento formal de evidencia | Crear matriz/casos/resultados |
 | Documentación formal | PENDIENTE DOCUMENTAR | Existen README y documentos por fase | Consolidar entrega final |
@@ -136,8 +136,8 @@ El README fue actualizado durante esta auditoría para:
 3. ~~Ejecutar suite .NET desde `main`.~~ **COMPLETADO: 390/390 correctas, 0 errores.**
 4. Ejecutar Unity EditMode/PlayMode y smoke test del build.
 5. Guardar ejemplos reales de los tres archivos obligatorios después de una partida final.
-6. Crear informe final MVC + concurrencia + networking opcional.
-7. Crear UML basado en el código final.
+6. ~~Crear informe final MVC + concurrencia + networking opcional.~~ **COMPLETADO**
+7. ~~Crear UML basado en el código final.~~ **COMPLETADO**
 8. Crear diagrama de flujo.
 9. Crear documento de pruebas de escritorio.
 10. Hacer revisión final de consistencia entre documentación y código.
