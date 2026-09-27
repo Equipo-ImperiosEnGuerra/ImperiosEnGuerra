@@ -330,7 +330,7 @@ Validar:
 4. el juego puede iniciar una partida;
 5. al cerrar el juego, la API iniciada por el launcher termina.
 
-**Evidencia obtenida:** el build Windows fue generado y ejecutado correctamente mediante el launcher; abrió el juego y permitió iniciar/interactuar con una partida. También se corrigió y verificó visualmente el HUD standalone. Queda pendiente confirmar explícitamente el cierre automático del proceso de API al salir del juego.
+**Evidencia obtenida:** el build Windows fue generado y ejecutado correctamente mediante el launcher; abrió el juego y permitió iniciar/interactuar con una partida. También se corrigió y verificó visualmente el HUD standalone. Al cerrar el juego, se comprobó que el puerto 5086 queda libre, confirmando que el launcher detiene correctamente la API iniciada por él.
 
 ## 6. Evidencias recomendadas
 
@@ -359,7 +359,7 @@ La entrega queda lista para congelarse cuando:
 [ ] log_partida.txt verificado con evidencia limpia final
 [x] resultado_final.txt verificado
 [x] Build standalone generado
-[~] Launcher probado: inicio OK; falta confirmar cierre automático de API
+[x] Launcher probado: inicia API + juego y cierra la API al salir
 [ ] Evidencias guardadas
 [ ] Documentación consistente con main
 [ ] PR documental listo para merge
